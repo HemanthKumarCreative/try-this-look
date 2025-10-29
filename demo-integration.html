@@ -363,12 +363,12 @@
           <pre><code>&lt;!-- 1. Add this script to your theme.liquid --&gt;
 &lt;script&gt;
   window.NUSENSE_CONFIG = {
-    widgetUrl: 'https://your-domain.com',
+     widgetUrl: 'https://try-this-look.vercel.app',
     debug: false,
     autoDetect: true
   };
 &lt;/script&gt;
-&lt;script src="https://your-domain.com/nusense-tryon-widget.js" async defer&gt;&lt;/script&gt;
+ &lt;script src="https://try-this-look.vercel.app/nusense-tryon-widget.js" async defer&gt;&lt;/script&gt;
 
 &lt;!-- 2. Add this button to your product template --&gt;
 &lt;button id="nusense-tryon-btn" class="btn btn-primary"&gt;
@@ -407,7 +407,7 @@
 
       // NUSENSE TryON Configuration
       window.NUSENSE_CONFIG = {
-        widgetUrl: "http://localhost:8080", // Replace with your deployed URL
+        widgetUrl: "https://try-this-look.vercel.app",
         debug: true,
         autoDetect: true,
       };
@@ -415,7 +415,7 @@
       // Load the NUSENSE TryON widget
       (function () {
         const script = document.createElement("script");
-        script.src = "http://localhost:8080/nusense-tryon-widget.js"; // Replace with your deployed URL
+        script.src = "https://try-this-look.vercel.app/nusense-tryon-widget.js";
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);

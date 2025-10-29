@@ -12,12 +12,12 @@ This guide provides step-by-step instructions for integrating the NUSENSE TryON 
 <!-- NUSENSE TryON Widget -->
 <script>
   window.NUSENSE_CONFIG = {
-    widgetUrl: 'https://your-domain.com', // Replace with your deployed app URL
+    widgetUrl: 'https://try-this-look.vercel.app',
     debug: false,
     autoDetect: true
   };
 </script>
-<script src="https://your-domain.com/nusense-tryon-widget.js" async defer></script>
+<script src="https://try-this-look.vercel.app/nusense-tryon-widget.js" async defer></script>
 ```
 
 2. **Add the button** to your product template (`sections/main-product.liquid` or `product-template.liquid`):
@@ -29,7 +29,7 @@ This guide provides step-by-step instructions for integrating the NUSENSE TryON 
 </button>
 ```
 
-3. **Deploy your app** and update the `widgetUrl` in the script above.
+3. The widget is already configured and ready to use!
 
 ### Option 2: Advanced Integration with Liquid Templates
 
@@ -72,32 +72,78 @@ This guide provides step-by-step instructions for integrating the NUSENSE TryON 
    <!-- Add before </head> -->
    <script>
      window.NUSENSE_CONFIG = {
-       widgetUrl: 'YOUR_DEPLOYED_URL',
+       widgetUrl: 'https://try-this-look.vercel.app',
        debug: false,
        autoDetect: true
      };
    </script>
-   <script src="YOUR_DEPLOYED_URL/nusense-tryon-widget.js" async defer></script>
+   <script src="https://try-this-look.vercel.app/nusense-tryon-widget.js" async defer></script>
    ```
 
 3. **Add the button** to your product template:
    - Open `sections/main-product.liquid` or `product-template.liquid`
    - Add the button where you want it to appear (usually after the "Add to cart" button)
 
-#### Method B: Using Liquid Templates
+#### Method B: Using Shopify Theme Editor (No Code Required!) ⭐ Recommended
 
-1. **Upload the templates**:
-   - Copy `nusense-tryon-button.liquid` to `snippets/`
-   - Copy `nusense-tryon-script.liquid` to `snippets/`
+This method allows you to add the button directly from the Shopify Theme Editor UI without editing any code.
 
-2. **Include in your product template**:
-   ```liquid
-   <!-- Add the button -->
-   {% render 'nusense-tryon-button' %}
-   
-   <!-- Add the script -->
-   {% render 'nusense-tryon-script' %}
-   ```
+**📋 Step-by-Step Guide:**
+
+1. **Upload the section file**:
+   - Go to `Online Store > Themes`
+   - Click `Actions > Edit code` on your active theme
+   - Navigate to `sections/` folder
+   - Click `Add a new section`
+   - Name it `nusense-tryon-button.liquid`
+   - Copy and paste the contents from `shopify-templates/sections/nusense-tryon-button.liquid`
+   - Click `Save`
+
+2. **Add via Theme Editor UI**:
+   - Go back to `Online Store > Themes`
+   - Click `Customize` on your active theme
+   - Navigate to a **Product Page** (click on any product page template)
+   - In the left sidebar, find the section where you want the button (usually the product form section)
+   - Click `Add section` or look for `Add block` in that section
+   - Scroll down and find **"NUSENSE TryON Button"** in the list
+   - Click on it to add it to your page
+   - **Drag and drop** to position it where you want (typically right after the Add to Cart button)
+
+3. **Customize the button** (all from the sidebar UI):
+   - **Button Text**: Change "Try Now" to any text you want
+   - **Show Icon**: Toggle to show/hide the ✨ icon
+   - **Button Icon**: Change the emoji/icon (✨, 🎯, 👕, etc.)
+   - **Button Style**: Choose from Primary, Secondary, Outline, or Minimal
+     - **Primary**: Uses your theme's primary color (matches Add to Cart button)
+     - **Secondary**: Uses your theme's secondary color
+     - **Outline**: Uses your theme's accent color with transparent background
+     - **Minimal**: Transparent with your theme's text color
+   - **Button Width**: Auto or Full Width
+   - **Match Theme Button Style**: Automatically inherits your theme's button styling
+   - **Widget URL**: Already set to `https://try-this-look.vercel.app`
+   - **Debug Mode**: Enable for troubleshooting
+
+4. **Save and Preview**:
+   - Click `Save` in the top right
+   - Preview your product page to see the button
+   - The button will automatically work once you save!
+
+**🎨 Visual Customization Options:**
+- ✅ Change button text and icon without code
+- ✅ **Automatic theme color matching** - no manual color selection needed
+- ✅ Choose button style (Primary, Secondary, Outline, Minimal)
+- ✅ Set button width (Auto or Full Width)
+- ✅ **Inherit theme button styling** - matches your Add to Cart button
+- ✅ Position anywhere on the product page via drag-and-drop
+
+**💡 Benefits:**
+- ✅ **Seamless theme integration** - automatically matches your store's color palette
+- ✅ No code editing required
+- ✅ Easy to customize via UI
+- ✅ Can be added/removed anytime
+- ✅ Works with any Shopify theme
+- ✅ Mobile responsive by default
+- ✅ **Consistent with your brand** - looks like it belongs in your store
 
 ### Step 3: Customization
 
@@ -138,7 +184,7 @@ Add these settings to your theme's `settings_schema.json`:
       "type": "text",
       "id": "nusense_widget_url",
       "label": "Widget URL",
-      "default": "https://your-domain.com"
+      "default": "https://try-this-look.vercel.app"
     },
     {
       "type": "text",

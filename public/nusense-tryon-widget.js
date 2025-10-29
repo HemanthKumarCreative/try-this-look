@@ -8,7 +8,7 @@
 
   // Configuration
   const CONFIG = {
-    widgetUrl: "https://your-domain.com", // Replace with your deployed app URL
+    widgetUrl: "https://try-this-look.vercel.app",
     buttonId: "nusense-tryon-btn",
     widgetId: "nusense-tryon-widget",
     version: "1.0.0",
