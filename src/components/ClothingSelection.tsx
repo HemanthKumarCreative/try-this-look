@@ -1,5 +1,5 @@
-import { Card } from '@/components/ui/card';
-import { Check } from 'lucide-react';
+import { Card } from "@/components/ui/card";
+import { Check } from "lucide-react";
 
 interface ClothingSelectionProps {
   images: string[];
@@ -16,10 +16,10 @@ export default function ClothingSelection({
     return (
       <Card className="p-8 text-center bg-warning/10 border-warning">
         <p className="font-semibold text-warning">
-          Aucune image de vêtement détectée sur cette page
+          No clothing images detected on this page
         </p>
         <p className="text-sm text-muted-foreground mt-2">
-          Assurez-vous d'être sur une page produit Shopify
+          Make sure you're on a Shopify product page
         </p>
       </Card>
     );
@@ -28,9 +28,9 @@ export default function ClothingSelection({
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h3 className="text-2xl font-bold mb-2">Sélectionnez un Vêtement</h3>
+        <h3 className="text-2xl font-bold mb-2">Select Clothing</h3>
         <p className="text-muted-foreground">
-          Choisissez le vêtement que vous souhaitez essayer
+          Choose the clothing you want to try on
         </p>
       </div>
 
@@ -40,8 +40,8 @@ export default function ClothingSelection({
             key={index}
             className={`overflow-hidden cursor-pointer transition-all transform hover:scale-105 relative ${
               selectedImage === image
-                ? 'ring-4 ring-primary shadow-lg scale-105'
-                : 'hover:ring-2 hover:ring-primary/50'
+                ? "ring-4 ring-primary shadow-lg scale-105"
+                : "hover:ring-2 hover:ring-primary/50"
             }`}
             onClick={() => onSelect(image)}
           >
@@ -67,7 +67,7 @@ export default function ClothingSelection({
       {selectedImage && (
         <Card className="p-4 bg-success/10 border-success">
           <p className="font-semibold text-success text-center">
-            Vêtement sélectionné! Cliquez sur "Générer" pour continuer
+            Clothing selected! Click "Generate" to continue
           </p>
         </Card>
       )}

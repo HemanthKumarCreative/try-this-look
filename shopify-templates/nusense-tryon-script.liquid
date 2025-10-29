@@ -1,0 +1,73 @@
+{% comment %}
+  NUSENSE TryON Script - Shopify Liquid Template
+  Include this script to load the NUSENSE TryON widget functionality
+{% endcomment %}
+
+{% unless nusense_tryon_disabled %}
+  <script>
+    // NUSENSE TryON Configuration
+    window.NUSENSE_CONFIG = {
+      widgetUrl: '{{ settings.nusense_widget_url | default: "https://your-domain.com" }}',
+      debug: {{ settings.nusense_debug | default: false }},
+      buttonSelector: '{{ settings.nusense_button_selector | default: "#nusense-tryon-btn" }}',
+      autoDetect: {{ settings.nusense_auto_detect | default: true }},
+      theme: '{{ settings.nusense_theme | default: "default" }}'
+    };
+  </script>
+
+  <script src="{{ settings.nusense_widget_url | default: 'https://your-domain.com' }}/nusense-tryon-widget.js" 
+          async 
+          defer
+          onload="console.log('NUSENSE TryON Widget loaded successfully')"
+          onerror="console.error('Failed to load NUSENSE TryON Widget')">
+  </script>
+
+  <style>
+    /* NUSENSE TryON Widget Styles */
+    .nusense-tryon-button {
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+    
+    .nusense-tryon-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .nusense-tryon-button:active {
+      transform: scale(0.98);
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      .nusense-tryon-button {
+        width: 100%;
+        justify-content: center;
+        margin: 10px 0;
+      }
+    }
+    
+    /* Theme customizations */
+    {% if settings.nusense_theme == 'minimal' %}
+      .nusense-tryon-button {
+        background: #000 !important;
+        border: 2px solid #000 !important;
+      }
+      .nusense-tryon-button:hover {
+        background: #333 !important;
+        border-color: #333 !important;
+      }
+    {% elsif settings.nusense_theme == 'colorful' %}
+      .nusense-tryon-button {
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4) !important;
+        background-size: 300% 300% !important;
+        animation: gradientShift 3s ease infinite !important;
+      }
+      @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+    {% endif %}
+  </style>
+{% endunless %}

@@ -1,8 +1,21 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import TryOnWidget from '@/components/TryOnWidget';
-import { Sparkles, ShoppingBag, Zap, Image as ImageIcon, Shirt, CheckCircle2 } from 'lucide-react';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import TryOnWidget from "@/components/TryOnWidget";
+import {
+  Sparkles,
+  ShoppingBag,
+  Zap,
+  Image as ImageIcon,
+  Shirt,
+  CheckCircle2,
+} from "lucide-react";
 
 const Index = () => {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
@@ -16,17 +29,20 @@ const Index = () => {
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-full shadow-lg">
               <Sparkles className="w-5 h-5 text-primary" />
-              <span className="font-semibold text-primary">Essayage Virtuel Alimenté par IA</span>
+              <span className="font-semibold text-primary">
+                AI-Powered Virtual Try-On
+              </span>
             </div>
-            
+
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight">
               NUSENSE TryON
               <span className="block text-primary mt-2">Shopify App</span>
             </h1>
-            
+
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Révolutionnez l'expérience d'achat avec notre technologie d'essayage virtuel IA. 
-              Laissez vos clients voir comment les vêtements leur vont avant d'acheter.
+              Revolutionize the shopping experience with our AI virtual try-on
+              technology. Let your customers see how clothing looks on them
+              before buying.
             </p>
 
             <div className="flex gap-4 justify-center flex-wrap">
@@ -37,15 +53,15 @@ const Index = () => {
                 className="text-lg px-8"
               >
                 <Sparkles className="w-6 h-6" />
-                Essayer Maintenant
+                Try Now
               </Button>
               <Button
                 variant="outline"
                 size="lg"
                 className="text-lg"
-                onClick={() => window.location.href = '/demo'}
+                onClick={() => (window.location.href = "/demo")}
               >
-                Page Produit Démo
+                Demo Product Page
               </Button>
             </div>
           </div>
@@ -56,8 +72,8 @@ const Index = () => {
       <section id="features" className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Comment Ça Marche</h2>
-            <p className="text-xl text-gray-600">Un processus simple en 3 étapes</p>
+            <h2 className="text-4xl font-bold mb-4">How It Works</h2>
+            <p className="text-xl text-gray-600">A simple 3-step process</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -66,9 +82,9 @@ const Index = () => {
                 <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
                   <ImageIcon className="w-8 h-8 text-primary" />
                 </div>
-                <CardTitle>1. Téléchargez Votre Photo</CardTitle>
+                <CardTitle>1. Upload Your Photo</CardTitle>
                 <CardDescription>
-                  Choisissez une photo de vous ou utilisez une photo de démonstration
+                  Choose a photo of yourself or use a demo photo
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -78,9 +94,9 @@ const Index = () => {
                 <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
                   <Shirt className="w-8 h-8 text-primary" />
                 </div>
-                <CardTitle>2. Sélectionnez un Vêtement</CardTitle>
+                <CardTitle>2. Select Clothing</CardTitle>
                 <CardDescription>
-                  Choisissez le produit que vous voulez essayer depuis la page
+                  Choose the product you want to try from the page
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -90,9 +106,9 @@ const Index = () => {
                 <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
                   <Zap className="w-8 h-8 text-primary" />
                 </div>
-                <CardTitle>3. Générez Votre Essayage</CardTitle>
+                <CardTitle>3. Generate Your Try-On</CardTitle>
                 <CardDescription>
-                  Notre IA crée une image réaliste de vous portant le vêtement
+                  Our AI creates a realistic image of you wearing the clothing
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -104,34 +120,43 @@ const Index = () => {
       <section className="py-20 bg-gradient-to-br from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Avantages Pour Votre Boutique</h2>
-            <p className="text-xl text-gray-600">Augmentez vos ventes et réduisez les retours</p>
+            <h2 className="text-4xl font-bold mb-4">Benefits for Your Store</h2>
+            <p className="text-xl text-gray-600">
+              Increase sales and reduce returns
+            </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {[
               {
                 icon: CheckCircle2,
-                title: 'Augmentez les Conversions',
-                description: 'Les clients qui voient comment les vêtements leur vont sont plus susceptibles d\'acheter',
+                title: "Increase Conversions",
+                description:
+                  "Customers who see how clothing looks on them are more likely to buy",
               },
               {
                 icon: CheckCircle2,
-                title: 'Réduisez les Retours',
-                description: 'Les clients savent exactement à quoi s\'attendre, réduisant ainsi les retours',
+                title: "Reduce Returns",
+                description:
+                  "Customers know exactly what to expect, reducing returns",
               },
               {
                 icon: CheckCircle2,
-                title: 'Expérience Innovante',
-                description: 'Offrez une expérience d\'achat moderne qui démarque votre boutique',
+                title: "Innovative Experience",
+                description:
+                  "Offer a modern shopping experience that sets your store apart",
               },
               {
                 icon: CheckCircle2,
-                title: 'Installation Facile',
-                description: 'Intégration simple dans votre boutique Shopify existante',
+                title: "Easy Installation",
+                description:
+                  "Simple integration into your existing Shopify store",
               },
             ].map((benefit, index) => (
-              <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+              <Card
+                key={index}
+                className="p-6 hover:shadow-lg transition-shadow"
+              >
                 <div className="flex gap-4">
                   <div className="flex-shrink-0">
                     <div className="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
@@ -152,9 +177,11 @@ const Index = () => {
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-primary to-primary-light text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold mb-4">Prêt à Transformer Votre Boutique?</h2>
+          <h2 className="text-4xl font-bold mb-4">
+            Ready to Transform Your Store?
+          </h2>
           <p className="text-xl mb-8 opacity-90">
-            Essayez NUSENSE TryON dès maintenant et voyez la différence
+            Try NUSENSE TryON now and see the difference
           </p>
           <Button
             onClick={() => setIsWidgetOpen(true)}
@@ -162,7 +189,7 @@ const Index = () => {
             className="bg-white text-primary hover:bg-gray-100 text-lg px-10"
           >
             <Sparkles className="w-6 h-6" />
-            Lancer la Démo
+            Launch Demo
           </Button>
         </div>
       </section>
@@ -171,14 +198,20 @@ const Index = () => {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Installation pour Boutiques Shopify</h2>
-            <p className="text-xl text-gray-600">Intégrez facilement dans votre boutique</p>
+            <h2 className="text-4xl font-bold mb-4">
+              Installation for Shopify Stores
+            </h2>
+            <p className="text-xl text-gray-600">
+              Easily integrate into your store
+            </p>
           </div>
 
           <Card className="p-8">
             <CardHeader>
-              <CardTitle className="text-2xl">Guide d'Installation</CardTitle>
-              <CardDescription>Suivez ces étapes simples pour intégrer l'app dans votre boutique</CardDescription>
+              <CardTitle className="text-2xl">Installation Guide</CardTitle>
+              <CardDescription>
+                Follow these simple steps to integrate the app into your store
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
@@ -187,13 +220,14 @@ const Index = () => {
                     1
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-2">Ajoutez le Bouton "Essayer Maintenant"</h4>
+                    <h4 className="font-semibold mb-2">Add "Try Now" Button</h4>
                     <p className="text-sm text-gray-600 mb-2">
-                      Ajoutez ce code dans votre thème Shopify là où vous voulez que le bouton apparaisse (généralement dans le fichier product.liquid):
+                      Add this code to your Shopify theme where you want the
+                      button to appear (usually in the product.liquid file):
                     </p>
                     <pre className="bg-gray-100 p-4 rounded-lg text-xs overflow-x-auto">
-{`<button id="nusense-tryon-btn" class="btn">
-  <span>✨</span> Essayer Maintenant
+                      {`<button id="nusense-tryon-btn" class="btn">
+  <span>✨</span> Try Now
 </button>`}
                     </pre>
                   </div>
@@ -204,9 +238,10 @@ const Index = () => {
                     2
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-2">Intégrez le Widget</h4>
+                    <h4 className="font-semibold mb-2">Integrate the Widget</h4>
                     <p className="text-sm text-gray-600 mb-2">
-                      Cette application peut être hébergée et intégrée via un iframe ou en tant que widget embarqué dans votre boutique.
+                      This application can be hosted and integrated via iframe
+                      or as an embedded widget in your store.
                     </p>
                   </div>
                 </div>
@@ -216,9 +251,10 @@ const Index = () => {
                     3
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-2">Mode Développement</h4>
+                    <h4 className="font-semibold mb-2">Development Mode</h4>
                     <p className="text-sm text-gray-600">
-                      Pour tester en mode dev, utilisez les outils de développement Shopify et pointez vers votre URL locale ou de staging.
+                      To test in dev mode, use Shopify development tools and
+                      point to your local or staging URL.
                     </p>
                   </div>
                 </div>
@@ -226,7 +262,9 @@ const Index = () => {
 
               <div className="bg-info/10 border border-info rounded-lg p-4">
                 <p className="text-sm">
-                  <strong>💡 Note:</strong> Pour une intégration complète, contactez notre équipe de support qui vous aidera à configurer l'app dans votre boutique Shopify.
+                  <strong>💡 Note:</strong> For complete integration, contact
+                  our support team who will help you configure the app in your
+                  Shopify store.
                 </p>
               </div>
             </CardContent>
@@ -241,15 +279,20 @@ const Index = () => {
             <Sparkles className="w-8 h-8" />
             <h3 className="text-2xl font-bold">NUSENSE TryON</h3>
           </div>
-          <p className="text-gray-400 mb-6">Essayage Virtuel Alimenté par IA pour Shopify</p>
+          <p className="text-gray-400 mb-6">
+            AI-Powered Virtual Try-On for Shopify
+          </p>
           <p className="text-sm text-gray-500">
-            © 2024 NUSENSE TryON. Tous droits réservés.
+            © 2024 NUSENSE TryON. All rights reserved.
           </p>
         </div>
       </footer>
 
       {/* Try-On Widget Modal */}
-      <TryOnWidget isOpen={isWidgetOpen} onClose={() => setIsWidgetOpen(false)} />
+      <TryOnWidget
+        isOpen={isWidgetOpen}
+        onClose={() => setIsWidgetOpen(false)}
+      />
     </div>
   );
 };

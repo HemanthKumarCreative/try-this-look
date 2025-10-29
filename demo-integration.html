@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NUSENSE TryON - Demo Integration</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .header {
+        background: linear-gradient(135deg, #ce0003, #ff1a1d);
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      .product-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        padding: 40px;
+      }
+      .product-images {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .main-image {
+        width: 100%;
+        height: 500px;
+        object-fit: cover;
+        border-radius: 8px;
+      }
+      .thumbnail-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+      .thumbnail {
+        width: 100%;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      .thumbnail:hover {
+        transform: scale(1.05);
+      }
+      .product-info {
+        padding: 20px 0;
+      }
+      .product-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .product-price {
+        font-size: 2rem;
+        color: #ce0003;
+        margin-bottom: 20px;
+      }
+      .product-description {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 30px;
+      }
+      .size-selector {
+        margin-bottom: 20px;
+      }
+      .size-options {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .size-option {
+        width: 50px;
+        height: 50px;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .size-option:hover,
+      .size-option.selected {
+        border-color: #ce0003;
+        background: #ce0003;
+        color: white;
+      }
+      .color-selector {
+        margin-bottom: 30px;
+      }
+      .color-options {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .color-option {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 3px solid #ddd;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .color-option:hover,
+      .color-option.selected {
+        border-color: #ce0003;
+        transform: scale(1.1);
+      }
+      .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+      .btn {
+        padding: 15px 30px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #ce0003, #ff1a1d);
+        color: white;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(206, 0, 3, 0.3);
+      }
+      .btn-secondary {
+        background: #f8f9fa;
+        color: #333;
+        border: 2px solid #ddd;
+      }
+      .btn-secondary:hover {
+        background: #e9ecef;
+      }
+      .features {
+        background: #f8f9fa;
+        padding: 40px;
+        text-align: center;
+      }
+      .features h2 {
+        margin-bottom: 30px;
+        color: #333;
+      }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 30px;
+      }
+      .feature {
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .feature-icon {
+        font-size: 2rem;
+        margin-bottom: 15px;
+      }
+      .integration-code {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 20px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 20px 0;
+      }
+      .integration-code pre {
+        margin: 0;
+        font-family: "Courier New", monospace;
+      }
+      @media (max-width: 768px) {
+        .product-section {
+          grid-template-columns: 1fr;
+          gap: 20px;
+          padding: 20px;
+        }
+        .product-title {
+          font-size: 2rem;
+        }
+        .thumbnail-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <h1>NUSENSE TryON - Demo Integration</h1>
+        <p>See how the virtual try-on widget integrates into a product page</p>
+      </div>
+
+      <!-- Product Section -->
+      <div class="product-section">
+        <!-- Product Images -->
+        <div class="product-images">
+          <img
+            src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800"
+            alt="Premium Cotton T-Shirt"
+            class="main-image"
+            id="main-product-image"
+          />
+          <div class="thumbnail-grid">
+            <img
+              src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200"
+              alt="View 1"
+              class="thumbnail"
+              onclick="changeMainImage(this.src)"
+            />
+            <img
+              src="https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=200"
+              alt="View 2"
+              class="thumbnail"
+              onclick="changeMainImage(this.src)"
+            />
+            <img
+              src="https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=200"
+              alt="View 3"
+              class="thumbnail"
+              onclick="changeMainImage(this.src)"
+            />
+            <img
+              src="https://images.unsplash.com/photo-1622470953794-aa9c70b0fb9d?w=200"
+              alt="View 4"
+              class="thumbnail"
+              onclick="changeMainImage(this.src)"
+            />
+          </div>
+        </div>
+
+        <!-- Product Info -->
+        <div class="product-info">
+          <h1 class="product-title">Premium Cotton T-Shirt</h1>
+          <div class="product-price">$49.99</div>
+          <div class="product-description">
+            Premium organic cotton t-shirt with regular fit. Made sustainably
+            with high-quality materials. Perfect for a casual and comfortable
+            style.
+          </div>
+
+          <!-- Size Selector -->
+          <div class="size-selector">
+            <h3>Size</h3>
+            <div class="size-options">
+              <div class="size-option" onclick="selectSize(this)">XS</div>
+              <div class="size-option" onclick="selectSize(this)">S</div>
+              <div class="size-option selected" onclick="selectSize(this)">
+                M
+              </div>
+              <div class="size-option" onclick="selectSize(this)">L</div>
+              <div class="size-option" onclick="selectSize(this)">XL</div>
+              <div class="size-option" onclick="selectSize(this)">XXL</div>
+            </div>
+          </div>
+
+          <!-- Color Selector -->
+          <div class="color-selector">
+            <h3>Color</h3>
+            <div class="color-options">
+              <div
+                class="color-option selected"
+                style="background: #000000"
+                onclick="selectColor(this)"
+              ></div>
+              <div
+                class="color-option"
+                style="background: #ffffff"
+                onclick="selectColor(this)"
+              ></div>
+              <div
+                class="color-option"
+                style="background: #ce0003"
+                onclick="selectColor(this)"
+              ></div>
+              <div
+                class="color-option"
+                style="background: #4b5563"
+                onclick="selectColor(this)"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons">
+            <!-- NUSENSE TryON Button - This is where the magic happens! -->
+            <button id="nusense-tryon-btn" class="btn btn-primary">
+              <span>✨</span>
+              Try Now
+            </button>
+
+            <button class="btn btn-secondary">
+              <span>🛒</span>
+              Add to Cart
+            </button>
+
+            <button class="btn btn-secondary">
+              <span>❤️</span>
+              Add to Favorites
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features Section -->
+      <div class="features">
+        <h2>How NUSENSE TryON Works</h2>
+        <div class="feature-grid">
+          <div class="feature">
+            <div class="feature-icon">📸</div>
+            <h3>1. Upload Your Photo</h3>
+            <p>Take a photo or use one of our demo photos to get started</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">👕</div>
+            <h3>2. Select Clothing</h3>
+            <p>
+              Choose from the product images automatically detected on this page
+            </p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">✨</div>
+            <h3>3. Generate Try-On</h3>
+            <p>Our AI creates a realistic image of you wearing the clothing</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Integration Code Example -->
+      <div style="padding: 40px">
+        <h2>Integration Code</h2>
+        <p>
+          Here's how easy it is to integrate NUSENSE TryON into your Shopify
+          store:
+        </p>
+
+        <div class="integration-code">
+          <pre><code>&lt;!-- 1. Add this script to your theme.liquid --&gt;
+&lt;script&gt;
+  window.NUSENSE_CONFIG = {
+    widgetUrl: 'https://your-domain.com',
+    debug: false,
+    autoDetect: true
+  };
+&lt;/script&gt;
+&lt;script src="https://your-domain.com/nusense-tryon-widget.js" async defer&gt;&lt;/script&gt;
+
+&lt;!-- 2. Add this button to your product template --&gt;
+&lt;button id="nusense-tryon-btn" class="btn btn-primary"&gt;
+  &lt;span&gt;✨&lt;/span&gt; Try Now
+&lt;/button&gt;
+
+&lt;!-- 3. That's it! The widget will automatically: --&gt;
+&lt;!-- - Detect product images --&gt;
+&lt;!-- - Extract product information --&gt;
+&lt;!-- - Handle the complete try-on flow --&gt;
+&lt;!-- - Integrate with your cart --&gt;</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- NUSENSE TryON Widget Integration -->
+    <script>
+      // Product data for the widget
+      window.NUSENSE_PRODUCT_DATA = {
+        title: "Premium Cotton T-Shirt",
+        price: "$49.99",
+        images: [
+          "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800",
+          "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=800",
+          "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=800",
+          "https://images.unsplash.com/photo-1622470953794-aa9c70b0fb9d?w=800",
+        ],
+        description:
+          "Premium organic cotton t-shirt with regular fit. Made sustainably with high-quality materials.",
+        variants: [
+          { name: "Size", value: "M" },
+          { name: "Color", value: "Black" },
+        ],
+        url: window.location.href,
+      };
+
+      // NUSENSE TryON Configuration
+      window.NUSENSE_CONFIG = {
+        widgetUrl: "http://localhost:8080", // Replace with your deployed URL
+        debug: true,
+        autoDetect: true,
+      };
+
+      // Load the NUSENSE TryON widget
+      (function () {
+        const script = document.createElement("script");
+        script.src = "http://localhost:8080/nusense-tryon-widget.js"; // Replace with your deployed URL
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      })();
+
+      // Demo functionality
+      function changeMainImage(src) {
+        document.getElementById("main-product-image").src = src;
+      }
+
+      function selectSize(element) {
+        document
+          .querySelectorAll(".size-option")
+          .forEach((el) => el.classList.remove("selected"));
+        element.classList.add("selected");
+      }
+
+      function selectColor(element) {
+        document
+          .querySelectorAll(".color-option")
+          .forEach((el) => el.classList.remove("selected"));
+        element.classList.add("selected");
+      }
+
+      // Listen for widget events
+      window.addEventListener("message", function (event) {
+        if (event.data.type === "NUSENSE_ADD_TO_CART") {
+          alert("Product added to cart: " + event.data.product.title);
+        }
+      });
+    </script>
+  </body>
+</html>

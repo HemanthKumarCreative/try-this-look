@@ -1,35 +1,35 @@
-# NUSENSE TryON - Guide d'Installation Shopify
+# NUSENSE TryON - Shopify Installation Guide
 
-## Vue d'Ensemble
+## Overview
 
-NUSENSE TryON est une application d'essayage virtuel alimentée par IA conçue pour s'intégrer dans les boutiques Shopify. Cette application permet aux clients de voir comment les vêtements leur vont avant d'acheter, augmentant ainsi les conversions et réduisant les retours.
+NUSENSE TryON is an AI-powered virtual try-on application designed to integrate into Shopify stores. This application allows customers to see how clothing items look on them before purchasing, increasing conversions and reducing returns.
 
-## Fonctionnalités Principales
+## Key Features
 
-- ✨ **Essayage Virtuel IA**: Génération d'images réalistes en 30-60 secondes
-- 📸 **Upload de Photo**: Les clients peuvent télécharger leur photo ou utiliser des démos
-- 👕 **Détection Automatique**: Détecte automatiquement les images de produits sur la page
-- 🛒 **Intégration Panier**: Ajout direct au panier Shopify
-- 📱 **Responsive**: Fonctionne sur desktop, tablette et mobile
-- 🎨 **Personnalisable**: S'adapte au design de votre boutique
+- ✨ **AI Virtual Try-On**: Generate realistic images in 30-60 seconds
+- 📸 **Photo Upload**: Customers can upload their photos or use demo images
+- 👕 **Auto-Detection**: Automatically detects product images from the page
+- 🛒 **Cart Integration**: Direct integration with Shopify cart
+- 📱 **Responsive**: Works on desktop, tablet, and mobile
+- 🎨 **Customizable**: Adapts to your store's design
 
-## Prérequis
+## Prerequisites
 
-- Une boutique Shopify (plan Basic ou supérieur)
-- Accès au code du thème Shopify
-- Backend API déjà configuré (https://try-on-server-v1.onrender.com/api/fashion-photo)
+- A Shopify store (Basic plan or higher)
+- Access to Shopify theme code
+- Backend API already configured (https://try-on-server-v1.onrender.com/api/fashion-photo)
 
-## Installation en Mode Développement
+## Development Mode Installation
 
-### Option 1: Intégration Directe dans le Thème
+### Option 1: Direct Theme Integration
 
-1. **Accédez à l'éditeur de thème Shopify**
-   - Allez dans `Online Store > Themes`
-   - Cliquez sur `Actions > Edit code` sur votre thème actif
+1. **Access Shopify theme editor**
+   - Go to `Online Store > Themes`
+   - Click `Actions > Edit code` on your active theme
 
-2. **Ajoutez le bouton "Essayer Maintenant"**
-   - Ouvrez le fichier `sections/main-product.liquid` ou `product-template.liquid`
-   - Ajoutez ce code où vous voulez que le bouton apparaisse (généralement après le bouton "Ajouter au panier"):
+2. **Add "Try Now" button**
+   - Open the file `sections/main-product.liquid` or `product-template.liquid`
+   - Add this code where you want the button to appear (usually after the "Add to cart" button):
 
    ```liquid
    <button 
@@ -51,184 +51,184 @@ NUSENSE TryON est une application d'essayage virtuel alimentée par IA conçue p
      onmouseover="this.style.transform='scale(1.05)'"
      onmouseout="this.style.transform='scale(1)'"
    >
-     <span>✨</span> Essayer Maintenant
+     <span>✨</span> Try Now
    </button>
    ```
 
-3. **Intégrez le widget**
-   - Créez un nouveau snippet: `snippets/nusense-tryon-widget.liquid`
-   - Ajoutez ce code:
+3. **Integrate the widget**
+   - Create a new snippet: `snippets/nusense-tryon-widget.liquid`
+   - Add this code:
 
    ```liquid
    <div id="nusense-tryon-root"></div>
    
    <script>
      document.getElementById('nusense-tryon-btn').addEventListener('click', function() {
-       // Logique pour ouvrir le widget
+       // Logic to open the widget
        window.postMessage({ type: 'OPEN_TRYON_WIDGET' }, '*');
      });
    </script>
    ```
 
-4. **Incluez le snippet dans votre template produit**
+4. **Include the snippet in your product template**
    ```liquid
    {% render 'nusense-tryon-widget' %}
    ```
 
-### Option 2: Intégration via App Embed
+### Option 2: App Embed Integration
 
-Pour une intégration plus professionnelle, cette application peut être convertie en Shopify App avec App Embed:
+For a more professional integration, this application can be converted to a Shopify App with App Embed:
 
-1. **Configurez l'App Shopify**
-   - Créez une nouvelle app dans le Shopify Partners Dashboard
-   - Configurez les App Extensions avec Theme App Extension
-   - Déployez cette application React comme widget embarqué
+1. **Configure Shopify App**
+   - Create a new app in the Shopify Partners Dashboard
+   - Configure App Extensions with Theme App Extension
+   - Deploy this React application as an embedded widget
 
-2. **Installation depuis l'App Store**
-   - Les marchands pourront installer l'app directement
-   - Activation via le Theme Editor (App Embeds)
+2. **Installation from App Store**
+   - Merchants can install the app directly
+   - Activation via Theme Editor (App Embeds)
 
-## Configuration en Mode Dev
+## Development Mode Configuration
 
-### Démarrage Local
+### Local Startup
 
 ```bash
-# Installer les dépendances
+# Install dependencies
 npm install
 
-# Lancer le serveur de développement
+# Start development server
 npm run dev
 
-# L'application sera accessible sur http://localhost:8080
+# Application will be accessible at http://localhost:8080
 ```
 
-### Test dans une Boutique Dev
+### Testing in a Dev Store
 
-1. **Créez une boutique de développement**
-   - Allez sur partners.shopify.com
-   - Créez une Development Store
+1. **Create a development store**
+   - Go to partners.shopify.com
+   - Create a Development Store
 
-2. **Utilisez ngrok pour exposer votre serveur local**
+2. **Use ngrok to expose your local server**
    ```bash
    ngrok http 8080
    ```
 
-3. **Intégrez l'URL ngrok dans votre boutique**
-   - Utilisez l'URL fournie par ngrok dans votre thème Shopify
-   - Testez le widget en mode développement
+3. **Integrate ngrok URL in your store**
+   - Use the URL provided by ngrok in your Shopify theme
+   - Test the widget in development mode
 
-## Structure du Projet
+## Project Structure
 
 ```
 src/
 ├── components/
-│   ├── TryOnWidget.tsx          # Widget principal
-│   ├── PhotoUpload.tsx          # Upload de photo
-│   ├── ClothingSelection.tsx    # Sélection de vêtements
-│   ├── GenerationProgress.tsx   # Barre de progression
-│   └── ResultDisplay.tsx        # Affichage des résultats
+│   ├── TryOnWidget.tsx          # Main widget
+│   ├── PhotoUpload.tsx          # Photo upload
+│   ├── ClothingSelection.tsx    # Clothing selection
+│   ├── GenerationProgress.tsx   # Progress bar
+│   └── ResultDisplay.tsx        # Results display
 ├── services/
-│   └── tryonApi.ts             # Appels API backend
+│   └── tryonApi.ts             # Backend API calls
 ├── utils/
 │   ├── storage.ts              # LocalStorage management
-│   └── shopifyIntegration.ts   # Extraction produits Shopify
+│   └── shopifyIntegration.ts   # Shopify product extraction
 └── types/
-    └── tryon.ts                # Définitions TypeScript
+    └── tryon.ts                # TypeScript definitions
 ```
 
-## Fonctionnement
+## How It Works
 
-### Flux Utilisateur
+### User Flow
 
-1. **Étape 1**: L'utilisateur clique sur "Essayer Maintenant" sur une page produit
-2. **Étape 2**: Le widget s'ouvre et demande d'uploader une photo
-3. **Étape 3**: L'application détecte automatiquement les images de vêtements
-4. **Étape 4**: L'utilisateur sélectionne un vêtement
-5. **Étape 5**: Clic sur "Générer" lance l'API de génération
-6. **Étape 6**: Affichage du résultat avec options (télécharger, ajouter au panier, partager)
+1. **Step 1**: User clicks "Try Now" on a product page
+2. **Step 2**: Widget opens and asks to upload a photo
+3. **Step 3**: Application automatically detects clothing images
+4. **Step 4**: User selects a clothing item
+5. **Step 5**: Click "Generate" launches the generation API
+6. **Step 6**: Display result with options (download, add to cart, share)
 
-### API Backend
+### Backend API
 
-L'application utilise l'API existante:
+The application uses the existing API:
 
 ```javascript
 POST https://try-on-server-v1.onrender.com/api/fashion-photo
 
 Headers:
 - Content-Type: multipart/form-data
-- Accept-Language: fr-FR,fr;q=0.9,en;q=0.8
-- Content-Language: fr
+- Accept-Language: en-US,en;q=0.9
+- Content-Language: en
 
 Body (FormData):
-- personImage: File (photo de la personne)
-- clothingImage: Blob (image du vêtement)
+- personImage: File (person's photo)
+- clothingImage: Blob (clothing image)
 
 Response:
 {
   "status": "success",
-  "image": "data:image/jpeg;base64,..." // Image générée en base64
+  "image": "data:image/jpeg;base64,..." // Generated image in base64
 }
 ```
 
-## Personnalisation
+## Customization
 
-### Couleurs de la Marque
+### Brand Colors
 
-Les couleurs sont définies dans `src/index.css`:
+Colors are defined in `src/index.css`:
 
 ```css
 :root {
-  --primary: 0 99% 40%;      /* #ce0003 - Rouge NUSENSE */
-  --secondary: 0 13% 32%;     /* #564646 - Brun/Gris */
+  --primary: 0 99% 40%;      /* #ce0003 - NUSENSE Red */
+  --secondary: 0 13% 32%;     /* #564646 - Brown/Gray */
 }
 ```
 
-Modifiez ces valeurs pour correspondre à votre marque.
+Modify these values to match your brand.
 
-### Textes et Traductions
+### Texts and Translations
 
-Tous les textes sont en français. Pour ajouter d'autres langues, créez un système de traduction dans `src/i18n/`.
+All texts are in English. To add other languages, create a translation system in `src/i18n/`.
 
-## Sécurité et Performance
+## Security and Performance
 
-### Considérations de Sécurité
+### Security Considerations
 
-- ✅ Les images sont traitées côté serveur
-- ✅ Validation des types de fichiers
-- ✅ Limite de taille de fichier (10MB)
-- ✅ Gestion CORS pour les images externes
+- ✅ Images are processed server-side
+- ✅ File type validation
+- ✅ File size limit (10MB)
+- ✅ CORS handling for external images
 
-### Optimisation Performance
+### Performance Optimization
 
-- ✅ Images lazy-loaded
-- ✅ Compression des images avant upload
-- ✅ Cache des résultats générés
-- ✅ Progress tracking en temps réel
+- ✅ Lazy-loaded images
+- ✅ Image compression before upload
+- ✅ Cache for generated results
+- ✅ Real-time progress tracking
 
-## Dépannage
+## Troubleshooting
 
-### Problèmes Courants
+### Common Issues
 
-**Le bouton n'apparaît pas**
-- Vérifiez que le code est bien ajouté dans le bon fichier template
-- Vérifiez la console pour des erreurs JavaScript
+**Button doesn't appear**
+- Check that the code is properly added in the correct template file
+- Check console for JavaScript errors
 
-**Les images de produits ne sont pas détectées**
-- Assurez-vous d'être sur une page produit Shopify standard
-- Vérifiez que les images ont des dimensions suffisantes (>200x200px)
+**Product images are not detected**
+- Make sure you're on a standard Shopify product page
+- Check that images have sufficient dimensions (>200x200px)
 
-**Erreur de génération**
-- Vérifiez que l'API backend est accessible
-- Vérifiez la console pour des erreurs CORS
-- Assurez-vous que les deux images sont valides
+**Generation error**
+- Check that the backend API is accessible
+- Check console for CORS errors
+- Make sure both images are valid
 
 ## Support
 
-Pour toute question ou problème:
+For any questions or issues:
 - 📧 Email: support@nusense.com
 - 📝 Documentation: https://docs.nusense.com
 - 💬 Discord: https://discord.gg/nusense
 
-## Licence
+## License
 
-© 2024 NUSENSE TryON. Tous droits réservés.
+© 2024 NUSENSE TryON. All rights reserved.

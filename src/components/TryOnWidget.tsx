@@ -1,17 +1,20 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import PhotoUpload from './PhotoUpload';
-import ClothingSelection from './ClothingSelection';
-import GenerationProgress from './GenerationProgress';
-import ResultDisplay from './ResultDisplay';
-import { extractShopifyProductInfo, extractProductImages } from '@/utils/shopifyIntegration';
-import { storage } from '@/utils/storage';
-import { generateTryOn, dataURLToBlob } from '@/services/tryonApi';
-import { TryOnResponse } from '@/types/tryon';
-import { Sparkles, ShoppingBag } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import PhotoUpload from "./PhotoUpload";
+import ClothingSelection from "./ClothingSelection";
+import GenerationProgress from "./GenerationProgress";
+import ResultDisplay from "./ResultDisplay";
+import {
+  extractShopifyProductInfo,
+  extractProductImages,
+} from "@/utils/shopifyIntegration";
+import { storage } from "@/utils/storage";
+import { generateTryOn, dataURLToBlob } from "@/services/tryonApi";
+import { TryOnResponse } from "@/types/tryon";
+import { Sparkles, ShoppingBag } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface TryOnWidgetProps {
   isOpen: boolean;
@@ -49,8 +52,8 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     storage.saveUploadedImage(dataURL);
     setCurrentStep(2);
     toast({
-      title: 'Photo téléchargée',
-      description: 'Maintenant, sélectionnez un vêtement',
+      title: "Photo uploaded",
+      description: "Now select clothing",
     });
   };
 
@@ -58,17 +61,17 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     setSelectedClothing(imageUrl);
     storage.saveClothingUrl(imageUrl);
     toast({
-      title: 'Vêtement sélectionné',
-      description: 'Prêt à générer votre essayage virtuel!',
+      title: "Clothing selected",
+      description: "Ready to generate your virtual try-on!",
     });
   };
 
   const handleGenerate = async () => {
     if (!uploadedImage || !selectedClothing) {
       toast({
-        title: 'Images manquantes',
-        description: 'Veuillez sélectionner votre photo et un vêtement',
-        variant: 'destructive',
+        title: "Missing images",
+        description: "Please select your photo and clothing",
+        variant: "destructive",
       });
       return;
     }
@@ -80,7 +83,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
 
     // Simulate progress
     const progressInterval = setInterval(() => {
-      setProgress(prev => Math.min(prev + 5, 90));
+      setProgress((prev) => Math.min(prev + 5, 90));
     }, 1500);
 
     try {
@@ -88,30 +91,34 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       const clothingResponse = await fetch(selectedClothing);
       const clothingBlob = await clothingResponse.blob();
 
-      const result: TryOnResponse = await generateTryOn(personBlob, clothingBlob);
+      const result: TryOnResponse = await generateTryOn(
+        personBlob,
+        clothingBlob
+      );
 
       clearInterval(progressInterval);
       setProgress(100);
 
-      if (result.status === 'success' && result.image) {
+      if (result.status === "success" && result.image) {
         setGeneratedImage(result.image);
         storage.saveGeneratedImage(result.image);
         setCurrentStep(4);
         toast({
-          title: 'Succès!',
-          description: 'Votre essayage virtuel est prêt!',
+          title: "Success!",
+          description: "Your virtual try-on is ready!",
         });
       } else {
-        throw new Error(result.error_message?.message || 'Erreur de génération');
+        throw new Error(result.error_message?.message || "Generation error");
       }
     } catch (err) {
       clearInterval(progressInterval);
-      const errorMessage = err instanceof Error ? err.message : 'Une erreur inattendue s\'est produite';
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);
       toast({
-        title: 'Erreur',
+        title: "Error",
         description: errorMessage,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
@@ -123,8 +130,8 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     if (productInfo) {
       storage.addToCart(productInfo);
       toast({
-        title: 'Ajouté au panier',
-        description: `${productInfo.name} a été ajouté à votre panier`,
+        title: "Added to cart",
+        description: `${productInfo.name} has been added to your cart`,
       });
     }
   };
@@ -150,13 +157,20 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                 <Sparkles className="w-8 h-8" />
                 <div>
                   <h2 className="text-2xl font-bold">NUSENSE TryON</h2>
-                  <p className="text-sm opacity-90">Essayage Virtuel Alimenté par IA</p>
+                  <p className="text-sm opacity-90">
+                    AI-Powered Virtual Try-On
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">
                 {currentStep > 1 && !isGenerating && (
-                  <Button variant="outline" size="sm" onClick={handleReset} className="bg-white/10 hover:bg-white/20 text-white border-white/30">
-                    Recommencer
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReset}
+                    className="bg-white/10 hover:bg-white/20 text-white border-white/30"
+                  >
+                    Start Over
                   </Button>
                 )}
               </div>
@@ -169,8 +183,8 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
                       currentStep >= step
-                        ? 'bg-white text-primary scale-110'
-                        : 'bg-white/20 text-white/60'
+                        ? "bg-white text-primary scale-110"
+                        : "bg-white/20 text-white/60"
                     }`}
                   >
                     {step}
@@ -178,7 +192,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                   {step < 4 && (
                     <div
                       className={`w-12 h-1 mx-1 rounded transition-all ${
-                        currentStep > step ? 'bg-white' : 'bg-white/20'
+                        currentStep > step ? "bg-white" : "bg-white/20"
                       }`}
                     />
                   )}
@@ -197,7 +211,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
               <div className="space-y-6">
                 {uploadedImage && (
                   <Card className="p-4">
-                    <h3 className="font-semibold mb-2">Votre Photo</h3>
+                    <h3 className="font-semibold mb-2">Your Photo</h3>
                     <img
                       src={uploadedImage}
                       alt="Uploaded"
@@ -217,13 +231,16 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                   size="lg"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
-                  Générer Mon Essayage Virtuel
+                  Generate My Virtual Try-On
                 </Button>
               </div>
             )}
 
             {currentStep === 3 && (
-              <GenerationProgress progress={progress} isGenerating={isGenerating} />
+              <GenerationProgress
+                progress={progress}
+                isGenerating={isGenerating}
+              />
             )}
 
             {currentStep === 4 && generatedImage && (
@@ -238,7 +255,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
               <Card className="p-6 bg-error/10 border-error">
                 <p className="text-error font-medium">{error}</p>
                 <Button onClick={handleReset} className="mt-4">
-                  Réessayer
+                  Try Again
                 </Button>
               </Card>
             )}

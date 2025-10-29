@@ -1,8 +1,8 @@
-import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Loader2, Sparkles } from 'lucide-react';
-import { LOADING_MESSAGES } from '@/types/tryon';
-import { useEffect, useState } from 'react';
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Sparkles } from "lucide-react";
+import { LOADING_MESSAGES } from "@/types/tryon";
+import { useEffect, useState } from "react";
 
 interface GenerationProgressProps {
   progress: number;
@@ -29,9 +29,9 @@ export default function GenerationProgress({
         <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary-light mb-6 animate-pulse">
           <Sparkles className="w-12 h-12 text-white" />
         </div>
-        <h3 className="text-2xl font-bold mb-2">Génération en cours...</h3>
+        <h3 className="text-2xl font-bold mb-2">Generating...</h3>
         <p className="text-muted-foreground">
-          Cela peut prendre entre 30 et 60 secondes
+          This may take between 30 and 60 seconds
         </p>
       </div>
 
@@ -40,8 +40,10 @@ export default function GenerationProgress({
           {/* Progress Bar */}
           <div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium">Progression</span>
-              <span className="text-sm font-bold text-primary">{progress}%</span>
+              <span className="text-sm font-medium">Progress</span>
+              <span className="text-sm font-bold text-primary">
+                {progress}%
+              </span>
             </div>
             <Progress value={progress} className="h-3" />
           </div>
@@ -53,8 +55,8 @@ export default function GenerationProgress({
                 key={step}
                 className={`w-3 h-3 rounded-full transition-all ${
                   step <= Math.floor((progress / 100) * 5) + 1
-                    ? 'bg-primary scale-110'
-                    : 'bg-gray-300'
+                    ? "bg-primary scale-110"
+                    : "bg-gray-300"
                 }`}
               />
             ))}
@@ -64,7 +66,7 @@ export default function GenerationProgress({
           <div className="text-center p-4 bg-muted rounded-lg">
             <div className="flex items-center justify-center gap-2 mb-2">
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
-              <p className="font-medium">Traitement en cours</p>
+              <p className="font-medium">Processing</p>
             </div>
             <p className="text-sm text-muted-foreground animate-pulse">
               {LOADING_MESSAGES[messageIndex]}

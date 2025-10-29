@@ -12,7 +12,7 @@ A powerful AI-powered virtual try-on application for Shopify stores that allows 
 - 🛒 **Cart Integration**: Direct integration with Shopify cart
 - 📱 **Fully Responsive**: Works seamlessly on desktop, tablet, and mobile
 - 🎨 **Customizable**: Brand colors and styling match your store
-- 🌐 **French UI**: Built with French interface (easily customizable)
+- 🌐 **English UI**: Built with English interface (easily customizable)
 - ⚡ **Fast & Efficient**: Optimized for performance with real-time progress tracking
 
 ## 🎯 Use Cases
@@ -113,7 +113,7 @@ All colors are defined in `src/index.css` and can be customized.
     font-weight: 600;
   "
 >
-  ✨ Essayer Maintenant
+  ✨ Try Now
 </button>
 ```
 
