@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import TryOnWidget from "@/components/TryOnWidget";
-import { extractProductImages } from "@/utils/shopifyIntegration";
+import {
+  extractProductImages,
+  initializeImageExtractionListener,
+} from "@/utils/shopifyIntegration";
 import { Sparkles, ShoppingCart, Heart, Share2 } from "lucide-react";
 
 /**
@@ -15,6 +18,9 @@ const ProductDemo = () => {
   const [productImages, setProductImages] = useState<string[]>([]);
 
   useEffect(() => {
+    // Initialize image extraction listener for iframe communication
+    initializeImageExtractionListener();
+
     // Extract real product images from the page
     const images = extractProductImages();
     setProductImages(images);
@@ -79,14 +85,42 @@ const ProductDemo = () => {
                 )}
               </>
             ) : (
-              <Card className="p-8 text-center bg-warning/10 border-warning">
-                <p className="font-semibold text-warning">
-                  No product images detected on this page
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Make sure you're on a Shopify product page with product images
-                </p>
-              </Card>
+              <>
+                {/* Fallback demo images when no product images are detected */}
+                <Card className="overflow-hidden">
+                  <img
+                    src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=600&fit=crop&crop=center"
+                    alt="Premium T-Shirt"
+                    className="w-full h-[600px] object-cover"
+                  />
+                </Card>
+                <div className="grid grid-cols-4 gap-4">
+                  {[
+                    "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&h=200&fit=crop&crop=center",
+                    "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=200&h=200&fit=crop&crop=center",
+                    "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=200&h=200&fit=crop&crop=center",
+                    "https://images.unsplash.com/photo-1576566588028-43ea1fd157cf?w=200&h=200&fit=crop&crop=center",
+                  ].map((img, i) => (
+                    <Card
+                      key={i}
+                      className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary"
+                    >
+                      <img
+                        src={img}
+                        alt={`View ${i + 1}`}
+                        className="w-full h-24 object-cover"
+                      />
+                    </Card>
+                  ))}
+                </div>
+                <Card className="p-4 bg-info/10 border-info">
+                  <p className="text-sm text-info">
+                    <strong>Demo Mode:</strong> Using sample images. In a real
+                    Shopify store, product images would be automatically
+                    detected from the page.
+                  </p>
+                </Card>
+              </>
             )}
           </div>
 

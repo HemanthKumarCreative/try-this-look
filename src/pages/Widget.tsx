@@ -43,6 +43,12 @@ export default function Widget() {
         setProductData(event.data.data);
         setAvailableImages(event.data.data.images || []);
       }
+      if (event.data.type === "NUSENSE_PRODUCT_IMAGES") {
+        const parentImages = event.data.images || [];
+        if (parentImages.length > 0) {
+          setAvailableImages(parentImages);
+        }
+      }
     };
 
     window.addEventListener("message", handleMessage);
@@ -57,6 +63,15 @@ export default function Widget() {
     // Extract product images from current page
     const images = extractProductImages();
     setAvailableImages(images);
+
+    // If we're in an iframe, request images from parent window
+    if (window.parent !== window) {
+      try {
+        window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
+      } catch (error) {
+        console.log("Could not communicate with parent window:", error);
+      }
+    }
 
     // Notify parent that widget is ready
     window.parent.postMessage({ type: "NUSENSE_WIDGET_READY" }, "*");

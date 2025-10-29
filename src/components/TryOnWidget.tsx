@@ -44,8 +44,37 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       // Extract product images from the current page
       const images = extractProductImages();
       setAvailableImages(images);
+
+      // If we're in an iframe, try to get images from parent window
+      if (window.parent !== window) {
+        try {
+          // Request product images from parent window
+          window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
+        } catch (error) {
+          console.log("Could not communicate with parent window:", error);
+        }
+      }
     }
   }, [isOpen]);
+
+  // Listen for messages from parent window
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === "NUSENSE_PRODUCT_IMAGES") {
+        const parentImages = event.data.images || [];
+        if (parentImages.length > 0) {
+          setAvailableImages(parentImages);
+          toast({
+            title: "Images loaded",
+            description: `Found ${parentImages.length} product images from the website`,
+          });
+        }
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [toast]);
 
   const handlePhotoUpload = (dataURL: string) => {
     setUploadedImage(dataURL);

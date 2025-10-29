@@ -8,7 +8,7 @@
 
   // Configuration
   const CONFIG = {
-    widgetUrl: "https://try-this-look.vercel.app",
+    widgetUrl: "http://localhost:8081",
     buttonId: "nusense-tryon-btn",
     widgetId: "nusense-tryon-widget",
     version: "1.0.0",
@@ -21,9 +21,8 @@
 
   // Utility functions
   function log(message, ...args) {
-    if (window.NUSENSE_DEBUG) {
-      console.log(`[NUSENSE TryON] ${message}`, ...args);
-    }
+    // Always log for debugging
+    console.log(`[NUSENSE TryON] ${message}`, ...args);
   }
 
   function createButton() {
@@ -225,13 +224,22 @@
         }
       }
 
-      // Product images
+      // Product images - comprehensive extraction
       const imageSelectors = [
         ".product-photos img",
         ".product-images img",
         "[data-product-image]",
         ".product-gallery img",
+        ".product__media img",
+        ".product-image img",
+        ".main-image",
+        ".thumbnail",
         'img[alt*="product" i]',
+        'img[alt*="T-Shirt" i]',
+        'img[alt*="Premium" i]',
+        'img[class*="product"]',
+        'img[class*="main"]',
+        'img[class*="thumbnail"]',
       ];
 
       for (const selector of imageSelectors) {
@@ -240,12 +248,34 @@
           if (
             img.src &&
             !img.src.includes("placeholder") &&
+            !img.src.includes("logo") &&
+            !img.src.includes("icon") &&
             !data.images.includes(img.src)
           ) {
             data.images.push(img.src);
+            log("Found product image:", img.src);
           }
         });
       }
+
+      // Also extract from all img elements as fallback
+      const allImages = document.querySelectorAll("img");
+      allImages.forEach((img) => {
+        if (
+          img.src &&
+          !img.src.includes("placeholder") &&
+          !img.src.includes("logo") &&
+          !img.src.includes("icon") &&
+          !img.src.includes("badge") &&
+          !img.src.includes("payment") &&
+          !img.src.includes("social") &&
+          !data.images.includes(img.src) &&
+          (img.naturalWidth > 100 || img.width > 100) // Only images that are reasonably sized
+        ) {
+          data.images.push(img.src);
+          log("Found additional image:", img.src);
+        }
+      });
 
       // Product description
       const descSelectors = [
@@ -358,6 +388,20 @@
           break;
         case "NUSENSE_WIDGET_READY":
           log("Widget is ready");
+          break;
+        case "NUSENSE_REQUEST_IMAGES":
+          // Send product images to widget
+          const productData = extractProductData();
+          if (widgetIframe) {
+            widgetIframe.contentWindow.postMessage(
+              {
+                type: "NUSENSE_PRODUCT_IMAGES",
+                images: productData.images,
+              },
+              CONFIG.widgetUrl
+            );
+            log("Sent product images to widget:", productData.images);
+          }
           break;
       }
     });
