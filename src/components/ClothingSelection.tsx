@@ -6,7 +6,6 @@ interface ClothingSelectionProps {
   images: string[];
   selectedImage: string | null;
   onSelect: (imageUrl: string) => void;
-  isRealImages?: boolean;
   onRefreshImages?: () => void;
 }
 
@@ -14,7 +13,6 @@ export default function ClothingSelection({
   images,
   selectedImage,
   onSelect,
-  isRealImages = true,
   onRefreshImages,
 }: ClothingSelectionProps) {
   if (images.length === 0) {
@@ -41,11 +39,6 @@ export default function ClothingSelection({
           <p className="text-xs text-muted-foreground">
             Found {images.length} clothing image{images.length !== 1 ? "s" : ""}{" "}
             on this page
-            {!isRealImages && (
-              <span className="block text-warning">
-                (Using demo images - no product images detected)
-              </span>
-            )}
           </p>
           {onRefreshImages && (
             <Button

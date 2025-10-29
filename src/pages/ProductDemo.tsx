@@ -17,17 +17,7 @@ const ProductDemo = () => {
   useEffect(() => {
     // Extract real product images from the page
     const images = extractProductImages();
-    if (images.length > 0) {
-      setProductImages(images);
-    } else {
-      // Fallback to demo images if no real images found
-      setProductImages([
-        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800",
-        "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=200",
-        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=200",
-        "https://images.unsplash.com/photo-1622470953794-aa9c70b0fb9d?w=200",
-      ]);
-    }
+    setProductImages(images);
   }, []);
 
   return (
@@ -62,30 +52,41 @@ const ProductDemo = () => {
         <div className="grid md:grid-cols-2 gap-12">
           {/* Product Images */}
           <div className="space-y-4">
-            {productImages.length > 0 && (
-              <Card className="overflow-hidden">
-                <img
-                  src={productImages[0]}
-                  alt="Premium T-Shirt"
-                  className="w-full h-[600px] object-cover"
-                />
+            {productImages.length > 0 ? (
+              <>
+                <Card className="overflow-hidden">
+                  <img
+                    src={productImages[0]}
+                    alt="Premium T-Shirt"
+                    className="w-full h-[600px] object-cover"
+                  />
+                </Card>
+                {productImages.length > 1 && (
+                  <div className="grid grid-cols-4 gap-4">
+                    {productImages.slice(1, 5).map((img, i) => (
+                      <Card
+                        key={i}
+                        className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary"
+                      >
+                        <img
+                          src={img}
+                          alt={`View ${i + 1}`}
+                          className="w-full h-24 object-cover"
+                        />
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <Card className="p-8 text-center bg-warning/10 border-warning">
+                <p className="font-semibold text-warning">
+                  No product images detected on this page
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Make sure you're on a Shopify product page with product images
+                </p>
               </Card>
-            )}
-            {productImages.length > 1 && (
-              <div className="grid grid-cols-4 gap-4">
-                {productImages.slice(1, 5).map((img, i) => (
-                  <Card
-                    key={i}
-                    className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary"
-                  >
-                    <img
-                      src={img}
-                      alt={`View ${i + 1}`}
-                      className="w-full h-24 object-cover"
-                    />
-                  </Card>
-                ))}
-              </div>
             )}
           </div>
 
