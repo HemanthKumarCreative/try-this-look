@@ -564,7 +564,7 @@ function extractJSONLDImages(): string[] {
   } catch (e) {
     console.error('Error extracting JSON-LD images:', e);
   }
-  
+
   return images;
 }
 

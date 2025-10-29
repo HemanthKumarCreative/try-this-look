@@ -5,7 +5,10 @@ import PhotoUpload from "@/components/PhotoUpload";
 import ClothingSelection from "@/components/ClothingSelection";
 import GenerationProgress from "@/components/GenerationProgress";
 import ResultDisplay from "@/components/ResultDisplay";
-// Images now come from the parent page via postMessage
+import {
+  extractShopifyProductInfo,
+  extractProductImages,
+} from "@/utils/shopifyIntegration";
 import { storage } from "@/utils/storage";
 import { generateTryOn, dataURLToBlob } from "@/services/tryonApi";
 import { TryOnResponse } from "@/types/tryon";
@@ -50,6 +53,10 @@ export default function Widget() {
       setUploadedImage(savedImage);
       setCurrentStep(2);
     }
+
+    // Extract product images from current page
+    const images = extractProductImages();
+    setAvailableImages(images);
 
     // Notify parent that widget is ready
     window.parent.postMessage({ type: "NUSENSE_WIDGET_READY" }, "*");
@@ -163,10 +170,15 @@ export default function Widget() {
   };
 
   const handleRefreshImages = () => {
-    window.parent.postMessage({ type: "NUSENSE_REQUEST_PRODUCT_DATA" }, "*");
+    const images = extractProductImages();
+    setAvailableImages(images);
     toast({
-      title: "Request sent",
-      description: "Requesting product images from the page...",
+      title: "Images refreshed",
+      description:
+        images.length > 0
+          ? `Found ${images.length} product images`
+          : "No product images found on this page",
+      variant: images.length > 0 ? "default" : "destructive",
     });
   };
 

@@ -6,7 +6,10 @@ import PhotoUpload from "./PhotoUpload";
 import ClothingSelection from "./ClothingSelection";
 import GenerationProgress from "./GenerationProgress";
 import ResultDisplay from "./ResultDisplay";
-import { extractShopifyProductInfo } from "@/utils/shopifyIntegration";
+import {
+  extractShopifyProductInfo,
+  extractProductImages,
+} from "@/utils/shopifyIntegration";
 import { storage } from "@/utils/storage";
 import { generateTryOn, dataURLToBlob } from "@/services/tryonApi";
 import { TryOnResponse } from "@/types/tryon";
@@ -38,22 +41,11 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         setCurrentStep(2);
       }
 
-      // Request product images from parent page
-      window.parent.postMessage({ type: "NUSENSE_REQUEST_PRODUCT_DATA" }, "*");
+      // Extract product images from the current page
+      const images = extractProductImages();
+      setAvailableImages(images);
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    // Listen for messages from parent window
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === "NUSENSE_PRODUCT_DATA") {
-        setAvailableImages(event.data.data.images || []);
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
 
   const handlePhotoUpload = (dataURL: string) => {
     setUploadedImage(dataURL);
@@ -145,10 +137,15 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   };
 
   const handleRefreshImages = () => {
-    window.parent.postMessage({ type: "NUSENSE_REQUEST_PRODUCT_DATA" }, "*");
+    const images = extractProductImages();
+    setAvailableImages(images);
     toast({
-      title: "Request sent",
-      description: "Requesting product images from the page...",
+      title: "Images refreshed",
+      description:
+        images.length > 0
+          ? `Found ${images.length} product images`
+          : "No product images found on this page",
+      variant: images.length > 0 ? "default" : "destructive",
     });
   };
 

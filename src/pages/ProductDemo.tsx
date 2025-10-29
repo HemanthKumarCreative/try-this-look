@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import TryOnWidget from "@/components/TryOnWidget";
+import { extractProductImages } from "@/utils/shopifyIntegration";
 import { Sparkles, ShoppingCart, Heart, Share2 } from "lucide-react";
 
 /**
@@ -14,14 +15,9 @@ const ProductDemo = () => {
   const [productImages, setProductImages] = useState<string[]>([]);
 
   useEffect(() => {
-    // For demo purposes, use hardcoded product images
-    // In real implementation, these would come from the actual product page
-    setProductImages([
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800",
-      "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=200",
-      "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=200",
-      "https://images.unsplash.com/photo-1622470953794-aa9c70b0fb9d?w=200",
-    ]);
+    // Extract real product images from the page
+    const images = extractProductImages();
+    setProductImages(images);
   }, []);
 
   return (
