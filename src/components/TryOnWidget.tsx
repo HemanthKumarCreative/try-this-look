@@ -1,0 +1,250 @@
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import PhotoUpload from './PhotoUpload';
+import ClothingSelection from './ClothingSelection';
+import GenerationProgress from './GenerationProgress';
+import ResultDisplay from './ResultDisplay';
+import { extractShopifyProductInfo, extractProductImages } from '@/utils/shopifyIntegration';
+import { storage } from '@/utils/storage';
+import { generateTryOn, dataURLToBlob } from '@/services/tryonApi';
+import { TryOnResponse } from '@/types/tryon';
+import { Sparkles, ShoppingBag } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+interface TryOnWidgetProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [selectedClothing, setSelectedClothing] = useState<string | null>(null);
+  const [availableImages, setAvailableImages] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      // Load saved session
+      const savedImage = storage.getUploadedImage();
+      if (savedImage) {
+        setUploadedImage(savedImage);
+        setCurrentStep(2);
+      }
+
+      // Extract product images
+      const images = extractProductImages();
+      setAvailableImages(images);
+    }
+  }, [isOpen]);
+
+  const handlePhotoUpload = (dataURL: string) => {
+    setUploadedImage(dataURL);
+    storage.saveUploadedImage(dataURL);
+    setCurrentStep(2);
+    toast({
+      title: 'Photo téléchargée',
+      description: 'Maintenant, sélectionnez un vêtement',
+    });
+  };
+
+  const handleClothingSelect = (imageUrl: string) => {
+    setSelectedClothing(imageUrl);
+    storage.saveClothingUrl(imageUrl);
+    toast({
+      title: 'Vêtement sélectionné',
+      description: 'Prêt à générer votre essayage virtuel!',
+    });
+  };
+
+  const handleGenerate = async () => {
+    if (!uploadedImage || !selectedClothing) {
+      toast({
+        title: 'Images manquantes',
+        description: 'Veuillez sélectionner votre photo et un vêtement',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+    setProgress(0);
+    setCurrentStep(3);
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setProgress(prev => Math.min(prev + 5, 90));
+    }, 1500);
+
+    try {
+      const personBlob = await dataURLToBlob(uploadedImage);
+      const clothingResponse = await fetch(selectedClothing);
+      const clothingBlob = await clothingResponse.blob();
+
+      const result: TryOnResponse = await generateTryOn(personBlob, clothingBlob);
+
+      clearInterval(progressInterval);
+      setProgress(100);
+
+      if (result.status === 'success' && result.image) {
+        setGeneratedImage(result.image);
+        storage.saveGeneratedImage(result.image);
+        setCurrentStep(4);
+        toast({
+          title: 'Succès!',
+          description: 'Votre essayage virtuel est prêt!',
+        });
+      } else {
+        throw new Error(result.error_message?.message || 'Erreur de génération');
+      }
+    } catch (err) {
+      clearInterval(progressInterval);
+      const errorMessage = err instanceof Error ? err.message : 'Une erreur inattendue s\'est produite';
+      setError(errorMessage);
+      toast({
+        title: 'Erreur',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleAddToCart = () => {
+    const productInfo = extractShopifyProductInfo();
+    if (productInfo) {
+      storage.addToCart(productInfo);
+      toast({
+        title: 'Ajouté au panier',
+        description: `${productInfo.name} a été ajouté à votre panier`,
+      });
+    }
+  };
+
+  const handleReset = () => {
+    setCurrentStep(1);
+    setUploadedImage(null);
+    setSelectedClothing(null);
+    setGeneratedImage(null);
+    setError(null);
+    setProgress(0);
+    storage.clearSession();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        <div className="bg-gradient-to-br from-background via-background to-muted">
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-primary text-primary-foreground p-6 rounded-t-lg shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-8 h-8" />
+                <div>
+                  <h2 className="text-2xl font-bold">NUSENSE TryON</h2>
+                  <p className="text-sm opacity-90">Essayage Virtuel Alimenté par IA</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {currentStep > 1 && !isGenerating && (
+                  <Button variant="outline" size="sm" onClick={handleReset} className="bg-white/10 hover:bg-white/20 text-white border-white/30">
+                    Recommencer
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Progress Steps */}
+            <div className="mt-6 flex items-center justify-center gap-2">
+              {[1, 2, 3, 4].map((step) => (
+                <div key={step} className="flex items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                      currentStep >= step
+                        ? 'bg-white text-primary scale-110'
+                        : 'bg-white/20 text-white/60'
+                    }`}
+                  >
+                    {step}
+                  </div>
+                  {step < 4 && (
+                    <div
+                      className={`w-12 h-1 mx-1 rounded transition-all ${
+                        currentStep > step ? 'bg-white' : 'bg-white/20'
+                      }`}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 space-y-6">
+            {currentStep === 1 && (
+              <PhotoUpload onPhotoUpload={handlePhotoUpload} />
+            )}
+
+            {currentStep === 2 && (
+              <div className="space-y-6">
+                {uploadedImage && (
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Votre Photo</h3>
+                    <img
+                      src={uploadedImage}
+                      alt="Uploaded"
+                      className="w-32 h-32 object-cover rounded-lg mx-auto"
+                    />
+                  </Card>
+                )}
+                <ClothingSelection
+                  images={availableImages}
+                  selectedImage={selectedClothing}
+                  onSelect={handleClothingSelect}
+                />
+                <Button
+                  onClick={handleGenerate}
+                  disabled={!selectedClothing || isGenerating}
+                  className="w-full bg-primary hover:bg-primary-dark text-primary-foreground text-lg py-6"
+                  size="lg"
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Générer Mon Essayage Virtuel
+                </Button>
+              </div>
+            )}
+
+            {currentStep === 3 && (
+              <GenerationProgress progress={progress} isGenerating={isGenerating} />
+            )}
+
+            {currentStep === 4 && generatedImage && (
+              <ResultDisplay
+                generatedImage={generatedImage}
+                onAddToCart={handleAddToCart}
+                onTryAnother={handleReset}
+              />
+            )}
+
+            {error && (
+              <Card className="p-6 bg-error/10 border-error">
+                <p className="text-error font-medium">{error}</p>
+                <Button onClick={handleReset} className="mt-4">
+                  Réessayer
+                </Button>
+              </Card>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
