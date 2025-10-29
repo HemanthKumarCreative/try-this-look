@@ -29,6 +29,7 @@ export default function Widget() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedClothing, setSelectedClothing] = useState<string | null>(null);
   const [availableImages, setAvailableImages] = useState<string[]>([]);
+  const [isRealImages, setIsRealImages] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +59,16 @@ export default function Widget() {
     const images = extractProductImages();
     if (images.length > 0) {
       setAvailableImages(images);
+      setIsRealImages(true);
+    } else {
+      // Fallback to demo images if no real images found
+      setAvailableImages([
+        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200",
+        "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=200",
+        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=200",
+        "https://images.unsplash.com/photo-1622470953794-aa9c70b0fb9d?w=200",
+      ]);
+      setIsRealImages(false);
     }
 
     // Notify parent that widget is ready
@@ -171,6 +182,25 @@ export default function Widget() {
     window.parent.postMessage({ type: "NUSENSE_CLOSE_WIDGET" }, "*");
   };
 
+  const handleRefreshImages = () => {
+    const images = extractProductImages();
+    if (images.length > 0) {
+      setAvailableImages(images);
+      setIsRealImages(true);
+      toast({
+        title: "Images refreshed",
+        description: `Found ${images.length} product images`,
+      });
+    } else {
+      setIsRealImages(false);
+      toast({
+        title: "No images found",
+        description: "Using demo images",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleReset = () => {
     setCurrentStep(1);
     setUploadedImage(null);
@@ -260,6 +290,8 @@ export default function Widget() {
               images={availableImages}
               selectedImage={selectedClothing}
               onSelect={handleClothingSelect}
+              isRealImages={isRealImages}
+              onRefreshImages={handleRefreshImages}
             />
             <Button
               onClick={handleGenerate}

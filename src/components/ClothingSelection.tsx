@@ -1,16 +1,21 @@
 import { Card } from "@/components/ui/card";
-import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Check, RefreshCw } from "lucide-react";
 
 interface ClothingSelectionProps {
   images: string[];
   selectedImage: string | null;
   onSelect: (imageUrl: string) => void;
+  isRealImages?: boolean;
+  onRefreshImages?: () => void;
 }
 
 export default function ClothingSelection({
   images,
   selectedImage,
   onSelect,
+  isRealImages = true,
+  onRefreshImages,
 }: ClothingSelectionProps) {
   if (images.length === 0) {
     return (
@@ -32,6 +37,28 @@ export default function ClothingSelection({
         <p className="text-muted-foreground">
           Choose the clothing you want to try on
         </p>
+        <div className="flex items-center justify-center gap-2 mt-1">
+          <p className="text-xs text-muted-foreground">
+            Found {images.length} clothing image{images.length !== 1 ? "s" : ""}{" "}
+            on this page
+            {!isRealImages && (
+              <span className="block text-warning">
+                (Using demo images - no product images detected)
+              </span>
+            )}
+          </p>
+          {onRefreshImages && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRefreshImages}
+              className="h-6 w-6 p-0"
+              title="Refresh images"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

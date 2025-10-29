@@ -425,6 +425,9 @@ export function extractProductImages(): string[] {
     }
   });
 
+  // Debug: Log detected images
+  console.log('NUSENSE: Detected product images:', images);
+  
   return images;
 }
 

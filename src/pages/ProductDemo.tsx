@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import TryOnWidget from "@/components/TryOnWidget";
+import { extractProductImages } from "@/utils/shopifyIntegration";
 import { Sparkles, ShoppingCart, Heart, Share2 } from "lucide-react";
 
 /**
@@ -11,6 +12,23 @@ import { Sparkles, ShoppingCart, Heart, Share2 } from "lucide-react";
 const ProductDemo = () => {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [productImages, setProductImages] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Extract real product images from the page
+    const images = extractProductImages();
+    if (images.length > 0) {
+      setProductImages(images);
+    } else {
+      // Fallback to demo images if no real images found
+      setProductImages([
+        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800",
+        "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=200",
+        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=200",
+        "https://images.unsplash.com/photo-1622470953794-aa9c70b0fb9d?w=200",
+      ]);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -44,32 +62,31 @@ const ProductDemo = () => {
         <div className="grid md:grid-cols-2 gap-12">
           {/* Product Images */}
           <div className="space-y-4">
-            <Card className="overflow-hidden">
-              <img
-                src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800"
-                alt="Premium T-Shirt"
-                className="w-full h-[600px] object-cover"
-              />
-            </Card>
-            <div className="grid grid-cols-4 gap-4">
-              {[
-                "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200",
-                "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=200",
-                "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=200",
-                "https://images.unsplash.com/photo-1622470953794-aa9c70b0fb9d?w=200",
-              ].map((img, i) => (
-                <Card
-                  key={i}
-                  className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary"
-                >
-                  <img
-                    src={img}
-                    alt={`View ${i + 1}`}
-                    className="w-full h-24 object-cover"
-                  />
-                </Card>
-              ))}
-            </div>
+            {productImages.length > 0 && (
+              <Card className="overflow-hidden">
+                <img
+                  src={productImages[0]}
+                  alt="Premium T-Shirt"
+                  className="w-full h-[600px] object-cover"
+                />
+              </Card>
+            )}
+            {productImages.length > 1 && (
+              <div className="grid grid-cols-4 gap-4">
+                {productImages.slice(1, 5).map((img, i) => (
+                  <Card
+                    key={i}
+                    className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary"
+                  >
+                    <img
+                      src={img}
+                      alt={`View ${i + 1}`}
+                      className="w-full h-24 object-cover"
+                    />
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
