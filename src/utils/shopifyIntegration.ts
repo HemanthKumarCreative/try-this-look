@@ -236,28 +236,343 @@ function generateProductId(): string {
 
 /**
  * Extract all product images from the page
+ * This comprehensive function detects images from multiple sources:
+ * - Regular img tags (src, data-src, data-lazy-src, srcset)
+ * - Background images in CSS
+ * - Shopify product JSON data
+ * - Shopify-specific gallery/carousel elements
+ * - JSON-LD structured data
  */
 export function extractProductImages(): string[] {
   const images: string[] = [];
   const seenUrls = new Set<string>();
 
-  // Find all images that might be product images
+  // Helper to add image if valid and not duplicate
+  const addImage = (url: string, metadata?: { width?: number; height?: number; alt?: string }) => {
+    if (!url || seenUrls.has(url)) return;
+    
+    const cleanUrl = cleanImageUrl(url);
+    if (!cleanUrl || seenUrls.has(cleanUrl)) return;
+    
+    if (isValidProductImageUrl(cleanUrl, metadata)) {
+      images.push(cleanUrl);
+      seenUrls.add(cleanUrl);
+    }
+  };
+
+  // 1. Extract from Shopify Product JSON (most reliable)
+  const shopifyProductData = extractShopifyProductJSON();
+  if (shopifyProductData?.images) {
+    if (Array.isArray(shopifyProductData.images)) {
+      shopifyProductData.images.forEach((img: any) => {
+        if (typeof img === 'string') {
+          addImage(img);
+        } else if (img.src || img.url || img.original) {
+          addImage(img.src || img.url || img.original);
+        }
+      });
+    }
+  }
+
+  // 2. Extract from JSON-LD structured data
+  const jsonLdImages = extractJSONLDImages();
+  jsonLdImages.forEach(img => addImage(img));
+
+  // 3. Extract from all img elements (including lazy-loaded)
   const imgElements = document.querySelectorAll('img');
-  
   imgElements.forEach(img => {
-    const src = img.src || img.dataset.src;
-    if (src && !seenUrls.has(src) && isValidProductImage(img, src)) {
-      images.push(src);
-      seenUrls.add(src);
+    // Check multiple source attributes
+    const sources = [
+      img.src,
+      img.dataset.src,
+      img.dataset.lazySrc,
+      img.dataset.originalSrc,
+      img.dataset.productImage,
+      img.currentSrc, // For srcset
+      img.getAttribute('data-original'),
+      img.getAttribute('data-lazy'),
+    ].filter(Boolean) as string[];
+
+    // Extract from srcset
+    if (img.srcset) {
+      const srcsetUrls = parseSrcset(img.srcset);
+      sources.push(...srcsetUrls);
+    }
+
+    sources.forEach(src => {
+      addImage(src, {
+        width: img.naturalWidth || img.width,
+        height: img.naturalHeight || img.height,
+        alt: img.alt,
+      });
+    });
+  });
+
+  // 4. Extract from Shopify-specific selectors
+  const shopifySelectors = [
+    '.product__media img',
+    '.product-image img',
+    '.product-gallery img',
+    '.product-photos img',
+    '.product__media-wrapper img',
+    '.product-single__media img',
+    '[data-product-image] img',
+    '[data-product-single-media-group] img',
+    '.product-images img',
+    '.product-media img',
+    '.flickity-slider img',
+    '.swiper-slide img',
+    '.carousel img',
+    '.product-thumbnails img',
+    '.thumbnail img',
+  ];
+
+  shopifySelectors.forEach(selector => {
+    document.querySelectorAll(selector).forEach((img: Element) => {
+      if (img instanceof HTMLImageElement) {
+        const sources = [
+          img.src,
+          img.dataset.src,
+          img.dataset.lazySrc,
+          img.currentSrc,
+        ].filter(Boolean) as string[];
+        
+        sources.forEach(src => {
+          addImage(src, {
+            width: img.naturalWidth || img.width,
+            height: img.naturalHeight || img.height,
+            alt: img.alt,
+          });
+        });
+      }
+    });
+  });
+
+  // 5. Extract background images from CSS
+  const bgImageElements = document.querySelectorAll('[style*="background-image"], [class*="product"], [class*="gallery"]');
+  bgImageElements.forEach(el => {
+    const style = window.getComputedStyle(el);
+    const bgImage = style.backgroundImage;
+    if (bgImage && bgImage !== 'none') {
+      const urlMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+      if (urlMatch && urlMatch[1]) {
+        addImage(urlMatch[1], {
+          width: el instanceof HTMLElement ? el.offsetWidth : 0,
+          height: el instanceof HTMLElement ? el.offsetHeight : 0,
+        });
+      }
+    }
+
+    // Also check data attributes for background images
+    ['data-bg', 'data-background', 'data-src', 'data-image'].forEach(attr => {
+      const bgUrl = el.getAttribute(attr);
+      if (bgUrl) {
+        addImage(bgUrl);
+      }
+    });
+  });
+
+  // 6. Extract from picture elements and source tags
+  document.querySelectorAll('picture source').forEach(source => {
+    if (source instanceof HTMLSourceElement) {
+      if (source.srcset) {
+        const srcsetUrls = parseSrcset(source.srcset);
+        srcsetUrls.forEach(url => addImage(url));
+      }
+      if (source.src) {
+        addImage(source.src);
+      }
+    }
+  });
+
+  // 7. Extract from link tags with rel="image_src" or product image relationships
+  document.querySelectorAll('link[rel*="image"], link[rel*="product"]').forEach(link => {
+    const href = link.getAttribute('href');
+    if (href) {
+      addImage(href);
+    }
+  });
+
+  // 8. Extract from meta tags
+  document.querySelectorAll('meta[property*="image"], meta[name*="image"]').forEach(meta => {
+    const content = meta.getAttribute('content');
+    if (content) {
+      addImage(content);
+    }
+  });
+
+  // 9. Look for images in data attributes of containers
+  document.querySelectorAll('[data-images], [data-product-images], [data-gallery]').forEach(el => {
+    const imagesAttr = el.getAttribute('data-images') || 
+                      el.getAttribute('data-product-images') || 
+                      el.getAttribute('data-gallery');
+    if (imagesAttr) {
+      try {
+        const parsed = JSON.parse(imagesAttr);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((img: any) => {
+            if (typeof img === 'string') {
+              addImage(img);
+            } else if (img.src || img.url) {
+              addImage(img.src || img.url);
+            }
+          });
+        }
+      } catch (e) {
+        // Not JSON, treat as comma-separated
+        imagesAttr.split(',').forEach(url => addImage(url.trim()));
+      }
     }
   });
 
   return images;
 }
 
-function isValidProductImage(img: HTMLImageElement, src: string): boolean {
-  // Filter out logos, icons, and small images
-  if (img.width < 200 || img.height < 200) return false;
+/**
+ * Clean and normalize image URL
+ */
+function cleanImageUrl(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  
+  try {
+    // Remove query parameters that resize images (keep quality if present)
+    const urlObj = new URL(url, window.location.href);
+    
+    // Keep only important query params
+    const keepParams = ['quality', 'format'];
+    const params = new URLSearchParams();
+    
+    for (const [key, value] of urlObj.searchParams.entries()) {
+      if (keepParams.includes(key.toLowerCase())) {
+        params.set(key, value);
+      }
+    }
+    
+    urlObj.search = params.toString();
+    
+    // Convert to absolute URL
+    return urlObj.href;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Parse srcset attribute to extract URLs
+ */
+function parseSrcset(srcset: string): string[] {
+  const urls: string[] = [];
+  const entries = srcset.split(',');
+  
+  entries.forEach(entry => {
+    const parts = entry.trim().split(/\s+/);
+    if (parts[0]) {
+      urls.push(parts[0]);
+    }
+  });
+
+  return urls;
+}
+
+/**
+ * Extract images from Shopify product JSON in script tags
+ */
+function extractShopifyProductJSON(): any {
+  try {
+    // Shopify often includes product data in script tags
+    const scripts = document.querySelectorAll('script[type="application/json"]');
+    for (const script of scripts) {
+      try {
+        const data = JSON.parse(script.textContent || '{}');
+        if (data.product && data.product.images) {
+          return data.product;
+        }
+        if (data.product?.media) {
+          return data.product;
+        }
+      } catch (e) {
+        // Continue to next script
+      }
+    }
+
+    // Check for Shopify.product or window.product
+    if (typeof (window as any).Shopify !== 'undefined' && (window as any).Shopify.product) {
+      return (window as any).Shopify.product;
+    }
+    if ((window as any).product) {
+      return (window as any).product;
+    }
+  } catch (e) {
+    console.error('Error extracting Shopify product JSON:', e);
+  }
+  
+  return null;
+}
+
+/**
+ * Extract images from JSON-LD structured data
+ */
+function extractJSONLDImages(): string[] {
+  const images: string[] = [];
+  
+  try {
+    const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+    jsonLdScripts.forEach(script => {
+      try {
+        const data = JSON.parse(script.textContent || '{}');
+        
+        // Handle different JSON-LD structures
+        if (data['@type'] === 'Product') {
+          if (data.image) {
+            if (Array.isArray(data.image)) {
+              images.push(...data.image.filter((img: any) => typeof img === 'string'));
+            } else if (typeof data.image === 'string') {
+              images.push(data.image);
+            } else if (data.image.url) {
+              images.push(data.image.url);
+            }
+          }
+          
+          // Check for offers with images
+          if (data.offers && Array.isArray(data.offers)) {
+            data.offers.forEach((offer: any) => {
+              if (offer.image) images.push(offer.image);
+            });
+          }
+        }
+        
+        // Handle GraphQL responses
+        if (data.product && data.product.images) {
+          const productImages = data.product.images;
+          if (Array.isArray(productImages)) {
+            productImages.forEach((img: any) => {
+              if (typeof img === 'string') {
+                images.push(img);
+              } else if (img.url || img.src || img.originalSrc) {
+                images.push(img.url || img.src || img.originalSrc);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        // Continue to next script
+      }
+    });
+  } catch (e) {
+    console.error('Error extracting JSON-LD images:', e);
+  }
+  
+  return images;
+}
+
+/**
+ * Validate if an image URL is likely a product image
+ */
+function isValidProductImageUrl(url: string, metadata?: { width?: number; height?: number; alt?: string }): boolean {
+  if (!url) return false;
+  
+  const lowerUrl = url.toLowerCase();
+  const lowerAlt = (metadata?.alt || '').toLowerCase();
   
   // Filter out common non-product image patterns
   const excludePatterns = [
@@ -268,15 +583,51 @@ function isValidProductImage(img: HTMLImageElement, src: string): boolean {
     'trust',
     'review',
     'star',
+    'avatar',
+    'user',
+    'profile',
+    'social',
+    'facebook',
+    'twitter',
+    'instagram',
+    'pinterest',
+    'google',
+    'analytics',
+    'tracking',
+    'pixel',
+    'spacer',
+    'blank',
+    'placeholder',
+    '1x1',
+    'pixel.gif',
+    'transparent',
+    '.svg', // Exclude SVG for product images (usually icons/logos)
   ];
 
-  const lowerSrc = src.toLowerCase();
-  const lowerAlt = (img.alt || '').toLowerCase();
-  
   for (const pattern of excludePatterns) {
-    if (lowerSrc.includes(pattern) || lowerAlt.includes(pattern)) {
+    if (lowerUrl.includes(pattern) || lowerAlt.includes(pattern)) {
       return false;
     }
+  }
+
+  // Accept common image formats
+  const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif'];
+  const hasValidExtension = validExtensions.some(ext => lowerUrl.includes(ext));
+  
+  // Check size if metadata available
+  if (metadata) {
+    const { width, height } = metadata;
+    // Skip very small images (likely icons)
+    if (width && height && width < 150 && height < 150) {
+      return false;
+    }
+  }
+
+  // Must be a valid URL
+  try {
+    new URL(url, window.location.href);
+  } catch {
+    return false;
   }
 
   return true;
