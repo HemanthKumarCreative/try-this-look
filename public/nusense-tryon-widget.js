@@ -103,30 +103,7 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.3);
     `;
 
-    // Close button
-    const closeButton = document.createElement("button");
-    closeButton.innerHTML = "×";
-    closeButton.style.cssText = `
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: rgba(255, 255, 255, 0.9);
-      border: none;
-      border-radius: 4px;
-      width: 40px;
-      height: 40px;
-      font-size: 24px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000000;
-    `;
-
-    closeButton.addEventListener("click", closeWidget);
-
     widget.appendChild(iframe);
-    widget.appendChild(closeButton);
     document.body.appendChild(widget);
 
     widgetIframe = iframe;
@@ -406,19 +383,9 @@
       }
     });
 
-    // Close on escape key
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && isWidgetOpen) {
-        closeWidget();
-      }
-    });
-
-    // Close on outside click
-    document.addEventListener("click", function (event) {
-      if (isWidgetOpen && event.target.id === CONFIG.widgetId) {
-        closeWidget();
-      }
-    });
+    // Note: Closing is controlled from inside the iframe via the header close button
+    // which posts a message (NUSENSE_CLOSE_WIDGET). We intentionally do not
+    // close on Escape or outside clicks to ensure a single, explicit close control.
   }
 
   function handleAddToCart(product) {

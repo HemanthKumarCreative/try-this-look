@@ -144,3 +144,35 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Slim, clean scrollbars */
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--gray-400)) transparent;
+}
+
+/* WebKit */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--gray-300));
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.dark * {
+  scrollbar-color: hsl(var(--gray-600)) transparent;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--gray-600));
+}
