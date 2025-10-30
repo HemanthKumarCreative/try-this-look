@@ -30,7 +30,7 @@ const Index = () => {
             <div className="flex items-center justify-center">
               <img src="/assets/NUSENSE_LOGO.svg" alt="NUSENSE" className="h-10 w-auto" />
             </div>
-            <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-full shadow-lg">
+            <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded shadow-lg">
               <Sparkles className="w-5 h-5 text-primary" />
               <span className="font-semibold text-primary">
                 AI-Powered Virtual Try-On
@@ -82,7 +82,7 @@ const Index = () => {
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <Card className="text-center hover:shadow-xl transition-shadow">
               <CardHeader>
-                <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded flex items-center justify-center">
                   <ImageIcon className="w-8 h-8 text-primary" />
                 </div>
                 <CardTitle>1. Upload Your Photo</CardTitle>
@@ -94,7 +94,7 @@ const Index = () => {
 
             <Card className="text-center hover:shadow-xl transition-shadow">
               <CardHeader>
-                <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded flex items-center justify-center">
                   <Shirt className="w-8 h-8 text-primary" />
                 </div>
                 <CardTitle>2. Select Clothing</CardTitle>
@@ -106,7 +106,7 @@ const Index = () => {
 
             <Card className="text-center hover:shadow-xl transition-shadow">
               <CardHeader>
-                <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded flex items-center justify-center">
                   <Zap className="w-8 h-8 text-primary" />
                 </div>
                 <CardTitle>3. Generate Your Try-On</CardTitle>
@@ -162,7 +162,7 @@ const Index = () => {
               >
                 <div className="flex gap-4">
                   <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
+                    <div className="w-12 h-12 bg-success/10 rounded flex items-center justify-center">
                       <benefit.icon className="w-6 h-6 text-success" />
                     </div>
                   </div>
@@ -228,7 +228,7 @@ const Index = () => {
                       Add this code to your Shopify theme where you want the
                       button to appear (usually in the product.liquid file):
                     </p>
-                    <pre className="bg-gray-100 p-4 rounded-lg text-xs overflow-x-auto">
+                    <pre className="bg-gray-100 p-4 rounded text-xs overflow-x-auto">
                       {`<button id="nusense-tryon-btn" class="btn">
   <span>✨</span> Try Now
 </button>`}
@@ -237,7 +237,7 @@ const Index = () => {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
+                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded flex items-center justify-center font-bold">
                     2
                   </div>
                   <div>
@@ -250,7 +250,7 @@ const Index = () => {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
+                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded flex items-center justify-center font-bold">
                     3
                   </div>
                   <div>
@@ -263,7 +263,7 @@ const Index = () => {
                 </div>
               </div>
 
-              <div className="bg-info/10 border border-info rounded-lg p-4">
+              <div className="bg-info/10 border border-info rounded p-4">
                 <p className="text-sm">
                   <strong>💡 Note:</strong> For complete integration, contact
                   our support team who will help you configure the app in your

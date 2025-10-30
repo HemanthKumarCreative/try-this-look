@@ -245,7 +245,7 @@ export default function Widget() {
           {[1, 2, 3, 4].map((step) => (
             <div key={step} className="flex items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold transition-all text-sm ${
+                className={`w-8 h-8 rounded flex items-center justify-center font-bold transition-all text-sm ${
                   currentStep >= step
                     ? "bg-white text-primary scale-110"
                     : "bg-white/20 text-white/60"
@@ -277,7 +277,7 @@ export default function Widget() {
                 <img
                   src={uploadedImage}
                   alt="Uploaded"
-                  className="w-24 h-24 object-cover rounded-lg mx-auto"
+                  className="w-24 h-24 object-cover rounded mx-auto"
                 />
               </Card>
             )}

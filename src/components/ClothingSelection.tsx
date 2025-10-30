@@ -74,7 +74,7 @@ export default function ClothingSelection({
               />
               {selectedImage === image && (
                 <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                  <div className="w-12 h-12 rounded bg-primary text-primary-foreground flex items-center justify-center">
                     <Check className="w-8 h-8" />
                   </div>
                 </div>

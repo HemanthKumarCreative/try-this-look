@@ -26,7 +26,7 @@ export default function GenerationProgress({
   return (
     <div className="space-y-6 py-12">
       <div className="text-center">
-        <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary-light mb-6 animate-pulse">
+        <div className="inline-flex items-center justify-center w-24 h-24 rounded bg-gradient-to-br from-primary to-primary-light mb-6 animate-pulse">
           <Sparkles className="w-12 h-12 text-white" />
         </div>
         <h3 className="text-2xl font-bold mb-2">Generating...</h3>
@@ -53,7 +53,7 @@ export default function GenerationProgress({
             {[1, 2, 3, 4, 5].map((step) => (
               <div
                 key={step}
-                className={`w-3 h-3 rounded-full transition-all ${
+                className={`w-3 h-3 rounded transition-all ${
                   step <= Math.floor((progress / 100) * 5) + 1
                     ? "bg-primary scale-110"
                     : "bg-gray-300"
@@ -63,7 +63,7 @@ export default function GenerationProgress({
           </div>
 
           {/* Status Message */}
-          <div className="text-center p-4 bg-muted rounded-lg">
+          <div className="text-center p-4 bg-muted rounded">
             <div className="flex items-center justify-center gap-2 mb-2">
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
               <p className="font-medium">Processing</p>

@@ -45,7 +45,7 @@
       color: white;
       border: none;
       padding: 12px 24px;
-      border-radius: 8px;
+      border-radius: 4px;
       cursor: pointer;
       font-weight: 600;
       font-size: 16px;
@@ -98,7 +98,7 @@
       max-width: 1200px;
       height: 90vh;
       border: none;
-      border-radius: 12px;
+      border-radius: 4px;
       background: white;
       box-shadow: 0 20px 40px rgba(0,0,0,0.3);
     `;
@@ -112,7 +112,7 @@
       right: 20px;
       background: rgba(255, 255, 255, 0.9);
       border: none;
-      border-radius: 50%;
+      border-radius: 4px;
       width: 40px;
       height: 40px;
       font-size: 24px;

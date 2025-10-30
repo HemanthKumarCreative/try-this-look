@@ -61,7 +61,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
           className="text-center"
           onClick={() => fileInputRef.current?.click()}
         >
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="w-20 h-20 mx-auto mb-4 rounded bg-primary/10 flex items-center justify-center">
             <Upload className="w-10 h-10 text-primary" />
           </div>
           <p className="text-lg font-semibold mb-2">Click to upload a photo</p>
@@ -110,7 +110,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
             <img
               src={preview}
               alt="Preview"
-              className="w-24 h-24 object-cover rounded-lg"
+              className="w-24 h-24 object-cover rounded"
             />
             <div className="flex-1">
               <p className="font-semibold text-success">

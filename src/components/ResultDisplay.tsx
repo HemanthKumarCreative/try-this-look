@@ -41,7 +41,7 @@ export default function ResultDisplay({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-success/20 text-success rounded-full mb-4">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-success/20 text-success rounded mb-4">
           <span className="text-2xl">🎉</span>
           <span className="font-semibold">Try-On Successful!</span>
         </div>

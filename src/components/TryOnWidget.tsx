@@ -193,10 +193,10 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
         <div className="bg-gradient-to-br from-background via-background to-muted">
           {/* Header */}
-          <div className="sticky top-0 z-10 bg-primary text-primary-foreground p-6 rounded-t-lg shadow-lg">
+          <div className="sticky top-0 z-10 bg-primary text-primary-foreground p-6 rounded-t shadow-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-white rounded-md px-2 py-1 shadow-sm">
+                <div className="bg-white rounded px-2 py-1 shadow-sm">
                   <img src="/assets/NUSENSE_LOGO.svg" alt="NUSENSE" className="h-8 w-auto" />
                 </div>
                 <span className="sr-only">NUSENSE TryON</span>
@@ -220,7 +220,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
               {[1, 2, 3, 4].map((step) => (
                 <div key={step} className="flex items-center">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                    className={`w-10 h-10 rounded flex items-center justify-center font-bold transition-all ${
                       currentStep >= step
                         ? "bg-white text-primary scale-110"
                         : "bg-white/20 text-white/60"
@@ -254,7 +254,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                     <img
                       src={uploadedImage}
                       alt="Uploaded"
-                      className="w-32 h-32 object-cover rounded-lg mx-auto"
+                      className="w-32 h-32 object-cover rounded mx-auto"
                     />
                   </Card>
                 )}
