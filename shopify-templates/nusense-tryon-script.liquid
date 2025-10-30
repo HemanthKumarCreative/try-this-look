@@ -7,7 +7,7 @@
   <script>
     // NUSENSE TryON Configuration
     window.NUSENSE_CONFIG = {
-      widgetUrl: '{{ settings.nusense_widget_url | default: "http://localhost:8081" }}',
+      widgetUrl: '{{ settings.nusense_widget_url | default: "https://try-this-look.vercel.app" }}',
       debug: {{ settings.nusense_debug | default: true }},
       buttonSelector: '{{ settings.nusense_button_selector | default: "#nusense-tryon-btn" }}',
       autoDetect: {{ settings.nusense_auto_detect | default: true }},
@@ -174,7 +174,7 @@
     })();
   </script>
 
-  <script src="{{ settings.nusense_widget_url | default: 'http://localhost:8081' }}/nusense-tryon-widget.js" 
+  <script src="{{ settings.nusense_widget_url | default: 'https://try-this-look.vercel.app' }}/nusense-tryon-widget.js" 
           async 
           defer
           onload="console.log('NUSENSE TryON Widget loaded successfully')"

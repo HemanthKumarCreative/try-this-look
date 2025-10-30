@@ -99,7 +99,7 @@ npm install
 # Start development server
 npm run dev
 
-# Application will be accessible at http://localhost:8080
+# Application will be accessible at https://try-this-look.vercel.app
 ```
 
 ### Testing in a Dev Store

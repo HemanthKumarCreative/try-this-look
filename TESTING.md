@@ -18,7 +18,7 @@
    ```
 
 4. **Open the test page:**
-   - Go to http://localhost:8081/test
+   - Go to https://try-this-look.vercel.app/test
    - This page simulates a Shopify product page with 4 product images
    - Click the "✨ Try Virtually with AI" button
    - The widget should open and show the 4 product images from the test page
@@ -53,8 +53,8 @@
 - Make sure images have proper `alt` attributes and `data-product-image="true"`
 
 ### Widget Not Opening
-- Check if the widget script is loading: http://localhost:8081/nusense-tryon-widget.js
-- Verify the iframe URL: http://localhost:8081/widget
+- Check if the widget script is loading: https://try-this-look.vercel.app/nusense-tryon-widget.js
+- Verify the iframe URL: https://try-this-look.vercel.app/widget
 - Check for CORS errors in console
 
 ### Images Not Showing in Widget

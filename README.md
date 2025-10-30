@@ -52,7 +52,7 @@ Perfect for:
 
 4. **Open in browser**
    ```
-   http://localhost:8080
+   https://try-this-look.vercel.app
    ```
 
 ## 📦 Project Structure
