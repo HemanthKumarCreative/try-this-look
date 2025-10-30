@@ -81,7 +81,7 @@
       top: 0;
       left: 0;
       width: 100%;
-      height: 100%;
+      height: 100vh;
       background: rgba(0, 0, 0, 0.8);
       z-index: 999999;
       display: none;
@@ -296,6 +296,9 @@
   function initializeWidget() {
     log("Initializing NUSENSE TryON Widget v" + CONFIG.version);
 
+    // Inject responsive styles for various device widths
+    injectResponsiveStyles();
+
     // Create and attach button
     const button = createButton();
 
@@ -437,3 +440,85 @@
     config: CONFIG,
   };
 })();
+
+// Adds responsive CSS targeting the widget/button without relying on inline overrides
+function injectResponsiveStyles() {
+  try {
+    const styleId = "nusense-tryon-responsive-styles";
+    if (document.getElementById(styleId)) return;
+
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.type = "text/css";
+    style.appendChild(
+      document.createTextNode(`
+/* Responsive adjustments for NUSENSE TryON */
+#${"nusense-tryon-widget"} {
+  /* Respect iOS safe areas */
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-right: max(12px, env(safe-area-inset-right));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+}
+
+/* Prefer dynamic viewport if supported */
+@supports (height: 100dvh) {
+  #${"nusense-tryon-widget"} { height: 100dvh; }
+}
+
+/* Iframe container sizing */
+#${"nusense-tryon-widget"} > iframe {
+  width: 100% !important;
+  max-width: min(1200px, 100%) !important;
+  height: min(90vh, 100%) !important;
+  border-radius: 8px !important;
+}
+
+/* Button: fluid sizing and full-width on small screens */
+#${"nusense-tryon-btn"}, .nusense-tryon-button {
+  font-size: clamp(14px, 1.6vw, 16px) !important;
+  padding: 12px 20px !important;
+}
+
+@media (max-width: 768px) {
+  #${"nusense-tryon-btn"}, .nusense-tryon-button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 14px 18px !important;
+  }
+
+  #${"nusense-tryon-widget"} > iframe {
+    height: 88vh !important;
+    border-radius: 6px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #${"nusense-tryon-btn"}, .nusense-tryon-button {
+    font-size: clamp(13px, 4vw, 15px) !important;
+    padding: 14px 16px !important;
+  }
+
+  #${"nusense-tryon-widget"} {
+    padding: 8px !important;
+  }
+  #${"nusense-tryon-widget"} > iframe {
+    height: 86vh !important;
+    border-radius: 4px !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .nusense-tryon-button { transition: none !important; }
+}
+      `)
+    );
+
+    document.head.appendChild(style);
+  } catch (e) {
+    try {
+      console.warn("[NUSENSE TryON] Failed to inject responsive styles", e);
+    } catch {}
+  }
+}

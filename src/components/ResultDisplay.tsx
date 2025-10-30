@@ -53,7 +53,7 @@ export default function ResultDisplay({
 
       {/* Result Image */}
       <Card className="overflow-hidden">
-        <div className="relative aspect-[3/4] max-w-md mx-auto">
+        <div className="relative aspect-[3/4] max-w-full sm:max-w-md mx-auto">
           <img
             src={generatedImage}
             alt="Generated Try-On Result"
@@ -63,7 +63,7 @@ export default function ResultDisplay({
       </Card>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <Button
           onClick={onAddToCart}
           className="bg-primary hover:bg-primary-dark text-primary-foreground"
@@ -78,7 +78,7 @@ export default function ResultDisplay({
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {navigator.share && (
           <Button onClick={handleShare} variant="outline" size="lg">
             <Share2 className="w-5 h-5 mr-2" />
@@ -89,7 +89,7 @@ export default function ResultDisplay({
           onClick={onTryAnother}
           variant="secondary"
           size="lg"
-          className={navigator.share ? "" : "col-span-2"}
+          className={navigator.share ? "" : "sm:col-span-2"}
         >
           <RefreshCw className="w-5 h-5 mr-2" />
           Try Something Else

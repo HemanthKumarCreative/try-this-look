@@ -61,24 +61,28 @@ const ProductDemo = () => {
             {productImages.length > 0 ? (
               <>
                 <Card className="overflow-hidden">
-                  <img
-                    src={productImages[0]}
-                    alt="Premium T-Shirt"
-                    className="w-full h-[600px] object-cover"
-                  />
+                  <div className="w-full aspect-[4/3] sm:aspect-[3/2]">
+                    <img
+                      src={productImages[0]}
+                      alt="Premium T-Shirt"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </Card>
                 {productImages.length > 1 && (
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                     {productImages.slice(1, 5).map((img, i) => (
                       <Card
                         key={i}
                         className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary"
                       >
-                        <img
-                          src={img}
-                          alt={`View ${i + 1}`}
-                          className="w-full h-24 object-cover"
-                        />
+                        <div className="w-full aspect-square">
+                          <img
+                            src={img}
+                            alt={`View ${i + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       </Card>
                     ))}
                   </div>
@@ -88,13 +92,15 @@ const ProductDemo = () => {
               <>
                 {/* Fallback demo images when no product images are detected */}
                 <Card className="overflow-hidden">
-                  <img
-                    src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=600&fit=crop&crop=center"
-                    alt="Premium T-Shirt"
-                    className="w-full h-[600px] object-cover"
-                  />
+                  <div className="w-full aspect-[4/3] sm:aspect-[3/2]">
+                    <img
+                      src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=600&fit=crop&crop=center"
+                      alt="Premium T-Shirt"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </Card>
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                   {[
                     "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&h=200&fit=crop&crop=center",
                     "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=200&h=200&fit=crop&crop=center",
@@ -105,11 +111,13 @@ const ProductDemo = () => {
                       key={i}
                       className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary"
                     >
-                      <img
-                        src={img}
-                        alt={`View ${i + 1}`}
-                        className="w-full h-24 object-cover"
-                      />
+                      <div className="w-full aspect-square">
+                        <img
+                          src={img}
+                          alt={`View ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     </Card>
                   ))}
                 </div>
@@ -207,7 +215,7 @@ const ProductDemo = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-3">
+              <div className="space-y-3">
               <Button
                 onClick={() => setIsWidgetOpen(true)}
                 variant="tryon"
@@ -223,7 +231,7 @@ const ProductDemo = () => {
                 Add to Cart
               </Button>
 
-              <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Button variant="outline" size="lg">
                   <Heart className="w-5 h-5" />
                   Favorites

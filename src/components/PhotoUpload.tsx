@@ -56,15 +56,15 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
       </div>
 
       {/* Upload Area */}
-      <Card className="p-8 border-2 border-dashed border-gray-300 hover:border-primary transition-all cursor-pointer">
+      <Card className="p-6 sm:p-8 border-2 border-dashed border-gray-300 hover:border-primary transition-all cursor-pointer">
         <div
           className="text-center"
           onClick={() => fileInputRef.current?.click()}
         >
-          <div className="w-20 h-20 mx-auto mb-4 rounded bg-primary/10 flex items-center justify-center">
-            <Upload className="w-10 h-10 text-primary" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded bg-primary/10 flex items-center justify-center">
+            <Upload className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
           </div>
-          <p className="text-lg font-semibold mb-2">Click to upload a photo</p>
+          <p className="text-base sm:text-lg font-semibold mb-2">Click to upload a photo</p>
           <p className="text-sm text-muted-foreground mb-4">
             or drag and drop your file here
           </p>
@@ -87,7 +87,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
           <ImageIcon className="w-5 h-5" />
           Or try with a demo photo
         </h4>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
           {DEMO_PHOTOS.map((photo, index) => (
             <Card
               key={index}
@@ -97,7 +97,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
               <img
                 src={photo}
                 alt={`Demo ${index + 1}`}
-                className="w-full h-40 object-cover"
+                className="w-full aspect-square object-cover"
               />
             </Card>
           ))}
@@ -106,11 +106,11 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
 
       {preview && (
         <Card className="p-4 bg-success/10 border-success">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <img
               src={preview}
               alt="Preview"
-              className="w-24 h-24 object-cover rounded"
+              className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded"
             />
             <div className="flex-1">
               <p className="font-semibold text-success">

@@ -24,18 +24,18 @@ export default function GenerationProgress({
   }, []);
 
   return (
-    <div className="space-y-6 py-12">
+    <div className="space-y-6 py-8 sm:py-12">
       <div className="text-center">
-        <div className="inline-flex items-center justify-center w-24 h-24 rounded bg-gradient-to-br from-primary to-primary-light mb-6 animate-pulse">
-          <Sparkles className="w-12 h-12 text-white" />
+        <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded bg-gradient-to-br from-primary to-primary-light mb-6 animate-pulse">
+          <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
         </div>
-        <h3 className="text-2xl font-bold mb-2">Generating...</h3>
+        <h3 className="text-xl sm:text-2xl font-bold mb-2">Generating...</h3>
         <p className="text-muted-foreground">
           This may take between 30 and 60 seconds
         </p>
       </div>
 
-      <Card className="p-8">
+      <Card className="p-6 sm:p-8">
         <div className="space-y-6">
           {/* Progress Bar */}
           <div>

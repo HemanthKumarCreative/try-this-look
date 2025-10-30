@@ -214,7 +214,7 @@ export default function Widget() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-white rounded-md px-2 py-1 shadow-sm">
-              <img src="/assets/NUSENSE_LOGO.svg" alt="NUSENSE" className="h-6 w-auto" />
+              <img src="/assets/NUSENSE_LOGO.svg" alt="NUSENSE" className="h-5 sm:h-6 w-auto" />
             </div>
             <span className="sr-only">NUSENSE TryON</span>
           </div>
@@ -245,7 +245,7 @@ export default function Widget() {
           {[1, 2, 3, 4].map((step) => (
             <div key={step} className="flex items-center">
               <div
-                className={`w-8 h-8 rounded flex items-center justify-center font-bold transition-all text-sm ${
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded flex items-center justify-center font-bold transition-all text-sm ${
                   currentStep >= step
                     ? "bg-white text-primary scale-110"
                     : "bg-white/20 text-white/60"
@@ -255,7 +255,7 @@ export default function Widget() {
               </div>
               {step < 4 && (
                 <div
-                  className={`w-8 h-1 mx-1 rounded transition-all ${
+                  className={`w-6 sm:w-8 h-1 mx-1 rounded transition-all ${
                     currentStep > step ? "bg-white" : "bg-white/20"
                   }`}
                 />
@@ -277,7 +277,7 @@ export default function Widget() {
                 <img
                   src={uploadedImage}
                   alt="Uploaded"
-                  className="w-24 h-24 object-cover rounded mx-auto"
+                  className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded mx-auto"
                 />
               </Card>
             )}
