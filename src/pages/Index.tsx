@@ -27,6 +27,9 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
         <div className="container mx-auto px-4 py-20 relative">
           <div className="max-w-4xl mx-auto text-center space-y-8">
+            <div className="flex items-center justify-center">
+              <img src="/assets/NUSENSE_LOGO.svg" alt="NUSENSE" className="h-10 w-auto" />
+            </div>
             <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-full shadow-lg">
               <Sparkles className="w-5 h-5 text-primary" />
               <span className="font-semibold text-primary">
@@ -35,7 +38,7 @@ const Index = () => {
             </div>
 
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight">
-              NUSENSE TryON
+              TryON
               <span className="block text-primary mt-2">Shopify App</span>
             </h1>
 

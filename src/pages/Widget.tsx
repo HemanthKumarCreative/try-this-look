@@ -213,11 +213,8 @@ export default function Widget() {
       <div className="sticky top-0 z-10 bg-primary text-primary-foreground p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Sparkles className="w-6 h-6" />
-            <div>
-              <h2 className="text-xl font-bold">NUSENSE TryON</h2>
-              <p className="text-sm opacity-90">AI-Powered Virtual Try-On</p>
-            </div>
+            <img src="/assets/NUSENSE_LOGO.svg" alt="NUSENSE" className="h-6 w-auto" />
+            <span className="sr-only">NUSENSE TryON</span>
           </div>
           <div className="flex gap-2">
             <Button
