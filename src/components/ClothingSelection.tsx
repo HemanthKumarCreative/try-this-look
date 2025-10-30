@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, RefreshCw } from "lucide-react";
+import { Check } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface ClothingSelectionProps {
   images: string[];
@@ -15,7 +16,14 @@ export default function ClothingSelection({
   onSelect,
   onRefreshImages,
 }: ClothingSelectionProps) {
-  if (images.length === 0) {
+  const [validImages, setValidImages] = useState<string[]>([]);
+
+  // Initialize with provided images; only remove on actual load error
+  useEffect(() => {
+    const unique = Array.from(new Set(images.filter(Boolean)));
+    setValidImages(unique);
+  }, [images]);
+  if (validImages.length === 0 && !selectedImage) {
     return (
       <Card className="p-8 text-center bg-warning/10 border-warning">
         <p className="font-semibold text-warning">
@@ -30,65 +38,56 @@ export default function ClothingSelection({
 
   return (
     <div className="space-y-4">
-      <div className="text-center">
-        <h3 className="text-2xl font-bold mb-2">Select Clothing</h3>
-        <p className="text-muted-foreground">
-          Choose the clothing you want to try on
-        </p>
-        <div className="flex items-center justify-center gap-2 mt-1">
-          <p className="text-xs text-muted-foreground">
-            Found {images.length} clothing image{images.length !== 1 ? "s" : ""}{" "}
-            on this page
-          </p>
-          {onRefreshImages && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRefreshImages}
-              className="h-6 w-6 p-0"
-              title="Refresh images"
-            >
-              <RefreshCw className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
-      </div>
+      {/* Heading intentionally removed per design */}
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {images.slice(0, 9).map((image, index) => (
-          <Card
-            key={index}
-            className={`overflow-hidden cursor-pointer transition-all transform hover:scale-105 relative ${
-              selectedImage === image
-                ? "ring-4 ring-primary shadow-lg scale-105"
-                : "hover:ring-2 hover:ring-primary/50"
-            }`}
-            onClick={() => onSelect(image)}
-          >
-            <div className="aspect-square relative">
-              <img
-                src={image}
-                alt={`Clothing ${index + 1}`}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-              {selectedImage === image && (
-                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                  <div className="w-12 h-12 rounded bg-primary text-primary-foreground flex items-center justify-center">
-                    <Check className="w-8 h-8" />
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
-        ))}
-      </div>
+      {!selectedImage && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {validImages.slice(0, 9).map((image, index) => (
+            <Card
+              key={index}
+              className={`overflow-hidden cursor-pointer transition-all transform hover:scale-105 relative ${
+                selectedImage === image
+                  ? "ring-4 ring-primary shadow-lg scale-105"
+                  : "hover:ring-2 hover:ring-primary/50"
+              }`}
+              onClick={() => onSelect(image)}
+            >
+              <div className="aspect-square relative">
+                <img
+                  src={image}
+                  alt={`Clothing ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={() => {
+                    setValidImages((prev) => prev.filter((u) => u !== image));
+                  }}
+                />
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {selectedImage && (
-        <Card className="p-4 bg-success/10 border-success">
-          <p className="font-semibold text-success text-center">
-            Clothing selected! Click "Generate" to continue
-          </p>
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-semibold">Article Sélectionné</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onSelect("")}
+              className="h-8 px-2"
+            >
+              Effacer
+            </Button>
+          </div>
+          <div className="aspect-[3/4] rounded overflow-hidden border bg-white">
+            <img
+              src={selectedImage}
+              alt="Selected clothing"
+              className="w-full h-full object-contain"
+            />
+          </div>
         </Card>
       )}
     </div>

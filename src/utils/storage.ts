@@ -32,6 +32,10 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.UPLOADED_IMAGE, dataURL);
   },
 
+  clearUploadedImage(): void {
+    localStorage.removeItem(STORAGE_KEYS.UPLOADED_IMAGE);
+  },
+
   getUploadedImage(): string | null {
     return localStorage.getItem(STORAGE_KEYS.UPLOADED_IMAGE);
   },
@@ -46,6 +50,10 @@ export const storage = {
 
   saveClothingUrl(url: string): void {
     localStorage.setItem(STORAGE_KEYS.SELECTED_CLOTHING_URL, url);
+  },
+
+  clearClothingUrl(): void {
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_CLOTHING_URL);
   },
 
   getClothingUrl(): string | null {
