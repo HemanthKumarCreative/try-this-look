@@ -213,7 +213,9 @@ export default function Widget() {
       <div className="sticky top-0 z-10 bg-primary text-primary-foreground p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/assets/NUSENSE_LOGO.svg" alt="NUSENSE" className="h-6 w-auto" />
+            <div className="bg-white rounded-md px-2 py-1 shadow-sm">
+              <img src="/assets/NUSENSE_LOGO.svg" alt="NUSENSE" className="h-6 w-auto" />
+            </div>
             <span className="sr-only">NUSENSE TryON</span>
           </div>
           <div className="flex gap-2">
