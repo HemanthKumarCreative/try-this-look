@@ -61,11 +61,11 @@ const ProductDemo = () => {
             {productImages.length > 0 ? (
               <>
                 <Card className="overflow-hidden">
-                  <div className="w-full aspect-[4/3] sm:aspect-[3/2] bg-muted/30 border border-border flex items-center justify-center shadow-sm">
+                  <div className="w-full bg-muted/30 border border-border flex items-center justify-center shadow-sm">
                     <img
                       src={productImages[0]}
                       alt="Premium T-Shirt"
-                      className="h-full w-auto object-contain"
+                      className="w-full h-auto object-contain"
                     />
                   </div>
                 </Card>
@@ -76,11 +76,11 @@ const ProductDemo = () => {
                         key={i}
                         className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary"
                       >
-                        <div className="w-full aspect-square bg-muted/30 border border-border flex items-center justify-center overflow-hidden">
+                        <div className="w-full bg-muted/30 border border-border flex items-center justify-center overflow-hidden">
                           <img
                             src={img}
                             alt={`View ${i + 1}`}
-                            className="h-full w-auto object-contain"
+                            className="w-full h-auto object-contain"
                           />
                         </div>
                       </Card>
@@ -92,11 +92,11 @@ const ProductDemo = () => {
               <>
                 {/* Fallback demo images when no product images are detected */}
                 <Card className="overflow-hidden">
-                  <div className="w-full aspect-[4/3] sm:aspect-[3/2] bg-muted/30 border border-border flex items-center justify-center shadow-sm">
+                  <div className="w-full bg-muted/30 border border-border flex items-center justify-center shadow-sm">
                     <img
                       src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=600&fit=crop&crop=center"
                       alt="Premium T-Shirt"
-                      className="h-full w-auto object-contain"
+                      className="w-full h-auto object-contain"
                     />
                   </div>
                 </Card>
@@ -111,11 +111,11 @@ const ProductDemo = () => {
                       key={i}
                       className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all duration-200 border-border"
                     >
-                      <div className="w-full aspect-square bg-muted/30 border border-border flex items-center justify-center overflow-hidden">
+                      <div className="w-full bg-muted/30 border border-border flex items-center justify-center overflow-hidden">
                         <img
                           src={img}
                           alt={`View ${i + 1}`}
-                          className="h-full w-auto object-contain"
+                          className="w-full h-auto object-contain"
                         />
                       </div>
                     </Card>

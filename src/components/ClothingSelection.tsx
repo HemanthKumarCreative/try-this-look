@@ -45,7 +45,7 @@ export default function ClothingSelection({
           {validImages.slice(0, 9).map((image, index) => (
             <Card
               key={index}
-              className={`overflow-hidden cursor-pointer transition-all transform hover:scale-105 relative min-h-[100px] sm:min-h-[120px] md:min-h-[140px] ${
+              className={`overflow-hidden cursor-pointer transition-all transform hover:scale-105 relative ${
                 selectedImage === image
                   ? "ring-4 ring-primary shadow-lg scale-105"
                   : "hover:ring-2 hover:ring-primary/50"
@@ -58,11 +58,11 @@ export default function ClothingSelection({
                 if (e.key === "Enter" || e.key === " ") onSelect(image);
               }}
             >
-              <div className="aspect-square relative bg-muted/30 flex items-center justify-center overflow-hidden">
+              <div className="relative bg-muted/30 flex items-center justify-center overflow-hidden">
                 <img
                   src={image}
                   alt={`Clothing ${index + 1}`}
-                  className="h-full w-auto object-contain"
+                  className="w-full h-auto object-contain"
                   loading="lazy"
                   onError={() => {
                     setValidImages((prev) => prev.filter((u) => u !== image));

@@ -289,7 +289,7 @@ const Index = () => {
             AI-Powered Virtual Try-On for Shopify
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground/70">
-            © 2024 NUSENSE TryON. All rights reserved.
+            © {new Date().getFullYear()} NUSENSE TryON. All rights reserved.
           </p>
         </div>
       </footer>

@@ -52,7 +52,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
       <div className="sr-only">Téléchargez votre photo ou utilisez une photo de démonstration</div>
 
       {/* Upload Area */}
-      <Card className="p-4 sm:p-5 md:p-6 lg:p-8 border-2 border-dashed border-primary/30 bg-card hover:border-primary/50 hover:bg-accent/30 transition-all duration-200 cursor-pointer min-h-[140px] sm:min-h-[160px] flex items-center group">
+      <Card className="p-4 sm:p-5 md:p-6 lg:p-8 border-2 border-dashed border-primary/30 bg-card hover:border-primary/50 hover:bg-accent/30 transition-all duration-200 cursor-pointer flex items-center group">
         <div
           className="text-center w-full"
           onClick={() => fileInputRef.current?.click()}
@@ -95,7 +95,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
           {DEMO_PHOTOS.map((photo, index) => (
             <Card
               key={index}
-              className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all transform hover:scale-105 min-h-[100px] sm:min-h-[120px] md:min-h-[140px]"
+              className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all transform hover:scale-105"
               onClick={() => handleDemoPhotoSelect(photo)}
               role="button"
               tabIndex={0}
@@ -104,11 +104,11 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
                 if (e.key === "Enter" || e.key === " ") handleDemoPhotoSelect(photo);
               }}
             >
-              <div className="w-full aspect-square bg-muted/30 flex items-center justify-center overflow-hidden">
+              <div className="w-full bg-muted/30 flex items-center justify-center overflow-hidden">
                 <img
                   src={photo}
                   alt={`Demo ${index + 1}`}
-                  className="h-full w-auto object-contain"
+                  className="w-full h-auto object-contain"
                 />
               </div>
             </Card>
