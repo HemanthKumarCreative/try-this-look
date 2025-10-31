@@ -232,7 +232,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         onInteractOutside={(e) => {
           e.preventDefault();
         }}
-        hideOverlay={isInIframe}
       >
         <div style={{ backgroundColor: '#fef3f3' }}>
           {/* Header */}

@@ -74,40 +74,25 @@
       return widgetIframe;
     }
 
-    const widget = document.createElement("div");
-    widget.id = CONFIG.widgetId;
-    widget.style.cssText = `
+    const iframe = document.createElement("iframe");
+    iframe.id = CONFIG.widgetId;
+    iframe.src = `${CONFIG.widgetUrl}/widget`;
+    iframe.style.cssText = `
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.8);
+      border: none;
+      background: transparent;
       z-index: 999999;
       display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      box-sizing: border-box;
     `;
 
-    const iframe = document.createElement("iframe");
-    iframe.src = `${CONFIG.widgetUrl}/widget`;
-    iframe.style.cssText = `
-      width: 100%;
-      max-width: 1200px;
-      height: 90vh;
-      border: none;
-      border-radius: 4px;
-      background: white;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-    `;
-
-    widget.appendChild(iframe);
-    document.body.appendChild(widget);
+    document.body.appendChild(iframe);
 
     widgetIframe = iframe;
-    return widget;
+    return iframe;
   }
 
   function openWidget() {
@@ -120,7 +105,7 @@
 
     const widget = document.getElementById(CONFIG.widgetId);
     if (widget) {
-      widget.style.display = "flex";
+      widget.style.display = "block";
       isWidgetOpen = true;
       document.body.style.overflow = "hidden";
 
@@ -455,23 +440,12 @@ function injectResponsiveStyles() {
 /* Responsive adjustments for NUSENSE TryON */
 #${"nusense-tryon-widget"} {
   /* Respect iOS safe areas */
-  padding-top: max(12px, env(safe-area-inset-top));
-  padding-right: max(12px, env(safe-area-inset-right));
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
-  padding-left: max(12px, env(safe-area-inset-left));
+  padding: 0 !important;
 }
 
 /* Prefer dynamic viewport if supported */
 @supports (height: 100dvh) {
-  #${"nusense-tryon-widget"} { height: 100dvh; }
-}
-
-/* Iframe container sizing */
-#${"nusense-tryon-widget"} > iframe {
-  width: 100% !important;
-  max-width: min(1200px, 100%) !important;
-  height: min(90vh, 100%) !important;
-  border-radius: 8px !important;
+  #${"nusense-tryon-widget"} { height: 100dvh !important; }
 }
 
 /* Button: fluid sizing and full-width on small screens */
@@ -486,25 +460,12 @@ function injectResponsiveStyles() {
     justify-content: center !important;
     padding: 14px 18px !important;
   }
-
-  #${"nusense-tryon-widget"} > iframe {
-    height: 88vh !important;
-    border-radius: 6px !important;
-  }
 }
 
 @media (max-width: 480px) {
   #${"nusense-tryon-btn"}, .nusense-tryon-button {
     font-size: clamp(13px, 4vw, 15px) !important;
     padding: 14px 16px !important;
-  }
-
-  #${"nusense-tryon-widget"} {
-    padding: 8px !important;
-  }
-  #${"nusense-tryon-widget"} > iframe {
-    height: 86vh !important;
-    border-radius: 4px !important;
   }
 }
 
