@@ -13,10 +13,8 @@ import {
 import { storage } from "@/utils/storage";
 import { generateTryOn, dataURLToBlob } from "@/services/tryonApi";
 import { TryOnResponse } from "@/types/tryon";
-import { Sparkles, ShoppingBag, ShoppingCart } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Sparkles, X, RotateCcw, XCircle } from "lucide-react";
 import StatusBar from "./StatusBar";
-import CartModal from "./CartModal";
 
 interface TryOnWidgetProps {
   isOpen: boolean;
@@ -33,20 +31,13 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const logoImgRef = useRef<HTMLImageElement | null>(null);
-  const [logoRenderedWidth, setLogoRenderedWidth] = useState<number | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(
     "Téléchargez votre photo puis choisissez un article à essayer"
   );
   const [statusVariant, setStatusVariant] = useState<"info" | "error">(
     "info"
   );
-  const [cartCount, setCartCount] = useState<number>(
-    storage.getCartItems().length
-  );
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const INFLIGHT_KEY = 'nusense_tryon_inflight';
 
   useEffect(() => {
@@ -86,18 +77,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     }
   }, [isOpen]);
 
-  // Sync tagline width to exactly match logo width
-  useEffect(() => {
-    const updateWidth = () => {
-      const w = logoImgRef.current?.getBoundingClientRect().width;
-      if (w && Math.round(w) !== logoRenderedWidth) {
-        setLogoRenderedWidth(Math.round(w));
-      }
-    };
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, [logoRenderedWidth]);
+  // No longer needed - using fixed 185px width
 
   // Listen for messages from parent window
   useEffect(() => {
@@ -106,27 +86,19 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         const parentImages = event.data.images || [];
         if (parentImages.length > 0) {
           setAvailableImages(parentImages);
-          toast({
-            title: "Images loaded",
-            description: `Found ${parentImages.length} product images from the website`,
-          });
         }
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [toast]);
+  }, []);
 
   const handlePhotoUpload = (dataURL: string) => {
     setUploadedImage(dataURL);
     storage.saveUploadedImage(dataURL);
     setStatusVariant("info");
     setStatusMessage("Photo chargée. Sélectionnez un vêtement.");
-    toast({
-      title: "Photo chargée",
-      description: "Sélectionnez maintenant un vêtement",
-    });
   };
 
   const handleClothingSelect = (imageUrl: string) => {
@@ -134,19 +106,10 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     storage.saveClothingUrl(imageUrl);
     setStatusVariant("info");
     setStatusMessage("Prêt à générer. Cliquez sur Générer.");
-    toast({
-      title: "Clothing selected",
-      description: "Ready to generate your virtual try-on!",
-    });
   };
 
   const handleGenerate = async () => {
     if (!uploadedImage || !selectedClothing) {
-      toast({
-        title: "Missing images",
-        description: "Please select your photo and clothing",
-        variant: "destructive",
-      });
       setStatusVariant("error");
       setStatusMessage(
         "La génération nécessite une photo et un article sélectionné."
@@ -186,10 +149,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         setCurrentStep(4);
         setStatusVariant("info");
         setStatusMessage("Résultat prêt. Vous pouvez acheter ou télécharger.");
-        toast({
-          title: "Success!",
-          description: "Your virtual try-on is ready!",
-        });
       } else {
         throw new Error(result.error_message?.message || "Generation error");
       }
@@ -200,42 +159,15 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       setError(errorMessage);
       setStatusVariant("error");
       setStatusMessage(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
     } finally {
       setIsGenerating(false);
       try { localStorage.removeItem(INFLIGHT_KEY); } catch {}
     }
   };
 
-  const handleAddToCart = () => {
-    const productInfo = extractShopifyProductInfo();
-    if (productInfo) {
-      storage.addToCart(productInfo);
-      setCartCount(storage.getCartItems().length);
-      setStatusVariant("info");
-      setStatusMessage("Article ajouté au panier.");
-      toast({
-        title: "Added to cart",
-        description: `${productInfo.name} has been added to your cart`,
-      });
-    }
-  };
-
   const handleRefreshImages = () => {
     const images = extractProductImages();
     setAvailableImages(images);
-    toast({
-      title: "Images refreshed",
-      description:
-        images.length > 0
-          ? `Found ${images.length} product images`
-          : "No product images found on this page",
-      variant: images.length > 0 ? "default" : "destructive",
-    });
   };
 
   const handleClearUploadedImage = () => {
@@ -274,94 +206,78 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     }
   }, [isOpen]);
 
-  const handleCheckout = () => {
-    setStatusVariant("info");
-    setStatusMessage("Redirection vers le paiement…");
-    toast({ title: "Checkout", description: "Redirection en cours…" });
-    setTimeout(() => {
-      setStatusMessage("Paiement simulé terminé.");
-    }, 1500);
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-5xl max-h-[90dvh] overflow-y-auto p-0">
-        <div className="bg-[#fff3f4]">
+      <DialogContent 
+        className="w-[100vw] sm:w-[95vw] sm:max-w-5xl max-h-[100dvh] sm:max-h-[90dvh] overflow-y-auto p-0 rounded-none sm:rounded-lg"
+        onInteractOutside={(e) => {
+          e.preventDefault();
+        }}
+      >
+        <div style={{ backgroundColor: '#fef3f3' }}>
           {/* Header */}
-          <div className="sticky top-0 z-10 bg-white/80 backdrop-blur p-4 sm:p-5 border-b">
-            <div className="flex items-center justify-between">
-              <div className="inline-flex flex-col items-center">
-                <img
-                  ref={logoImgRef}
-                  src="/assets/NUSENSE_LOGO.svg"
-                  alt="NUSENSE"
-                  className="h-7 sm:h-8 w-auto"
-                  onLoad={() => {
-                    const w = logoImgRef.current?.getBoundingClientRect().width;
-                    if (w) setLogoRenderedWidth(Math.round(w));
-                  }}
-                />
+          <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 border-b border-border shadow-sm">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="inline-flex flex-col flex-shrink-0" style={{ width: '185px' }}>
+                <span
+                  aria-label="NULOOK"
+                  className="inline-flex items-center tracking-wide leading-none whitespace-nowrap"
+                  style={{ width: '185px', fontSize: '32px', fontWeight: 700 }}
+                >
+                  <span style={{ color: "#ce0003" }}>NU</span>
+                  <span style={{ color: "#564646" }}>LOOK</span>
+                </span>
                 <div
-                  className="mt-1 text-center text-[12px] sm:text-[13px] md:text-sm text-gray-700 leading-tight tracking-[0.01em] font-medium whitespace-nowrap"
-                  style={{ width: logoRenderedWidth ? `${logoRenderedWidth}px` : undefined }}
+                  className="mt-0.5 sm:mt-1 text-left leading-tight tracking-tight whitespace-nowrap"
+                  style={{ width: '185px', fontSize: '12px', color: '#3D3232', fontWeight: 500 }}
                 >
                   Essayage Virtuel Alimenté par IA
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div
-                  className="relative cursor-pointer bg-[#ffe6ea] hover:bg-[#ffd6dd] text-[#d6455b] rounded-md p-2 shadow"
-                  aria-label="Panier"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setIsCartOpen(true)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") setIsCartOpen(true);
-                  }}
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-[#ff465e] text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
-                      {cartCount}
-                    </span>
-                  )}
-                </div>
+              <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3 flex-shrink-0">
                 {!isGenerating && (
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={handleReset}
-                    className="border-[#ffd6dd] text-[#d6455b] hover:bg-[#ffe6ea]"
+                    className="group text-secondary-foreground hover:bg-secondary/80 transition-all duration-200 text-xs sm:text-sm px-3 sm:px-4 h-[44px] sm:h-9 md:h-10 whitespace-nowrap shadow-sm hover:shadow-md gap-2 flex items-center"
+                    aria-label="Réinitialiser"
                   >
-                    Réinitialiser
+                    <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:rotate-[-120deg] duration-500" />
+                    <span>Réinitialiser</span>
                   </Button>
                 )}
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  onClick={onClose}
+                  className="h-[44px] w-[44px] sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-md bg-error text-error-foreground hover:bg-error/90 border-error transition-all duration-200 group shadow-sm hover:shadow-md"
+                  aria-label="Fermer"
+                  title="Fermer"
+                >
+                  <X className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:rotate-90 duration-300" />
+                </Button>
               </div>
             </div>
           </div>
 
           {/* Status Bar */}
-          <div className="px-4 sm:px-6 pt-3">
+          <div className="px-3 sm:px-4 md:px-5 lg:px-6 pt-2 sm:pt-3">
             <StatusBar message={statusMessage} variant={statusVariant} />
           </div>
 
-          {/* Cart Modal */}
-          {isCartOpen && (
-            <CartModal isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} onCheckout={handleCheckout} />
-          )}
-
           {/* Content */}
-          <div className="p-4 sm:p-6 space-y-6">
+          <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-4 sm:space-y-5 md:space-y-6">
             {/* Two-state layout for selection phase */}
             {currentStep <= 2 && !isGenerating && !generatedImage && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
                 {/* Left Panel: Upload / Preview */}
-                <Card className="p-5 border-rose-200 bg-rose-50">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-rose-500 text-white grid place-items-center font-semibold">1</div>
-                    <div>
-                      <h2 className="text-lg font-semibold">Téléchargez Votre Photo</h2>
-                      <p className="text-xs text-muted-foreground">Choisissez une photo claire de vous-même</p>
+                <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">1</div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-base sm:text-lg font-semibold">Téléchargez Votre Photo</h2>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">Choisissez une photo claire de vous-même</p>
                     </div>
                   </div>
 
@@ -370,16 +286,23 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                   )}
 
                   {uploadedImage && (
-                    <div className="space-y-4">
-                      <div className="relative rounded-lg bg-white p-3 border border-rose-300">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold">Votre Photo</h3>
-                          <Button variant="outline" size="sm" onClick={handleClearUploadedImage} className="h-8 px-2">
-                            Effacer
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="relative rounded-lg bg-card p-2 sm:p-3 border border-border shadow-sm">
+                        <div className="flex items-center justify-between mb-2 gap-2">
+                          <h3 className="font-semibold text-sm sm:text-base">Votre Photo</h3>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleClearUploadedImage}
+                            className="group h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm flex-shrink-0 gap-1.5 border-border text-foreground hover:bg-muted hover:border-muted-foreground/20 hover:text-muted-foreground transition-all duration-200"
+                            aria-label="Effacer la photo"
+                          >
+                            <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:scale-110 duration-200" />
+                            <span>Effacer</span>
                           </Button>
                         </div>
-                        <div className="aspect-[3/4] rounded overflow-hidden border bg-white">
-                          <img src={uploadedImage} alt="Uploaded" className="w-full h-full object-contain" />
+                        <div className="aspect-[3/4] rounded overflow-hidden border border-border bg-card flex items-center justify-center shadow-sm">
+                          <img src={uploadedImage} alt="Uploaded" className="h-full w-auto object-contain" />
                         </div>
                       </div>
                     </div>
@@ -387,12 +310,12 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                 </Card>
 
                 {/* Right Panel: Clothing Selection */}
-                <Card className="p-5 border-rose-200 bg-rose-50">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-rose-500 text-white grid place-items-center font-semibold">2</div>
-                    <div>
-                      <h2 className="text-lg font-semibold">Sélectionner un Article de Vêtement</h2>
-                      <p className="text-xs text-muted-foreground">Choisissez n'importe quel article de vêtement de cette page web</p>
+                <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">2</div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-base sm:text-lg font-semibold">Sélectionner un Article de Vêtement</h2>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">Sélectionnez un article de vêtement sur cette page</p>
                     </div>
                   </div>
 
@@ -407,14 +330,14 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
             )}
 
             {currentStep <= 2 && !isGenerating && !generatedImage && (
-              <div className="pt-1">
+              <div className="pt-1 sm:pt-2">
                 <Button
                   onClick={handleGenerate}
                   disabled={!selectedClothing || !uploadedImage || isGenerating}
-                  className="w-full bg-primary hover:bg-primary-dark text-primary-foreground"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11 sm:h-12 md:h-14 text-sm sm:text-base md:text-lg min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Générer l'essayage virtuel"
                 >
-                  <Sparkles className="w-5 h-5 mr-2" />
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                   Générer
                 </Button>
               </div>
@@ -438,9 +361,15 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
             {error && (
               <Card className="p-6 bg-error/10 border-error">
                 <p className="text-error font-medium">{error}</p>
-                <Button onClick={handleReset} className="mt-4">
-                  Try Again
-                </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleReset}
+                    className="group mt-4 gap-2 text-secondary-foreground hover:bg-secondary/80 transition-all duration-200"
+                    aria-label="Réessayer"
+                  >
+                    <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-[-120deg] duration-500" />
+                    <span>Réessayer</span>
+                  </Button>
               </Card>
             )}
           </div>

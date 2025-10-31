@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['var(--font-sans)', 'Helvetica', 'Arial', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -51,6 +54,13 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        chart: {
+          "1": "hsl(var(--chart-1))",
+          "2": "hsl(var(--chart-2))",
+          "3": "hsl(var(--chart-3))",
+          "4": "hsl(var(--chart-4))",
+          "5": "hsl(var(--chart-5))",
+        },
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
@@ -68,7 +78,7 @@ export default {
           foreground: "hsl(var(--info-foreground))",
         },
         sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
+          DEFAULT: "hsl(var(--sidebar))",
           foreground: "hsl(var(--sidebar-foreground))",
           primary: "hsl(var(--sidebar-primary))",
           "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
@@ -82,9 +92,10 @@ export default {
         glow: "var(--shadow-glow)",
       },
       borderRadius: {
-        lg: "0.25rem",
-        md: "0.25rem",
-        sm: "0.25rem",
+        lg: "var(--radius)",
+        md: "var(--radius)",
+        sm: "var(--radius)",
+        DEFAULT: "var(--radius)",
       },
       keyframes: {
         "accordion-down": {
@@ -107,6 +118,7 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "spin-slow": "spin 3s linear infinite",
       },
     },
   },
