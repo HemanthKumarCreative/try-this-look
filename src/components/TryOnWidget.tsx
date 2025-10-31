@@ -206,13 +206,33 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     }
   }, [isOpen]);
 
+  // Check if we're inside an iframe
+  const isInIframe = typeof window !== 'undefined' && window.parent !== window;
+
+  // Handle close - if in iframe, notify parent window
+  const handleClose = () => {
+    if (isInIframe) {
+      // Send message to parent window to close the modal
+      try {
+        window.parent.postMessage(
+          { type: "NUSENSE_CLOSE_WIDGET" },
+          "*"
+        );
+      } catch (error) {
+        console.error("Failed to send close message to parent:", error);
+      }
+    }
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent 
         className="w-[100vw] sm:w-[95vw] sm:max-w-5xl max-h-[100dvh] sm:max-h-[90dvh] overflow-y-auto p-0 rounded-none sm:rounded-lg"
         onInteractOutside={(e) => {
           e.preventDefault();
         }}
+        hideOverlay={isInIframe}
       >
         <div style={{ backgroundColor: '#fef3f3' }}>
           {/* Header */}
@@ -250,7 +270,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                 <Button
                   variant="destructive"
                   size="icon"
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="h-[44px] w-[44px] sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-md bg-error text-error-foreground hover:bg-error/90 border-error transition-all duration-200 group shadow-sm hover:shadow-md"
                   aria-label="Fermer"
                   title="Fermer"
