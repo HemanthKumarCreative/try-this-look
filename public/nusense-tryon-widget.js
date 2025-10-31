@@ -111,6 +111,16 @@
 
       // Send product data to widget
       sendProductData();
+
+      // Ask iframe to open its internal modal (handles subsequent opens)
+      try {
+        if (widgetIframe && widgetIframe.contentWindow) {
+          widgetIframe.contentWindow.postMessage(
+            { type: "NUSENSE_OPEN_MODAL" },
+            CONFIG.widgetUrl
+          );
+        }
+      } catch {}
     }
   }
 
@@ -353,6 +363,16 @@
           break;
         case "NUSENSE_WIDGET_READY":
           log("Widget is ready");
+          // Ensure product data and open command are sent when iframe reports ready
+          try {
+            sendProductData();
+            if (isWidgetOpen && widgetIframe && widgetIframe.contentWindow) {
+              widgetIframe.contentWindow.postMessage(
+                { type: "NUSENSE_OPEN_MODAL" },
+                CONFIG.widgetUrl
+              );
+            }
+          } catch {}
           break;
         case "NUSENSE_REQUEST_IMAGES":
           // Send product images to widget

@@ -23,6 +23,20 @@ export default function Widget() {
     setIsWidgetOpen(true);
   }, []);
 
+  // Respond to parent commands (e.g., re-open modal on subsequent clicks)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // We expect messages from parent (widget loader). No strict origin here due to potential custom domains.
+      const type = (event?.data && (event.data as any).type) as string | undefined;
+      if (!type) return;
+      if (type === "NUSENSE_OPEN_MODAL") {
+        setIsWidgetOpen(true);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
 
   return (
     <div className="min-h-screen bg-background">
