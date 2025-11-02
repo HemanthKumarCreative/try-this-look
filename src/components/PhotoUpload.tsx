@@ -43,7 +43,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
       };
       reader.readAsDataURL(blob);
     } catch (error) {
-      console.error("Error loading demo photo:", error);
+      console.error("Erreur lors du chargement de la photo de démo :", error);
     }
   };
 
@@ -58,7 +58,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
           onClick={() => fileInputRef.current?.click()}
           role="button"
           tabIndex={0}
-          aria-label="Upload your photo"
+          aria-label="Télécharger votre photo"
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
           }}
@@ -99,7 +99,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
               onClick={() => handleDemoPhotoSelect(photo)}
               role="button"
               tabIndex={0}
-              aria-label={`Select demo photo ${index + 1}`}
+              aria-label={`Sélectionner la photo de démo ${index + 1}`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") handleDemoPhotoSelect(photo);
               }}
@@ -107,7 +107,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
               <div className="w-full bg-muted/30 flex items-center justify-center overflow-hidden">
                 <img
                   src={photo}
-                  alt={`Demo ${index + 1}`}
+                  alt={`Démo ${index + 1}`}
                   className="w-full h-auto object-contain"
                 />
               </div>
@@ -122,16 +122,16 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
             <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-muted/30 rounded border border-border flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm">
               <img
                 src={preview}
-                alt="Preview"
+                alt="Aperçu"
                 className="h-full w-auto object-contain"
               />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-success text-sm sm:text-base">
-                Photo uploaded successfully!
+                Photo téléchargée avec succès !
               </p>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                Proceed to the next step to select clothing
+                Passez à l'étape suivante pour sélectionner un vêtement
               </p>
             </div>
           </div>

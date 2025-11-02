@@ -49,18 +49,18 @@ export type ErrorCode =
   | 'NETWORK_ERROR';
 
 export const LOADING_MESSAGES = [
-  "🎯 Preparing your virtual try-on experience...",
-  "📥 Retrieving clothing image from the website...",
-  "🎨 Preparing images for generation...",
-  "💫 Let us work our magic... This may take a moment.",
-  "✨ Finalizing your personalized image...",
-  "🎉 Amazing! Your virtual try-on is ready!"
+  "🎯 Préparation de votre expérience d'essayage virtuel...",
+  "📥 Récupération de l'image du vêtement depuis le site web...",
+  "🎨 Préparation des images pour la génération...",
+  "💫 Laissez-nous faire notre magie... Cela peut prendre un moment.",
+  "✨ Finalisation de votre image personnalisée...",
+  "🎉 Incroyable ! Votre essayage virtuel est prêt !"
 ];
 
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
-  MODEL_TIMEOUT: "Generation is taking longer than expected. Please try again with simpler images or a better internet connection.",
-  MISSING_FILES_ERROR: "Please make sure you have selected both your photo and a clothing item.",
-  SERVER_ERROR: "A technical error occurred. Please try again in a few moments.",
-  CORS_ERROR: "Image loading error. Please try again.",
-  NETWORK_ERROR: "Connection error. Please check your internet connection."
+  MODEL_TIMEOUT: "La génération prend plus de temps que prévu. Veuillez réessayer avec des images plus simples ou une meilleure connexion internet.",
+  MISSING_FILES_ERROR: "Veuillez vous assurer d'avoir sélectionné à la fois votre photo et un article de vêtement.",
+  SERVER_ERROR: "Une erreur technique s'est produite. Veuillez réessayer dans quelques instants.",
+  CORS_ERROR: "Erreur de chargement d'image. Veuillez réessayer.",
+  NETWORK_ERROR: "Erreur de connexion. Veuillez vérifier votre connexion internet."
 };

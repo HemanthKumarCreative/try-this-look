@@ -71,7 +71,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           // Request product images from parent window
           window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
         } catch (error) {
-          console.log("Could not communicate with parent window:", error);
+          console.log("Impossible de communiquer avec la fenêtre parente :", error);
         }
       }
     }
@@ -150,12 +150,12 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         setStatusVariant("info");
         setStatusMessage("Résultat prêt. Vous pouvez acheter ou télécharger.");
       } else {
-        throw new Error(result.error_message?.message || "Generation error");
+        throw new Error(result.error_message?.message || "Erreur de génération");
       }
     } catch (err) {
       clearInterval(progressInterval);
       const errorMessage =
-        err instanceof Error ? err.message : "An unexpected error occurred";
+        err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
       setError(errorMessage);
       setStatusVariant("error");
       setStatusMessage(errorMessage);
@@ -219,7 +219,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           "*"
         );
       } catch (error) {
-        console.error("Failed to send close message to parent:", error);
+        console.error("Échec de l'envoi du message de fermeture au parent :", error);
       }
     }
     onClose();

@@ -29,9 +29,9 @@ export default function GenerationProgress({
         <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary to-primary-light mb-4 sm:mb-5 md:mb-6 animate-pulse shadow-lg">
           <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-primary-foreground" />
         </div>
-        <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-2 text-foreground">Generating...</h3>
+        <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-2 text-foreground">Génération en cours...</h3>
         <p className="text-sm sm:text-base text-muted-foreground px-2">
-          This may take between 30 and 60 seconds
+          Cela peut prendre entre 30 et 60 secondes
         </p>
       </div>
 
@@ -40,7 +40,7 @@ export default function GenerationProgress({
           {/* Progress Bar */}
           <div>
             <div className="flex justify-between items-center mb-2 gap-2">
-              <span className="text-xs sm:text-sm font-medium">Progress</span>
+              <span className="text-xs sm:text-sm font-medium">Progression</span>
               <span className="text-xs sm:text-sm md:text-base font-bold text-primary">
                 {progress}%
               </span>
@@ -66,7 +66,7 @@ export default function GenerationProgress({
           <div className="text-center p-3 sm:p-4 bg-muted rounded">
             <div className="flex items-center justify-center gap-2 mb-2">
               <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-primary flex-shrink-0" />
-              <p className="font-medium text-sm sm:text-base">Processing</p>
+              <p className="font-medium text-sm sm:text-base">Traitement</p>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground animate-pulse px-2">
               {LOADING_MESSAGES[messageIndex]}

@@ -27,7 +27,7 @@ export async function generateTryOn(
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error generating try-on:', error);
+    console.error('Erreur lors de la génération de l\'essayage:', error);
     return {
       status: 'error',
       error_message: {
@@ -62,7 +62,7 @@ export async function fetchImageWithCorsHandling(
         signal,
       });
       if (response.type === 'opaque') {
-        throw new Error('No-cors response received');
+        throw new Error('Réponse no-cors reçue');
       }
       return response.blob();
     },
@@ -76,7 +76,7 @@ export async function fetchImageWithCorsHandling(
     }
   }
 
-  throw new Error('All CORS strategies failed');
+  throw new Error('Toutes les stratégies CORS ont échoué');
 }
 
 export function blobToDataURL(blob: Blob): Promise<string> {

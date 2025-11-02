@@ -44,7 +44,7 @@ export function extractShopifyProductInfo(): ProductInfo | null {
       availability: 'InStock',
     };
   } catch (error) {
-    console.error('Error extracting product info:', error);
+    console.error('Erreur lors de l\'extraction des informations produit :', error);
     return null;
   }
 }
@@ -445,8 +445,8 @@ export function extractProductImages(): string[] {
   });
 
   // Debug: Log detected images
-  console.log('NUSENSE: Detected product images:', images);
-  console.log('NUSENSE: Total images found:', images.length);
+  console.log('NUSENSE : Images produit détectées :', images);
+  console.log('NUSENSE : Nombre total d\'images trouvées :', images.length);
   
   return images;
 }
@@ -526,7 +526,7 @@ function extractShopifyProductJSON(): any {
       return (window as any).product;
     }
   } catch (e) {
-    console.error('Error extracting Shopify product JSON:', e);
+    console.error('Erreur lors de l\'extraction du JSON produit Shopify :', e);
   }
   
   return null;
@@ -582,7 +582,7 @@ function extractJSONLDImages(): string[] {
       }
     });
   } catch (e) {
-    console.error('Error extracting JSON-LD images:', e);
+    console.error('Erreur lors de l\'extraction des images JSON-LD :', e);
   }
 
   return images;
@@ -598,7 +598,7 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
   const lowerAlt = (metadata?.alt || '').toLowerCase();
   
   // Debug logging for troubleshooting
-  console.log('NUSENSE: Validating image:', url, 'metadata:', metadata);
+  console.log('NUSENSE : Validation de l\'image :', url, 'métadonnées :', metadata);
   
   // Filter out common non-product image patterns
   const excludePatterns = [
@@ -632,7 +632,7 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
 
   for (const pattern of excludePatterns) {
     if (lowerUrl.includes(pattern) || lowerAlt.includes(pattern)) {
-      console.log('NUSENSE: Excluded due to pattern:', pattern);
+      console.log('NUSENSE : Exclu en raison du motif :', pattern);
       return false;
     }
   }
@@ -646,7 +646,7 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
     const { width, height } = metadata;
     // Skip very small images (likely icons) - be more lenient for better detection
     if (width && height && width < 50 && height < 50) {
-      console.log('NUSENSE: Excluded due to small size:', width, 'x', height);
+      console.log('NUSENSE : Exclu en raison de la petite taille :', width, 'x', height);
       return false;
     }
   }
@@ -655,10 +655,10 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
   try {
     new URL(url, window.location.href);
   } catch {
-    console.log('NUSENSE: Excluded due to invalid URL');
+    console.log('NUSENSE : Exclu en raison d\'une URL invalide');
     return false;
   }
 
-  console.log('NUSENSE: Image accepted:', url);
+  console.log('NUSENSE : Image acceptée :', url);
   return true;
 }

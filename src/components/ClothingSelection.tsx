@@ -27,10 +27,10 @@ export default function ClothingSelection({
     return (
       <Card className="p-4 sm:p-6 md:p-8 text-center bg-warning/10 border-warning">
         <p className="font-semibold text-warning text-sm sm:text-base md:text-lg">
-          No clothing images detected on this page
+          Aucune image de vêtement détectée sur cette page
         </p>
         <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-          Make sure you're on a Shopify product page
+          Assurez-vous d'être sur une page produit Shopify
         </p>
       </Card>
     );
@@ -53,7 +53,7 @@ export default function ClothingSelection({
               onClick={() => onSelect(image)}
               role="button"
               tabIndex={0}
-              aria-label={`Select clothing item ${index + 1}`}
+              aria-label={`Sélectionner le vêtement ${index + 1}`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") onSelect(image);
               }}
@@ -61,7 +61,7 @@ export default function ClothingSelection({
               <div className="relative bg-muted/30 flex items-center justify-center overflow-hidden">
                 <img
                   src={image}
-                  alt={`Clothing ${index + 1}`}
+                  alt={`Vêtement ${index + 1}`}
                   className="w-full h-auto object-contain"
                   loading="lazy"
                   onError={() => {
@@ -92,7 +92,7 @@ export default function ClothingSelection({
           <div className="aspect-[3/4] rounded overflow-hidden border border-border bg-card flex items-center justify-center shadow-sm">
             <img
               src={selectedImage}
-              alt="Selected clothing"
+              alt="Vêtement sélectionné"
               className="h-full w-auto object-contain"
             />
           </div>

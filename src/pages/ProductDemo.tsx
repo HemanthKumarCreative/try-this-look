@@ -32,7 +32,7 @@ const ProductDemo = () => {
       <header className="border-b">
         <div className="container mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2 sm:gap-4">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-primary truncate min-w-0">DEMO STORE</h1>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-primary truncate min-w-0">BOUTIQUE DÉMO</h1>
             <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-shrink-0">
               <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 min-w-[44px] sm:min-w-[44px]">
                 <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -48,8 +48,8 @@ const ProductDemo = () => {
       {/* Breadcrumb */}
       <div className="container mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4">
         <div className="text-xs sm:text-sm text-muted-foreground truncate">
-          Home / Clothing / Tops /{" "}
-          <span className="text-foreground">Premium T-Shirt</span>
+          Accueil / Vêtements / Hauts /{" "}
+          <span className="text-foreground">T-Shirt Premium</span>
         </div>
       </div>
 
@@ -64,7 +64,7 @@ const ProductDemo = () => {
                   <div className="w-full bg-muted/30 border border-border flex items-center justify-center shadow-sm">
                     <img
                       src={productImages[0]}
-                      alt="Premium T-Shirt"
+                      alt="T-Shirt Premium"
                       className="w-full h-auto object-contain"
                     />
                   </div>
@@ -95,7 +95,7 @@ const ProductDemo = () => {
                   <div className="w-full bg-muted/30 border border-border flex items-center justify-center shadow-sm">
                     <img
                       src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=600&fit=crop&crop=center"
-                      alt="Premium T-Shirt"
+                      alt="T-Shirt Premium"
                       className="w-full h-auto object-contain"
                     />
                   </div>
@@ -123,9 +123,9 @@ const ProductDemo = () => {
                 </div>
                 <Card className="p-3 sm:p-4 bg-info/10 border-info">
                   <p className="text-xs sm:text-sm text-info">
-                    <strong>Demo Mode:</strong> Using sample images. In a real
-                    Shopify store, product images would be automatically
-                    detected from the page.
+                    <strong>Mode Démo :</strong> Utilisation d'images d'exemple. Dans une
+                    véritable boutique Shopify, les images des produits seraient automatiquement
+                    détectées depuis la page.
                   </p>
                 </Card>
               </>
@@ -136,7 +136,7 @@ const ProductDemo = () => {
           <div className="space-y-4 sm:space-y-5 md:space-y-6">
             <div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">
-                Premium Cotton T-Shirt
+                T-Shirt en Coton Bio Premium
               </h1>
               <div className="flex items-center gap-2 mb-3 sm:mb-4 flex-wrap">
                 <div className="flex">
@@ -149,26 +149,26 @@ const ProductDemo = () => {
                   ))}
                 </div>
                 <span className="text-xs sm:text-sm text-muted-foreground">
-                  (128 reviews)
+                  (128 avis)
                 </span>
               </div>
-              <div className="text-2xl sm:text-3xl font-bold text-primary mb-1 sm:mb-2">$49.99</div>
+              <div className="text-2xl sm:text-3xl font-bold text-primary mb-1 sm:mb-2">49,99 €</div>
               <p className="text-xs sm:text-sm text-muted-foreground line-through">
-                $69.99
+                69,99 €
               </p>
             </div>
 
             <div className="border-t border-b border-border py-3 sm:py-4">
               <p className="text-sm sm:text-base text-muted-foreground">
-                Premium organic cotton t-shirt with regular fit. Made
-                sustainably with high-quality materials. Perfect for a casual
-                and comfortable style.
+                T-shirt en coton bio premium avec coupe régulière. Fabriqué
+                de manière durable avec des matériaux de haute qualité. Parfait pour un style
+                décontracté et confortable.
               </p>
             </div>
 
             {/* Size Selection */}
             <div>
-              <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Size</h3>
+              <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Taille</h3>
               <div className="flex flex-wrap gap-2">
                 {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
                   <Button key={size} variant="outline" className="w-10 h-10 sm:w-12 sm:h-12 text-xs sm:text-sm min-w-[44px] min-h-[44px]">
@@ -180,14 +180,14 @@ const ProductDemo = () => {
 
             {/* Color Selection */}
             <div>
-              <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Color</h3>
+              <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Couleur</h3>
               <div className="flex gap-2">
                 {["#000000", "#FFFFFF", "#CE0003", "#4B5563"].map((color) => (
                   <button
                     key={color}
                     className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 hover:scale-110 transition-transform min-w-[44px] min-h-[44px]"
                     style={{ backgroundColor: color }}
-                    aria-label={`Select color ${color}`}
+                    aria-label={`Sélectionner la couleur ${color}`}
                   />
                 ))}
               </div>
@@ -195,14 +195,14 @@ const ProductDemo = () => {
 
             {/* Quantity */}
             <div>
-              <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Quantity</h3>
+              <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Quantité</h3>
               <div className="flex items-center gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   className="h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 min-w-[44px] min-h-[44px]"
-                  aria-label="Decrease quantity"
+                  aria-label="Diminuer la quantité"
                 >
                   <span className="text-base sm:text-lg md:text-xl">-</span>
                 </Button>
@@ -214,7 +214,7 @@ const ProductDemo = () => {
                   size="icon"
                   onClick={() => setQuantity(quantity + 1)}
                   className="h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 min-w-[44px] min-h-[44px]"
-                  aria-label="Increase quantity"
+                  aria-label="Augmenter la quantité"
                 >
                   <span className="text-base sm:text-lg md:text-xl">+</span>
                 </Button>
@@ -230,22 +230,22 @@ const ProductDemo = () => {
                 className="w-full text-sm sm:text-base md:text-lg h-11 sm:h-12 md:h-14 min-h-[44px]"
               >
                 <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                Try Virtually
+                Essayer Virtuellement
               </Button>
 
               <Button size="lg" className="w-full text-sm sm:text-base md:text-lg h-11 sm:h-12 md:h-14 min-h-[44px]">
                 <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Add to Cart
+                Ajouter au Panier
               </Button>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 <Button variant="outline" size="lg" className="h-11 sm:h-12 md:h-14 min-h-[44px] text-sm sm:text-base">
                   <Heart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                  Favorites
+                  Favoris
                 </Button>
                 <Button variant="outline" size="lg" className="h-11 sm:h-12 md:h-14 min-h-[44px] text-sm sm:text-base">
                   <Share2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                  Share
+                  Partager
                 </Button>
               </div>
             </div>
@@ -253,22 +253,22 @@ const ProductDemo = () => {
             {/* Product Details */}
             <Card className="p-4 sm:p-5 md:p-6 space-y-3 sm:space-y-4">
               <div>
-                <h3 className="font-semibold mb-2 text-sm sm:text-base md:text-lg text-foreground">Product Details</h3>
+                <h3 className="font-semibold mb-2 text-sm sm:text-base md:text-lg text-foreground">Détails du produit</h3>
                 <ul className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
-                  <li>• 100% Organic Cotton</li>
-                  <li>• Regular Fit</li>
-                  <li>• Round Neck</li>
-                  <li>• Short Sleeves</li>
-                  <li>• Machine washable at 30°</li>
-                  <li>• Ethically Made</li>
+                  <li>• 100% Coton Bio</li>
+                  <li>• Coupe Régulière</li>
+                  <li>• Col Rond</li>
+                  <li>• Manches Courtes</li>
+                  <li>• Lavable en machine à 30°</li>
+                  <li>• Fabriqué de manière éthique</li>
                 </ul>
               </div>
               <div>
-                <h3 className="font-semibold mb-2 text-sm sm:text-base md:text-lg text-foreground">Shipping & Returns</h3>
+                <h3 className="font-semibold mb-2 text-sm sm:text-base md:text-lg text-foreground">Livraison & Retours</h3>
                 <ul className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
-                  <li>• Free shipping on orders over $50</li>
-                  <li>• Free returns within 30 days</li>
-                  <li>• Ships within 24 hours</li>
+                  <li>• Livraison gratuite pour commandes de plus de 50€</li>
+                  <li>• Retours gratuits sous 30 jours</li>
+                  <li>• Expédition sous 24h</li>
                 </ul>
               </div>
             </Card>
@@ -282,20 +282,20 @@ const ProductDemo = () => {
               <button className="pb-3 sm:pb-4 border-b-2 border-primary font-semibold text-sm sm:text-base text-primary whitespace-nowrap flex-shrink-0 transition-colors">
                 Description
               </button>
-              <button className="pb-3 sm:pb-4 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary/30 text-sm sm:text-base whitespace-nowrap flex-shrink-0 transition-colors">Reviews (128)</button>
-              <button className="pb-3 sm:pb-4 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary/30 text-sm sm:text-base whitespace-nowrap flex-shrink-0 transition-colors">Size Guide</button>
+              <button className="pb-3 sm:pb-4 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary/30 text-sm sm:text-base whitespace-nowrap flex-shrink-0 transition-colors">Avis (128)</button>
+              <button className="pb-3 sm:pb-4 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary/30 text-sm sm:text-base whitespace-nowrap flex-shrink-0 transition-colors">Guide des Tailles</button>
             </div>
           </div>
           <div className="prose max-w-none text-sm sm:text-base">
             <p className="mb-3 sm:mb-4">
-              Our premium organic cotton t-shirt is designed to offer maximum
-              comfort while being environmentally friendly. Made with
-              high-quality materials and GOTS certified, this t-shirt is perfect
-              for daily use.
+              Notre t-shirt en coton bio premium est conçu pour offrir un maximum
+              de confort tout en étant respectueux de l'environnement. Fabriqué avec
+              des matériaux de haute qualité et certifié GOTS, ce t-shirt est parfait
+              pour un usage quotidien.
             </p>
             <p>
-              The regular fit ensures comfortable wear for all body types. The
-              breathable and soft fabric will keep you comfortable all day.
+              La coupe régulière assure un port confortable pour tous les types de morphologie. Le
+              tissu respirant et doux vous gardera confortable toute la journée.
             </p>
           </div>
         </div>

@@ -49,7 +49,7 @@ export default function Widget() {
           className="text-sm sm:text-base md:text-lg px-6 sm:px-7 md:px-8 h-11 sm:h-12 md:h-14 min-h-[44px]"
         >
           <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-          Try Now
+          Essayer Maintenant
         </Button>
       </div>
 
