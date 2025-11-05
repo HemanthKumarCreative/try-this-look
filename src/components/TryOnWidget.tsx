@@ -35,11 +35,9 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   const [statusMessage, setStatusMessage] = useState<string | null>(
     "Téléchargez votre photo puis choisissez un article à essayer"
   );
-  const [statusVariant, setStatusVariant] = useState<"info" | "error">(
-    "info"
-  );
-  const INFLIGHT_KEY = 'nusense_tryon_inflight';
-
+  const [statusVariant, setStatusVariant] = useState<"info" | "error">("info");
+  const INFLIGHT_KEY = "nusense_tryon_inflight";
+  console.log("TryOnWidget", isOpen);
   useEffect(() => {
     if (isOpen) {
       // Load saved session
@@ -71,7 +69,10 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           // Request product images from parent window
           window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
         } catch (error) {
-          console.log("Impossible de communiquer avec la fenêtre parente :", error);
+          console.log(
+            "Impossible de communiquer avec la fenêtre parente :",
+            error
+          );
         }
       }
     }
@@ -122,8 +123,12 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     setProgress(0);
     setCurrentStep(3);
     setStatusVariant("info");
-    setStatusMessage("Génération en cours. Cela peut prendre 30 à 60 secondes…");
-    try { localStorage.setItem(INFLIGHT_KEY, '1'); } catch {}
+    setStatusMessage(
+      "Génération en cours. Cela peut prendre 30 à 60 secondes…"
+    );
+    try {
+      localStorage.setItem(INFLIGHT_KEY, "1");
+    } catch {}
 
     // Simulate progress
     const progressInterval = setInterval(() => {
@@ -150,18 +155,24 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         setStatusVariant("info");
         setStatusMessage("Résultat prêt. Vous pouvez acheter ou télécharger.");
       } else {
-        throw new Error(result.error_message?.message || "Erreur de génération");
+        throw new Error(
+          result.error_message?.message || "Erreur de génération"
+        );
       }
     } catch (err) {
       clearInterval(progressInterval);
       const errorMessage =
-        err instanceof Error ? err.message : "Une erreur inattendue s'est produite";
+        err instanceof Error
+          ? err.message
+          : "Une erreur inattendue s'est produite";
       setError(errorMessage);
       setStatusVariant("error");
       setStatusMessage(errorMessage);
     } finally {
       setIsGenerating(false);
-      try { localStorage.removeItem(INFLIGHT_KEY); } catch {}
+      try {
+        localStorage.removeItem(INFLIGHT_KEY);
+      } catch {}
     }
   };
 
@@ -172,7 +183,9 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
 
   const handleClearUploadedImage = () => {
     setUploadedImage(null);
-    try { storage.clearUploadedImage(); } catch {}
+    try {
+      storage.clearUploadedImage();
+    } catch {}
     setCurrentStep(1);
     setStatusVariant("info");
     setStatusMessage("Photo effacée. Téléchargez votre photo.");
@@ -194,7 +207,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
 
   useEffect(() => {
     if (!isOpen) return;
-    const inflight = localStorage.getItem(INFLIGHT_KEY) === '1';
+    const inflight = localStorage.getItem(INFLIGHT_KEY) === "1";
     const savedImage = storage.getUploadedImage();
     const savedClothing = storage.getClothingUrl();
     const savedResult = storage.getGeneratedImage();
@@ -207,19 +220,19 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   }, [isOpen]);
 
   // Check if we're inside an iframe
-  const isInIframe = typeof window !== 'undefined' && window.parent !== window;
+  const isInIframe = typeof window !== "undefined" && window.parent !== window;
 
   // Handle close - if in iframe, notify parent window
   const handleClose = () => {
     if (isInIframe) {
       // Send message to parent window to close the modal
       try {
-        window.parent.postMessage(
-          { type: "NUSENSE_CLOSE_WIDGET" },
-          "*"
-        );
+        window.parent.postMessage({ type: "NUSENSE_CLOSE_WIDGET" }, "*");
       } catch (error) {
-        console.error("Échec de l'envoi du message de fermeture au parent :", error);
+        console.error(
+          "Échec de l'envoi du message de fermeture au parent :",
+          error
+        );
       }
     }
     onClose();
@@ -227,28 +240,36 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent 
+      <DialogContent
         className="w-[100vw] sm:w-[95vw] sm:max-w-5xl max-h-[100dvh] sm:max-h-[90dvh] overflow-y-auto p-0 rounded-none sm:rounded-lg"
         onInteractOutside={(e) => {
           e.preventDefault();
         }}
       >
-        <div style={{ backgroundColor: '#fef3f3' }}>
+        <div style={{ backgroundColor: "#fef3f3" }}>
           {/* Header */}
           <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 border-b border-border shadow-sm">
             <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <div className="inline-flex flex-col flex-shrink-0" style={{ width: '185px' }}>
+              <div
+                className="inline-flex flex-col flex-shrink-0"
+                style={{ width: "185px" }}
+              >
                 <span
                   aria-label="NULOOK"
                   className="inline-flex items-center tracking-wide leading-none whitespace-nowrap"
-                  style={{ width: '185px', fontSize: '32px', fontWeight: 700 }}
+                  style={{ width: "185px", fontSize: "32px", fontWeight: 700 }}
                 >
                   <span style={{ color: "#ce0003" }}>NU</span>
                   <span style={{ color: "#564646" }}>LOOK</span>
                 </span>
                 <div
                   className="mt-0.5 sm:mt-1 text-left leading-tight tracking-tight whitespace-nowrap"
-                  style={{ width: '185px', fontSize: '12px', color: '#3D3232', fontWeight: 500 }}
+                  style={{
+                    width: "185px",
+                    fontSize: "12px",
+                    color: "#3D3232",
+                    fontWeight: 500,
+                  }}
                 >
                   Essayage Virtuel Alimenté par IA
                 </div>
@@ -293,10 +314,16 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                 {/* Left Panel: Upload / Preview */}
                 <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
                   <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">1</div>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
+                      1
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-base sm:text-lg font-semibold">Téléchargez Votre Photo</h2>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">Choisissez une photo claire de vous-même</p>
+                      <h2 className="text-base sm:text-lg font-semibold">
+                        Téléchargez Votre Photo
+                      </h2>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Choisissez une photo claire de vous-même
+                      </p>
                     </div>
                   </div>
 
@@ -308,7 +335,9 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                     <div className="space-y-3 sm:space-y-4">
                       <div className="relative rounded-lg bg-card p-2 sm:p-3 border border-border shadow-sm">
                         <div className="flex items-center justify-between mb-2 gap-2">
-                          <h3 className="font-semibold text-sm sm:text-base">Votre Photo</h3>
+                          <h3 className="font-semibold text-sm sm:text-base">
+                            Votre Photo
+                          </h3>
                           <Button
                             variant="outline"
                             size="sm"
@@ -321,7 +350,11 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                           </Button>
                         </div>
                         <div className="aspect-[3/4] rounded overflow-hidden border border-border bg-card flex items-center justify-center shadow-sm">
-                          <img src={uploadedImage} alt="Uploaded" className="h-full w-auto object-contain" />
+                          <img
+                            src={uploadedImage}
+                            alt="Uploaded"
+                            className="h-full w-auto object-contain"
+                          />
                         </div>
                       </div>
                     </div>
@@ -331,10 +364,16 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                 {/* Right Panel: Clothing Selection */}
                 <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
                   <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">2</div>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
+                      2
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-base sm:text-lg font-semibold">Sélectionner un Article de Vêtement</h2>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">Sélectionnez un article de vêtement sur cette page</p>
+                      <h2 className="text-base sm:text-lg font-semibold">
+                        Sélectionner un Article de Vêtement
+                      </h2>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Sélectionnez un article de vêtement sur cette page
+                      </p>
                     </div>
                   </div>
 
@@ -380,15 +419,15 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
             {error && (
               <Card className="p-6 bg-error/10 border-error">
                 <p className="text-error font-medium">{error}</p>
-                  <Button
-                    variant="secondary"
-                    onClick={handleReset}
-                    className="group mt-4 gap-2 text-secondary-foreground hover:bg-secondary/80 transition-all duration-200"
-                    aria-label="Réessayer"
-                  >
-                    <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-[-120deg] duration-500" />
-                    <span>Réessayer</span>
-                  </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleReset}
+                  className="group mt-4 gap-2 text-secondary-foreground hover:bg-secondary/80 transition-all duration-200"
+                  aria-label="Réessayer"
+                >
+                  <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-[-120deg] duration-500" />
+                  <span>Réessayer</span>
+                </Button>
               </Card>
             )}
           </div>
