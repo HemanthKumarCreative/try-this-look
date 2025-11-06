@@ -144,7 +144,7 @@ Update your `shopify.app.toml` file with production URLs:
 
 ```toml
 name = "nusense-tryon"
-client_id = "8c0ff99d006911df268ba38b356149d8"
+client_id = "a1e3825239808132f72fdd55800b772a"
 application_url = "https://your-app.vercel.app"
 embedded = true
 
@@ -359,7 +359,7 @@ Required environment variables in Vercel:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `SHOPIFY_API_KEY` | Your Shopify app API key | `8c0ff99d006911df268ba38b356149d8` |
+| `SHOPIFY_API_KEY` | Your Shopify app API key | `a1e3825239808132f72fdd55800b772a` |
 | `SHOPIFY_API_SECRET` | Your Shopify app API secret | `your_secret_key` |
 | `SHOPIFY_APP_URL` | Your Vercel deployment URL | `https://your-app.vercel.app` |
 | `NODE_ENV` | Environment mode | `production` |
