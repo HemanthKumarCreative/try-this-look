@@ -254,6 +254,7 @@
       
       // Create modal overlay
       const overlay = document.createElement('div');
+      overlay.id = 'nusense-widget-overlay';
       overlay.style.cssText = `
         position: fixed;
         top: 0;
@@ -267,35 +268,103 @@
         justify-content: center;
       `;
       
-      const iframe = document.createElement('iframe');
-      iframe.src = widgetUrl;
-      iframe.style.cssText = `
+      // Create container for iframe and close button
+      const container = document.createElement('div');
+      container.style.cssText = `
+        position: relative;
         width: 95vw;
         max-width: 1200px;
         height: 90vh;
+      `;
+      
+      // Create close button
+      const closeButton = document.createElement('button');
+      closeButton.innerHTML = '×';
+      closeButton.setAttribute('aria-label', 'Close widget');
+      closeButton.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        border: none;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        font-size: 28px;
+        line-height: 1;
+        cursor: pointer;
+        border-radius: 50%;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+      `;
+      closeButton.onmouseover = function() {
+        this.style.background = 'rgba(0, 0, 0, 0.7)';
+      };
+      closeButton.onmouseout = function() {
+        this.style.background = 'rgba(0, 0, 0, 0.5)';
+      };
+      
+      // Close function
+      const closeWidget = function() {
+        if (overlay && overlay.parentNode) {
+          document.body.removeChild(overlay);
+          document.body.style.overflow = '';
+        }
+      };
+      
+      // Attach close button click handler
+      closeButton.onclick = function(e) {
+        e.stopPropagation();
+        closeWidget();
+      };
+      
+      // Create iframe
+      const iframe = document.createElement('iframe');
+      iframe.src = widgetUrl;
+      iframe.style.cssText = `
+        width: 100%;
+        height: 100%;
         border: none;
         border-radius: 0.25rem;
         background: white;
       `;
+      iframe.allow = 'camera; microphone';
+      iframe.setAttribute('allowfullscreen', 'true');
       
-      overlay.appendChild(iframe);
+      // Assemble modal
+      container.appendChild(closeButton);
+      container.appendChild(iframe);
+      overlay.appendChild(container);
       document.body.appendChild(overlay);
+      
+      // Prevent body scroll
+      document.body.style.overflow = 'hidden';
       
       // Close on click outside
       overlay.addEventListener('click', function(e) {
         if (e.target === overlay) {
-          document.body.removeChild(overlay);
+          closeWidget();
         }
       });
       
       // Close on escape key
       const closeHandler = function(e) {
         if (e.key === 'Escape') {
-          document.body.removeChild(overlay);
+          closeWidget();
           document.removeEventListener('keydown', closeHandler);
         }
       };
       document.addEventListener('keydown', closeHandler);
+      
+      // Listen for close messages from iframe
+      window.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'NUSENSE_CLOSE_WIDGET') {
+          closeWidget();
+        }
+      });
     });
   })();
 </script>
