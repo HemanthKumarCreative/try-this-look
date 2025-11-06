@@ -252,6 +252,19 @@
       // Or use direct app URL if app proxy not needed
       const widgetUrl = '{{ shop.metafields.nusense.widget_url | default: "https://try-this-look.vercel.app" }}/widget?product_id=' + productId;
       
+      // Save original body state BEFORE making any changes
+      const originalOverflow = document.body.style.overflow;
+      const originalPosition = document.body.style.position;
+      const originalTop = document.body.style.top;
+      const originalWidth = document.body.style.width;
+      const scrollY = window.scrollY;
+      
+      // Prevent body scroll FIRST - before creating overlay
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      
       // Create modal overlay
       const overlay = document.createElement('div');
       overlay.id = 'nusense-widget-overlay';
@@ -262,32 +275,55 @@
         width: 100%;
         height: 100%;
         background: rgba(0, 0, 0, 0.5);
-        z-index: 9999;
+        z-index: 999999;
         display: flex;
         align-items: center;
         justify-content: center;
         pointer-events: auto;
       `;
       
-      // Prevent body scroll and block interactions with parent page
-      const originalOverflow = document.body.style.overflow;
-      const originalPosition = document.body.style.position;
-      const originalTop = document.body.style.top;
-      const originalWidth = document.body.style.width;
-      const scrollY = window.scrollY;
-      
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
-      
-      // Block all pointer events on body content (except overlay)
-      const bodyChildren = Array.from(document.body.children);
-      bodyChildren.forEach(function(child) {
-        if (child !== overlay && child.id !== 'nusense-widget-overlay') {
-          child.style.pointerEvents = 'none';
+      // Block ALL clicks on overlay background - prevent closing
+      const overlayClickHandler = function(e) {
+        // Only allow clicks on iframe, block everything else
+        if (e.target === overlay) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          return false;
         }
-      });
+      };
+      overlay.addEventListener('click', overlayClickHandler, true); // Use capture phase
+      
+      // Block all mouse events on overlay background
+      const overlayMouseDownHandler = function(e) {
+        if (e.target === overlay) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          return false;
+        }
+      };
+      overlay.addEventListener('mousedown', overlayMouseDownHandler, true);
+      
+      const overlayMouseUpHandler = function(e) {
+        if (e.target === overlay) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          return false;
+        }
+      };
+      overlay.addEventListener('mouseup', overlayMouseUpHandler, true);
+      
+      const overlayContextMenuHandler = function(e) {
+        if (e.target === overlay) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          return false;
+        }
+      };
+      overlay.addEventListener('contextmenu', overlayContextMenuHandler, true);
       
       const iframe = document.createElement('iframe');
       iframe.src = widgetUrl;
@@ -305,43 +341,80 @@
       overlay.appendChild(iframe);
       document.body.appendChild(overlay);
       
-      // Prevent scroll events from reaching parent page
-      // Block all scroll events on overlay background (not on iframe)
-      const preventScroll = function(e) {
-        // Only prevent if event is on overlay background, not on iframe
-        // Events from inside iframe won't bubble to parent due to iframe isolation
+      // NOW block all pointer events on body content (after overlay is appended)
+      const bodyChildren = Array.from(document.body.children);
+      bodyChildren.forEach(function(child) {
+        if (child.id !== 'nusense-widget-overlay') {
+          child.style.pointerEvents = 'none';
+          child.style.userSelect = 'none';
+        }
+      });
+      
+      // Ensure overlay and iframe can receive events
+      overlay.style.pointerEvents = 'auto';
+      iframe.style.pointerEvents = 'auto';
+      
+      // Prevent ALL scroll events on document level
+      const preventAllScroll = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return false;
+      };
+      
+      // Block scroll events on overlay background
+      overlay.addEventListener('wheel', preventAllScroll, { passive: false, capture: true });
+      overlay.addEventListener('touchmove', preventAllScroll, { passive: false, capture: true });
+      overlay.addEventListener('scroll', preventAllScroll, { passive: false, capture: true });
+      const overlayTouchStartHandler = function(e) {
         if (e.target === overlay) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+      overlay.addEventListener('touchstart', overlayTouchStartHandler, { passive: false, capture: true });
+      
+      // Block scroll on document level - block everything
+      document.addEventListener('wheel', preventAllScroll, { passive: false, capture: true });
+      document.addEventListener('touchmove', preventAllScroll, { passive: false, capture: true });
+      document.addEventListener('scroll', preventAllScroll, { passive: false, capture: true });
+      
+      const documentTouchStartHandler = function(e) {
+        // Only allow touch events on iframe
+        if (!iframe.contains(e.target) && e.target !== iframe) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+      document.addEventListener('touchstart', documentTouchStartHandler, { passive: false, capture: true });
+      
+      // Block keyboard events that might cause scrolling
+      const preventKeyboardScroll = function(e) {
+        // Block arrow keys, page up/down, space, etc.
+        if ([32, 33, 34, 35, 36, 37, 38, 39, 40].indexOf(e.keyCode) !== -1) {
           e.preventDefault();
           e.stopPropagation();
           return false;
         }
       };
-      
-      // Block wheel, touch, and scroll events on overlay background
-      overlay.addEventListener('wheel', preventScroll, { passive: false });
-      overlay.addEventListener('touchmove', preventScroll, { passive: false });
-      overlay.addEventListener('scroll', preventScroll, { passive: false });
-      
-      // Prevent scroll on document level for any events not from iframe
-      // Note: Events from inside iframe won't reach parent document due to iframe isolation
-      const documentPreventScroll = function(e) {
-        // Block all scroll events on document/body level
-        // Only allow events that originate from within the iframe (which won't reach here anyway)
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      };
-      document.addEventListener('wheel', documentPreventScroll, { passive: false });
-      document.addEventListener('touchmove', documentPreventScroll, { passive: false });
+      document.addEventListener('keydown', preventKeyboardScroll, { passive: false, capture: true });
       
       // Function to close widget and restore page state
       const closeWidget = function() {
-        // Remove event listeners
-        overlay.removeEventListener('wheel', preventScroll);
-        overlay.removeEventListener('touchmove', preventScroll);
-        overlay.removeEventListener('scroll', preventScroll);
-        document.removeEventListener('wheel', documentPreventScroll);
-        document.removeEventListener('touchmove', documentPreventScroll);
+        // Remove ALL event listeners
+        overlay.removeEventListener('click', overlayClickHandler, true);
+        overlay.removeEventListener('mousedown', overlayMouseDownHandler, true);
+        overlay.removeEventListener('mouseup', overlayMouseUpHandler, true);
+        overlay.removeEventListener('contextmenu', overlayContextMenuHandler, true);
+        overlay.removeEventListener('wheel', preventAllScroll, true);
+        overlay.removeEventListener('touchmove', preventAllScroll, true);
+        overlay.removeEventListener('scroll', preventAllScroll, true);
+        overlay.removeEventListener('touchstart', overlayTouchStartHandler, true);
+        document.removeEventListener('wheel', preventAllScroll, true);
+        document.removeEventListener('touchmove', preventAllScroll, true);
+        document.removeEventListener('scroll', preventAllScroll, true);
+        document.removeEventListener('touchstart', documentTouchStartHandler, true);
+        document.removeEventListener('keydown', preventKeyboardScroll, true);
         
         // Restore body styles
         document.body.style.overflow = originalOverflow;
@@ -358,6 +431,7 @@
         bodyChildren.forEach(function(child) {
           if (child.id !== 'nusense-widget-overlay') {
             child.style.pointerEvents = '';
+            child.style.userSelect = '';
           }
         });
         
@@ -378,8 +452,7 @@
       };
       window.addEventListener('message', messageHandler);
       
-      // Prevent click outside from closing - removed
-      // Only close button inside iframe can close the widget
+      // NO click outside handler - only close button can close
     });
   })();
 </script>
