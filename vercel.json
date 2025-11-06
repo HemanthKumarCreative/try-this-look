@@ -17,15 +17,11 @@
       "destination": "/api/index.js"
     },
     {
-      "source": "/widget",
-      "destination": "/api/index.js"
-    },
-    {
       "source": "/health",
       "destination": "/api/index.js"
     },
     {
-      "source": "/((?!assets/).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
