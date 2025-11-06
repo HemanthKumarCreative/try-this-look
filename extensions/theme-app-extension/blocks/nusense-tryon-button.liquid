@@ -306,13 +306,6 @@
       // Prevent body scroll
       document.body.style.overflow = 'hidden';
       
-      // Close on click outside
-      overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) {
-          closeWidget();
-        }
-      });
-      
       // Close on escape key
       const closeHandler = function(e) {
         if (e.key === 'Escape') {
