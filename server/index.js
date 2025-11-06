@@ -217,7 +217,6 @@ app.get("/api/products/:productId", async (req, res) => {
 app.get("/widget", (req, res) => {
   // In Vercel, static files are handled by the platform
   // This route is mainly for API proxy scenarios
-  const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
   if (isVercel) {
     // In Vercel, redirect to the static file
     res.redirect("/index.html");
@@ -235,7 +234,6 @@ app.get("/apps/apps/a/*", (req, res) => {
   const proxyPath = req.path.replace("/apps/apps/a", "");
   
   if (proxyPath === "/widget" || proxyPath.startsWith("/widget")) {
-    const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
     if (isVercel) {
       res.redirect("/index.html");
     } else {
@@ -248,7 +246,6 @@ app.get("/apps/apps/a/*", (req, res) => {
 
 // Serve frontend (only in non-Vercel environment)
 // In Vercel, static files and SPA routing are handled by vercel.json
-const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
 if (!isVercel) {
   app.get("*", (req, res) => {
     res.sendFile(join(__dirname, "../dist/index.html"));
@@ -266,7 +263,6 @@ app.use((err, req, res, next) => {
 });
 
 // Only start server if not in Vercel environment
-const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
 if (!isVercel) {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
