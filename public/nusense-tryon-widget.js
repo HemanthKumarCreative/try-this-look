@@ -89,38 +89,6 @@
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     `;
 
-    // Create close button
-    const closeButton = document.createElement('button');
-    closeButton.innerHTML = '×';
-    closeButton.style.cssText = `
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 40px;
-      height: 40px;
-      border: none;
-      background: rgba(0, 0, 0, 0.5);
-      color: white;
-      font-size: 28px;
-      line-height: 1;
-      cursor: pointer;
-      border-radius: 50%;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-    `;
-    closeButton.onmouseover = function() {
-      this.style.background = 'rgba(0, 0, 0, 0.7)';
-    };
-    closeButton.onmouseout = function() {
-      this.style.background = 'rgba(0, 0, 0, 0.5)';
-    };
-    closeButton.onclick = function() {
-      closeWidget();
-    };
-
     // Create iframe
     const iframe = document.createElement('iframe');
     iframe.id = 'nusense-widget-iframe';
@@ -139,7 +107,6 @@
     iframe.setAttribute('allowfullscreen', 'true');
 
     // Assemble modal
-    container.appendChild(closeButton);
     container.appendChild(iframe);
     overlay.appendChild(container);
     document.body.appendChild(overlay);
