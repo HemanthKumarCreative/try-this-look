@@ -252,22 +252,8 @@
       // Or use direct app URL if app proxy not needed
       const widgetUrl = '{{ shop.metafields.nusense.widget_url | default: "https://try-this-look.vercel.app" }}/widget?product_id=' + productId;
       
-      // Save original body state BEFORE making any changes
-      const originalOverflow = document.body.style.overflow;
-      const originalPosition = document.body.style.position;
-      const originalTop = document.body.style.top;
-      const originalWidth = document.body.style.width;
-      const scrollY = window.scrollY;
-      
-      // Prevent body scroll FIRST - before creating overlay
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
-      
       // Create modal overlay
       const overlay = document.createElement('div');
-      overlay.id = 'nusense-widget-overlay';
       overlay.style.cssText = `
         position: fixed;
         top: 0;
@@ -275,55 +261,11 @@
         width: 100%;
         height: 100%;
         background: rgba(0, 0, 0, 0.5);
-        z-index: 999999;
+        z-index: 9999;
         display: flex;
         align-items: center;
         justify-content: center;
-        pointer-events: auto;
       `;
-      
-      // Block ALL clicks on overlay background - prevent closing
-      const overlayClickHandler = function(e) {
-        // Only allow clicks on iframe, block everything else
-        if (e.target === overlay) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          return false;
-        }
-      };
-      overlay.addEventListener('click', overlayClickHandler, true); // Use capture phase
-      
-      // Block all mouse events on overlay background
-      const overlayMouseDownHandler = function(e) {
-        if (e.target === overlay) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          return false;
-        }
-      };
-      overlay.addEventListener('mousedown', overlayMouseDownHandler, true);
-      
-      const overlayMouseUpHandler = function(e) {
-        if (e.target === overlay) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          return false;
-        }
-      };
-      overlay.addEventListener('mouseup', overlayMouseUpHandler, true);
-      
-      const overlayContextMenuHandler = function(e) {
-        if (e.target === overlay) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          return false;
-        }
-      };
-      overlay.addEventListener('contextmenu', overlayContextMenuHandler, true);
       
       const iframe = document.createElement('iframe');
       iframe.src = widgetUrl;
@@ -334,125 +276,26 @@
         border: none;
         border-radius: 8px;
         background: white;
-        pointer-events: auto;
       `;
-      iframe.allow = 'camera; microphone';
       
       overlay.appendChild(iframe);
       document.body.appendChild(overlay);
       
-      // NOW block all pointer events on body content (after overlay is appended)
-      const bodyChildren = Array.from(document.body.children);
-      bodyChildren.forEach(function(child) {
-        if (child.id !== 'nusense-widget-overlay') {
-          child.style.pointerEvents = 'none';
-          child.style.userSelect = 'none';
+      // Close on click outside
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+          document.body.removeChild(overlay);
         }
       });
       
-      // Ensure overlay and iframe can receive events
-      overlay.style.pointerEvents = 'auto';
-      iframe.style.pointerEvents = 'auto';
-      
-      // Prevent ALL scroll events on document level
-      const preventAllScroll = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        return false;
-      };
-      
-      // Block scroll events on overlay background
-      overlay.addEventListener('wheel', preventAllScroll, { passive: false, capture: true });
-      overlay.addEventListener('touchmove', preventAllScroll, { passive: false, capture: true });
-      overlay.addEventListener('scroll', preventAllScroll, { passive: false, capture: true });
-      const overlayTouchStartHandler = function(e) {
-        if (e.target === overlay) {
-          e.preventDefault();
-          e.stopPropagation();
+      // Close on escape key
+      const closeHandler = function(e) {
+        if (e.key === 'Escape') {
+          document.body.removeChild(overlay);
+          document.removeEventListener('keydown', closeHandler);
         }
       };
-      overlay.addEventListener('touchstart', overlayTouchStartHandler, { passive: false, capture: true });
-      
-      // Block scroll on document level - block everything
-      document.addEventListener('wheel', preventAllScroll, { passive: false, capture: true });
-      document.addEventListener('touchmove', preventAllScroll, { passive: false, capture: true });
-      document.addEventListener('scroll', preventAllScroll, { passive: false, capture: true });
-      
-      const documentTouchStartHandler = function(e) {
-        // Only allow touch events on iframe
-        if (!iframe.contains(e.target) && e.target !== iframe) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      };
-      document.addEventListener('touchstart', documentTouchStartHandler, { passive: false, capture: true });
-      
-      // Block keyboard events that might cause scrolling
-      const preventKeyboardScroll = function(e) {
-        // Block arrow keys, page up/down, space, etc.
-        if ([32, 33, 34, 35, 36, 37, 38, 39, 40].indexOf(e.keyCode) !== -1) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-      };
-      document.addEventListener('keydown', preventKeyboardScroll, { passive: false, capture: true });
-      
-      // Function to close widget and restore page state
-      const closeWidget = function() {
-        // Remove ALL event listeners
-        overlay.removeEventListener('click', overlayClickHandler, true);
-        overlay.removeEventListener('mousedown', overlayMouseDownHandler, true);
-        overlay.removeEventListener('mouseup', overlayMouseUpHandler, true);
-        overlay.removeEventListener('contextmenu', overlayContextMenuHandler, true);
-        overlay.removeEventListener('wheel', preventAllScroll, true);
-        overlay.removeEventListener('touchmove', preventAllScroll, true);
-        overlay.removeEventListener('scroll', preventAllScroll, true);
-        overlay.removeEventListener('touchstart', overlayTouchStartHandler, true);
-        document.removeEventListener('wheel', preventAllScroll, true);
-        document.removeEventListener('touchmove', preventAllScroll, true);
-        document.removeEventListener('scroll', preventAllScroll, true);
-        document.removeEventListener('touchstart', documentTouchStartHandler, true);
-        document.removeEventListener('keydown', preventKeyboardScroll, true);
-        
-        // Restore body styles
-        document.body.style.overflow = originalOverflow;
-        document.body.style.position = originalPosition;
-        document.body.style.top = originalTop;
-        document.body.style.width = originalWidth;
-        
-        // Restore scroll position
-        if (originalPosition !== 'fixed') {
-          window.scrollTo(0, scrollY);
-        }
-        
-        // Restore pointer events on body children
-        bodyChildren.forEach(function(child) {
-          if (child.id !== 'nusense-widget-overlay') {
-            child.style.pointerEvents = '';
-            child.style.userSelect = '';
-          }
-        });
-        
-        // Remove overlay
-        if (overlay.parentNode) {
-          overlay.parentNode.removeChild(overlay);
-        }
-        
-        // Remove message listener
-        window.removeEventListener('message', messageHandler);
-      };
-      
-      // Listen for close messages from iframe
-      const messageHandler = function(e) {
-        if (e.data && e.data.type === 'NUSENSE_CLOSE_WIDGET') {
-          closeWidget();
-        }
-      };
-      window.addEventListener('message', messageHandler);
-      
-      // NO click outside handler - only close button can close
+      document.addEventListener('keydown', closeHandler);
     });
   })();
 </script>
