@@ -84,7 +84,7 @@
       max-height: 900px;
       position: relative;
       background: white;
-      border-radius: 12px;
+      border-radius: 0.25rem;
       overflow: hidden;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     `;
