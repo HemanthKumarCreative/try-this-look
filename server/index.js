@@ -11,17 +11,46 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables
-dotenv.config({ path: join(__dirname, "../.env") });
+// In Vercel, environment variables are automatically available
+// Only load .env file in local development
+if (process.env.VERCEL !== "1" && !process.env.VERCEL_ENV) {
+  try {
+    dotenv.config({ path: join(__dirname, "../.env") });
+  } catch (error) {
+    console.warn("Could not load .env file:", error.message);
+  }
+}
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const isDev = process.env.NODE_ENV !== "production";
 
 // Initialize Shopify API
+// Validate required environment variables
+const apiKey = process.env.SHOPIFY_API_KEY;
+const apiSecret = process.env.SHOPIFY_API_SECRET;
+const appUrl = process.env.SHOPIFY_APP_URL;
+
+if (!apiKey || !apiSecret) {
+  console.error("Missing required environment variables: SHOPIFY_API_KEY or SHOPIFY_API_SECRET");
+}
+
+// Extract hostname from app URL safely
+let hostName = "localhost";
+if (appUrl) {
+  try {
+    const url = new URL(appUrl);
+    hostName = url.hostname;
+  } catch (error) {
+    // If URL parsing fails, try to extract hostname manually
+    hostName = appUrl.replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
+  }
+}
+
 const shopify = shopifyApi({
-  apiKey: process.env.SHOPIFY_API_KEY || "",
-  apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
+  apiKey: apiKey || "",
+  apiSecretKey: apiSecret || "",
   scopes: ["write_products", "read_products", "write_themes", "read_themes"],
-  hostName: process.env.SHOPIFY_APP_URL || "localhost",
+  hostName: hostName,
   apiVersion: LATEST_API_VERSION,
   isEmbeddedApp: true,
   restResources,
@@ -69,7 +98,12 @@ app.get("/auth", async (req, res) => {
     res.redirect(authRoute);
   } catch (error) {
     console.error("OAuth error:", error);
-    res.status(500).json({ error: "Failed to initiate OAuth" });
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: "Failed to initiate OAuth",
+        message: error.message 
+      });
+    }
   }
 });
 
@@ -99,7 +133,12 @@ app.get("/auth/callback", async (req, res) => {
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("OAuth callback error:", error);
-    res.status(500).json({ error: "OAuth callback failed", message: error.message });
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: "OAuth callback failed", 
+        message: error.message 
+      });
+    }
   }
 });
 
@@ -216,12 +255,14 @@ if (!isVercel) {
   });
 }
 
-// Error handling middleware
+// Error handling middleware (must be last)
 app.use((err, req, res, next) => {
   console.error("Error:", err);
-  res.status(err.status || 500).json({
-    error: err.message || "Internal server error",
-  });
+  if (!res.headersSent) {
+    res.status(err.status || 500).json({
+      error: err.message || "Internal server error",
+    });
+  }
 });
 
 // Only start server if not in Vercel environment
