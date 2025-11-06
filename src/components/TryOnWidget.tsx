@@ -39,6 +39,15 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   // Track if we've already loaded images from URL/NUSENSE_PRODUCT_DATA to prevent parent images from overriding
   const imagesLoadedRef = useRef<boolean>(false);
 
+  // Debug: Log when availableImages changes
+  useEffect(() => {
+    console.log(
+      "NUSENSE: availableImages updated:",
+      availableImages.length,
+      availableImages
+    );
+  }, [availableImages]);
+
   useEffect(() => {
     // Load saved session on mount
     const savedImage = storage.getUploadedImage();
@@ -59,7 +68,10 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       setStatusMessage("Résultat prêt. Utilisez les actions ci-dessous.");
     }
 
-    // Priority 1: Get product images from URL parameters (main product images)
+    const isInIframe = window.parent !== window;
+    let imagesFound = false;
+
+    // Priority 1: Get product images from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const productParam = urlParams.get("product");
     if (productParam) {
@@ -70,43 +82,72 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           Array.isArray(productData.images) &&
           productData.images.length > 0
         ) {
+          console.log(
+            "NUSENSE: Images loaded from URL parameters:",
+            productData.images.length
+          );
           setAvailableImages(productData.images);
-          imagesLoadedRef.current = true; // Mark as loaded to prevent parent override
-          return; // Use URL images, don't extract from page
+          imagesLoadedRef.current = true;
+          imagesFound = true;
         }
       } catch (error) {
         console.error("Failed to parse product data from URL:", error);
       }
     }
 
-    // Priority 2: Get product images from window.NUSENSE_PRODUCT_DATA (if available)
-    if (typeof window !== "undefined" && (window as any).NUSENSE_PRODUCT_DATA) {
+    // Priority 2: Get product images from window.NUSENSE_PRODUCT_DATA
+    if (!imagesFound && typeof window !== "undefined" && (window as any).NUSENSE_PRODUCT_DATA) {
       const productData = (window as any).NUSENSE_PRODUCT_DATA;
       if (
         productData.images &&
         Array.isArray(productData.images) &&
         productData.images.length > 0
       ) {
+        console.log(
+          "NUSENSE: Images loaded from NUSENSE_PRODUCT_DATA:",
+          productData.images.length
+        );
         setAvailableImages(productData.images);
-        imagesLoadedRef.current = true; // Mark as loaded to prevent parent override
-        return; // Use product data images, don't extract from page
+        imagesLoadedRef.current = true;
+        imagesFound = true;
       }
     }
 
-    // Priority 3: Extract product images from the current page (only main product images)
-    const images = extractProductImages();
-    if (images.length > 0) {
-      setAvailableImages(images);
-      imagesLoadedRef.current = true; // Mark as loaded to prevent parent override
+    // Priority 3: Extract product images from the current page
+    if (!imagesFound) {
+      const images = extractProductImages();
+      if (images.length > 0) {
+        console.log("NUSENSE: Images extracted from page:", images.length);
+        setAvailableImages(images);
+        imagesLoadedRef.current = true;
+        imagesFound = true;
+      } else {
+        console.log("NUSENSE: No images found from page extraction");
+      }
     }
 
-    // If we're in an iframe, try to get images from parent window
-    if (window.parent !== window) {
+    // Priority 4: If we're in an iframe, ALWAYS request images from parent window
+    // This ensures we get all product images from the Shopify product page
+    if (isInIframe) {
       try {
-        // Request product images from parent window
+        console.log("NUSENSE: Requesting images from parent window (iframe mode)");
+        // Request product images from parent window immediately
         window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
+        
+        // Retry multiple times to ensure we get the images
+        // Use a ref to track if we've received images
+        const retryDelays = [300, 600, 1000, 1500];
+        retryDelays.forEach((delay) => {
+          setTimeout(() => {
+            // Check ref to see if images were loaded
+            if (!imagesLoadedRef.current) {
+              console.log(`NUSENSE: Retrying image request from parent window (delay: ${delay}ms)`);
+              window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
+            }
+          }, delay);
+        });
       } catch (error) {
-        console.log(
+        console.error(
           "Impossible de communiquer avec la fenêtre parente :",
           error
         );
@@ -117,17 +158,34 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   // No longer needed - using fixed 185px width
 
   // Listen for messages from parent window
-  // Use empty dependency array to maintain persistent listener
-  // Check ref inside handler to determine if we should accept parent images
+  // This is critical for iframe mode - parent window sends all product images from the Shopify page
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === "NUSENSE_PRODUCT_IMAGES") {
         const parentImages = event.data.images || [];
-        // Only use parent images if we haven't already loaded images from URL/NUSENSE_PRODUCT_DATA
-        // Use ref to avoid stale closure issues
-        if (parentImages.length > 0 && !imagesLoadedRef.current) {
-          setAvailableImages(parentImages);
-          imagesLoadedRef.current = true; // Mark as loaded to prevent future overrides
+        console.log(
+          "NUSENSE: Received images from parent window:",
+          parentImages.length,
+          parentImages
+        );
+        
+        if (parentImages.length > 0) {
+          // Always use parent images - they come from the actual product page
+          // Merge with existing images to avoid duplicates
+          setAvailableImages((prevImages) => {
+            const allImages = [...parentImages];
+            // Add any existing images that aren't in parent images
+            prevImages.forEach((img) => {
+              if (!allImages.includes(img)) {
+                allImages.push(img);
+              }
+            });
+            console.log("NUSENSE: Setting images from parent window. Total:", allImages.length);
+            return allImages;
+          });
+          imagesLoadedRef.current = true;
+        } else {
+          console.log("NUSENSE: Parent window sent empty images array");
         }
       }
     };
@@ -218,7 +276,10 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   };
 
   const handleRefreshImages = () => {
-    // Priority 1: Get product images from URL parameters (main product images)
+    const isInIframe = window.parent !== window;
+    let imagesFound = false;
+
+    // Priority 1: Get product images from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const productParam = urlParams.get("product");
     if (productParam) {
@@ -230,15 +291,15 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           productData.images.length > 0
         ) {
           setAvailableImages(productData.images);
-          return;
+          imagesFound = true;
         }
       } catch (error) {
         console.error("Failed to parse product data from URL:", error);
       }
     }
 
-    // Priority 2: Get product images from window.NUSENSE_PRODUCT_DATA (if available)
-    if (typeof window !== "undefined" && (window as any).NUSENSE_PRODUCT_DATA) {
+    // Priority 2: Get product images from window.NUSENSE_PRODUCT_DATA
+    if (!imagesFound && typeof window !== "undefined" && (window as any).NUSENSE_PRODUCT_DATA) {
       const productData = (window as any).NUSENSE_PRODUCT_DATA;
       if (
         productData.images &&
@@ -246,13 +307,27 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         productData.images.length > 0
       ) {
         setAvailableImages(productData.images);
-        return;
+        imagesFound = true;
       }
     }
 
-    // Priority 3: Extract product images from the current page (only main product images)
-    const images = extractProductImages();
-    setAvailableImages(images);
+    // Priority 3: Extract product images from the current page
+    if (!imagesFound) {
+      const images = extractProductImages();
+      if (images.length > 0) {
+        setAvailableImages(images);
+        imagesFound = true;
+      }
+    }
+
+    // Priority 4: If in iframe, request from parent window
+    if (isInIframe) {
+      try {
+        window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
+      } catch (error) {
+        console.error("Failed to request images from parent:", error);
+      }
+    }
   };
 
   const handleClearUploadedImage = () => {
