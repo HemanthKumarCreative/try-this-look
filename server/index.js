@@ -31,7 +31,14 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(express.static(join(__dirname, "../dist")));
+
+// Serve static files only in non-Vercel environment
+// In Vercel, static files are served directly by the platform
+// Check for Vercel environment
+const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
+if (!isVercel) {
+  app.use(express.static(join(__dirname, "../dist")));
+}
 
 // CORS middleware
 app.use((req, res, next) => {
@@ -169,7 +176,15 @@ app.get("/api/products/:productId", async (req, res) => {
 
 // Widget route - serves the widget page
 app.get("/widget", (req, res) => {
-  res.sendFile(join(__dirname, "../dist/index.html"));
+  // In Vercel, static files are handled by the platform
+  // This route is mainly for API proxy scenarios
+  const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
+  if (isVercel) {
+    // In Vercel, redirect to the static file
+    res.redirect("/index.html");
+  } else {
+    res.sendFile(join(__dirname, "../dist/index.html"));
+  }
 });
 
 // App proxy route for Shopify app proxy
@@ -181,16 +196,25 @@ app.get("/apps/apps/a/*", (req, res) => {
   const proxyPath = req.path.replace("/apps/apps/a", "");
   
   if (proxyPath === "/widget" || proxyPath.startsWith("/widget")) {
-    res.sendFile(join(__dirname, "../dist/index.html"));
+    const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
+    if (isVercel) {
+      res.redirect("/index.html");
+    } else {
+      res.sendFile(join(__dirname, "../dist/index.html"));
+    }
   } else {
     res.status(404).json({ error: "Not found" });
   }
 });
 
-// Serve frontend
-app.get("*", (req, res) => {
-  res.sendFile(join(__dirname, "../dist/index.html"));
-});
+// Serve frontend (only in non-Vercel environment)
+// In Vercel, static files and SPA routing are handled by vercel.json
+const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
+if (!isVercel) {
+  app.get("*", (req, res) => {
+    res.sendFile(join(__dirname, "../dist/index.html"));
+  });
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -200,10 +224,17 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  if (isDev) {
-    console.log(`Development server: http://localhost:${PORT}`);
-  }
-});
+// Only start server if not in Vercel environment
+const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
+if (!isVercel) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    if (isDev) {
+      console.log(`Development server: http://localhost:${PORT}`);
+    }
+  });
+}
+
+// Export app for Vercel serverless functions
+export default app;
 

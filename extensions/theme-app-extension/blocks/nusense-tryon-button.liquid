@@ -61,16 +61,32 @@
 }
 {% endschema %}
 
+{% comment %}
+  Read all block settings with proper defaults
+  Checkboxes return true/false or nil, so we need to handle them properly
+{% endcomment %}
 {% assign button_text = block.settings.button_text | default: 'Try Now' %}
 {% assign button_style = block.settings.button_style | default: 'primary' %}
-{% assign show_icon = block.settings.show_icon | default: true %}
 {% assign button_icon = block.settings.button_icon | default: '✨' %}
-{% assign button_width_full = block.settings.button_width_full | default: true %}
+
+{% comment %}
+  Handle checkbox values - they can be true, false, or nil
+{% endcomment %}
+{% if block.settings.show_icon == true or block.settings.show_icon == 'true' %}
+  {% assign show_icon = true %}
+{% else %}
+  {% assign show_icon = false %}
+{% endif %}
+
+{% if block.settings.button_width_full == true or block.settings.button_width_full == 'true' %}
+  {% assign button_width_full = true %}
+{% else %}
+  {% assign button_width_full = false %}
+{% endif %}
 
 {% comment %}
   Build button classes based on style variant
   Shopify themes typically use: button, button--secondary, button--outline, button--tertiary
-  Debug: button_style = {{ button_style }}
 {% endcomment %}
 {% assign button_classes = 'button' %}
 {% case button_style %}
@@ -95,12 +111,12 @@
   data-product-id="{{ product.id }}"
   data-shop-domain="{{ shop.permanent_domain }}"
   data-button-style="{{ button_style }}"
+  data-show-icon="{{ show_icon }}"
+  data-button-width-full="{{ button_width_full }}"
   type="button"
   style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;{% if button_width_full %} width: 100%;{% endif %}"
 >
-  {% if show_icon %}
-    <span class="button__icon">{{ button_icon }}</span>
-  {% endif %}
+  <span class="button__icon" data-icon="{{ button_icon }}" style="{% unless show_icon %}display: none;{% endunless %}">{{ button_icon }}</span>
   <span class="button__text">{{ button_text }}</span>
 </button>
 
@@ -109,100 +125,122 @@
     const button = document.getElementById('nusense-tryon-btn-{{ block.id }}');
     if (!button) return;
     
-    // Ensure button style variant is applied correctly
-    // This handles cases where theme classes might not be present
-    const buttonStyle = button.dataset.buttonStyle || '{{ button_style }}' || 'primary';
-    
-    // Debug logging (remove in production)
-    console.log('NUSENSE Button Style:', buttonStyle);
-    console.log('NUSENSE Button Classes Before:', button.className);
-    
-    // Remove any existing style classes to avoid conflicts
-    let currentClasses = button.className;
-    currentClasses = currentClasses
-      .replace(/\s*button--secondary\s*/g, ' ')
-      .replace(/\s*button--outline\s*/g, ' ')
-      .replace(/\s*button--tertiary\s*/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    
-    // Ensure base button class is present
-    if (!currentClasses.includes('button')) {
-      currentClasses = 'button ' + currentClasses;
-    }
-    
-    // Re-apply the correct style class based on buttonStyle
-    if (buttonStyle === 'secondary') {
-      currentClasses += ' button--secondary';
-    } else if (buttonStyle === 'outline') {
-      currentClasses += ' button--outline';
-    } else if (buttonStyle === 'minimal') {
-      currentClasses += ' button--tertiary';
-    }
-    // Primary doesn't need an additional class
-    
-    // Apply the updated classes
-    button.className = currentClasses.trim();
-    
-    console.log('NUSENSE Button Classes After:', button.className);
-    
-    // Function to apply button style
-    const applyButtonStyle = function() {
-      const style = button.dataset.buttonStyle || '{{ button_style }}' || 'primary';
+    // Function to apply all button configurations
+    const applyButtonConfig = function() {
+      // Get all settings from data attributes
+      const buttonStyle = button.dataset.buttonStyle || '{{ button_style }}' || 'primary';
+      const showIcon = button.dataset.showIcon === 'true' || button.dataset.showIcon === true;
+      const buttonWidthFull = button.dataset.buttonWidthFull === 'true' || button.dataset.buttonWidthFull === true;
+      
+      // Apply button style classes
       let classes = button.className
         .replace(/\s*button--secondary\s*/g, ' ')
         .replace(/\s*button--outline\s*/g, ' ')
         .replace(/\s*button--tertiary\s*/g, ' ')
+        .replace(/\s*button--full-width\s*/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
       
+      // Ensure base button class is present
       if (!classes.includes('button')) {
         classes = 'button ' + classes;
       }
       
-      if (style === 'secondary') {
+      // Apply style variant
+      if (buttonStyle === 'secondary') {
         classes += ' button--secondary';
-      } else if (style === 'outline') {
+      } else if (buttonStyle === 'outline') {
         classes += ' button--outline';
-      } else if (style === 'minimal') {
+      } else if (buttonStyle === 'minimal') {
         classes += ' button--tertiary';
       }
       
+      // Apply full width class
+      if (buttonWidthFull) {
+        classes += ' button--full-width';
+      }
+      
       button.className = classes.trim();
-      console.log('NUSENSE Applied Style:', style, 'Classes:', button.className);
+      
+      // Apply width style
+      if (buttonWidthFull) {
+        button.style.width = '100%';
+      } else {
+        button.style.width = '';
+      }
+      
+      // Handle icon visibility and text
+      const iconSpan = button.querySelector('.button__icon');
+      if (iconSpan) {
+        iconSpan.style.display = showIcon ? 'inline' : 'none';
+        // Update icon text if data attribute exists
+        const iconText = iconSpan.dataset.icon || '{{ button_icon }}';
+        if (iconText && iconSpan.textContent !== iconText) {
+          iconSpan.textContent = iconText;
+        }
+      }
+      
+      console.log('NUSENSE Config Applied:', {
+        style: buttonStyle,
+        showIcon: showIcon,
+        fullWidth: buttonWidthFull,
+        iconText: iconSpan ? iconSpan.textContent : 'N/A',
+        classes: button.className
+      });
     };
     
-    // Watch for changes in the theme editor (when settings are updated)
+    // Apply configuration on load
+    applyButtonConfig();
+    
+    // Watch for changes in the theme editor
     const observer = new MutationObserver(function(mutations) {
+      let shouldUpdate = false;
       mutations.forEach(function(mutation) {
         if (mutation.type === 'attributes') {
-          if (mutation.attributeName === 'data-button-style' || mutation.attributeName === 'class') {
-            applyButtonStyle();
+          const attrName = mutation.attributeName;
+          if (attrName === 'data-button-style' || 
+              attrName === 'data-show-icon' || 
+              attrName === 'data-button-width-full' ||
+              attrName === 'class') {
+            shouldUpdate = true;
           }
         }
       });
+      if (shouldUpdate) {
+        applyButtonConfig();
+      }
     });
     
     observer.observe(button, {
       attributes: true,
-      attributeFilter: ['data-button-style', 'class']
+      attributeFilter: ['data-button-style', 'data-show-icon', 'data-button-width-full', 'class'],
+      subtree: true
     });
     
-    // Also watch for when the block is re-rendered by theme editor
-    // Check periodically but less aggressively
-    let lastStyle = button.dataset.buttonStyle;
-    const styleChecker = setInterval(function() {
-      const currentStyle = button.dataset.buttonStyle;
-      if (currentStyle !== lastStyle) {
-        lastStyle = currentStyle;
-        applyButtonStyle();
+    // Also check periodically for theme editor updates
+    let lastConfig = JSON.stringify({
+      style: button.dataset.buttonStyle,
+      showIcon: button.dataset.showIcon,
+      fullWidth: button.dataset.buttonWidthFull
+    });
+    
+    const configChecker = setInterval(function() {
+      const currentConfig = JSON.stringify({
+        style: button.dataset.buttonStyle,
+        showIcon: button.dataset.showIcon,
+        fullWidth: button.dataset.buttonWidthFull
+      });
+      
+      if (currentConfig !== lastConfig) {
+        lastConfig = currentConfig;
+        applyButtonConfig();
       }
     }, 500);
     
     // Clean up on page unload
     window.addEventListener('beforeunload', function() {
       observer.disconnect();
-      clearInterval(styleChecker);
+      clearInterval(configChecker);
     });
     
     const productId = button.dataset.productId;
@@ -212,7 +250,7 @@
       // Open widget in modal or iframe
       // App proxy URL format: /apps/apps/a/{path}
       // Or use direct app URL if app proxy not needed
-      const widgetUrl = '{{ shop.metafields.nusense.widget_url | default: "https://a3ef1c377916.ngrok-free.app" }}/widget?product_id=' + productId;
+      const widgetUrl = '{{ shop.metafields.nusense.widget_url | default: "https://try-this-look.vercel.app" }}/widget?product_id=' + productId;
       
       // Create modal overlay
       const overlay = document.createElement('div');
