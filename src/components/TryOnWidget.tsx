@@ -96,7 +96,11 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     }
 
     // Priority 2: Get product images from window.NUSENSE_PRODUCT_DATA
-    if (!imagesFound && typeof window !== "undefined" && (window as any).NUSENSE_PRODUCT_DATA) {
+    if (
+      !imagesFound &&
+      typeof window !== "undefined" &&
+      (window as any).NUSENSE_PRODUCT_DATA
+    ) {
       const productData = (window as any).NUSENSE_PRODUCT_DATA;
       if (
         productData.images &&
@@ -129,29 +133,37 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     // Priority 4: If we're in an iframe, ALWAYS request images from parent window
     // This ensures we get all product images from the Shopify product page
     if (isInIframe) {
-      try {
-        console.log("NUSENSE: Requesting images from parent window (iframe mode)");
-        // Request product images from parent window immediately
-        window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
-        
-        // Retry multiple times to ensure we get the images
-        // Use a ref to track if we've received images
-        const retryDelays = [300, 600, 1000, 1500];
-        retryDelays.forEach((delay) => {
-          setTimeout(() => {
-            // Check ref to see if images were loaded
-            if (!imagesLoadedRef.current) {
-              console.log(`NUSENSE: Retrying image request from parent window (delay: ${delay}ms)`);
-              window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
-            }
-          }, delay);
-        });
-      } catch (error) {
-        console.error(
-          "Impossible de communiquer avec la fenêtre parente :",
-          error
-        );
-      }
+      const requestImages = () => {
+        try {
+          console.log(
+            "NUSENSE: Requesting images from parent window (iframe mode)"
+          );
+          window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
+        } catch (error) {
+          console.error(
+            "NUSENSE: Error communicating with parent window:",
+            error
+          );
+        }
+      };
+
+      // Request immediately
+      requestImages();
+
+      // Retry multiple times to ensure we get the images
+      // Parent window listener might not be ready immediately
+      const retryDelays = [200, 500, 1000, 2000];
+      retryDelays.forEach((delay) => {
+        setTimeout(() => {
+          // Only retry if we haven't received images yet
+          if (!imagesLoadedRef.current) {
+            console.log(
+              `NUSENSE: Retrying image request from parent window (delay: ${delay}ms)`
+            );
+            requestImages();
+          }
+        }, delay);
+      });
     }
   }, []);
 
@@ -161,31 +173,26 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   // This is critical for iframe mode - parent window sends all product images from the Shopify page
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === "NUSENSE_PRODUCT_IMAGES") {
+      // Only process messages from parent window
+      if (event.data && event.data.type === "NUSENSE_PRODUCT_IMAGES") {
         const parentImages = event.data.images || [];
         console.log(
           "NUSENSE: Received images from parent window:",
           parentImages.length,
           parentImages
         );
-        
+
         if (parentImages.length > 0) {
-          // Always use parent images - they come from the actual product page
-          // Merge with existing images to avoid duplicates
-          setAvailableImages((prevImages) => {
-            const allImages = [...parentImages];
-            // Add any existing images that aren't in parent images
-            prevImages.forEach((img) => {
-              if (!allImages.includes(img)) {
-                allImages.push(img);
-              }
-            });
-            console.log("NUSENSE: Setting images from parent window. Total:", allImages.length);
-            return allImages;
-          });
+          // Always prioritize parent images - they come from the actual Shopify product page
+          // Parent images are the most reliable source
+          console.log(
+            "NUSENSE: Setting images from parent window. Total:",
+            parentImages.length
+          );
+          setAvailableImages(parentImages);
           imagesLoadedRef.current = true;
         } else {
-          console.log("NUSENSE: Parent window sent empty images array");
+          console.warn("NUSENSE: Parent window sent empty images array");
         }
       }
     };
@@ -299,7 +306,11 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     }
 
     // Priority 2: Get product images from window.NUSENSE_PRODUCT_DATA
-    if (!imagesFound && typeof window !== "undefined" && (window as any).NUSENSE_PRODUCT_DATA) {
+    if (
+      !imagesFound &&
+      typeof window !== "undefined" &&
+      (window as any).NUSENSE_PRODUCT_DATA
+    ) {
       const productData = (window as any).NUSENSE_PRODUCT_DATA;
       if (
         productData.images &&

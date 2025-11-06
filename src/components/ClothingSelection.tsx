@@ -21,6 +21,7 @@ export default function ClothingSelection({
   // Initialize with provided images; only remove on actual load error
   useEffect(() => {
     const unique = Array.from(new Set(images.filter(Boolean)));
+    console.log('NUSENSE: ClothingSelection received images:', images.length, 'unique:', unique.length, unique);
     setValidImages(unique);
   }, [images]);
   if (validImages.length === 0 && !selectedImage) {

@@ -240,17 +240,39 @@ function generateProductId(): string {
  */
 export function initializeImageExtractionListener(): void {
   window.addEventListener("message", (event) => {
-    if (event.data.type === "NUSENSE_REQUEST_IMAGES") {
-      const images = extractProductImages();
+    if (event.data && event.data.type === "NUSENSE_REQUEST_IMAGES") {
+      console.log('NUSENSE: Received image request from iframe (via initializeImageExtractionListener)');
+      
+      let images: string[] = [];
+      
+      // Priority 1: Use NUSENSE_PRODUCT_DATA if available (most reliable)
+      if (typeof window !== "undefined" && (window as any).NUSENSE_PRODUCT_DATA) {
+        const productData = (window as any).NUSENSE_PRODUCT_DATA;
+        if (productData.images && Array.isArray(productData.images) && productData.images.length > 0) {
+          images = productData.images;
+          console.log('NUSENSE: Using images from NUSENSE_PRODUCT_DATA:', images.length);
+        }
+      }
+      
+      // Priority 2: Extract from page if NUSENSE_PRODUCT_DATA not available or empty
+      if (images.length === 0) {
+        images = extractProductImages();
+        console.log('NUSENSE: Extracted images from page:', images.length);
+      }
+      
       // Send images back to the iframe
       if (event.source && event.source !== window) {
+        console.log('NUSENSE: Sending', images.length, 'images to iframe');
         (event.source as Window).postMessage({
           type: "NUSENSE_PRODUCT_IMAGES",
           images: images
         }, "*");
+      } else {
+        console.warn('NUSENSE: Invalid event source for image request');
       }
     }
   });
+  console.log('NUSENSE: Image extraction listener initialized on parent window');
 }
 
 /**
