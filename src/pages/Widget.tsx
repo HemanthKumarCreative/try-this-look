@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import TryOnWidget from "@/components/TryOnWidget";
 import {
@@ -8,20 +9,40 @@ import {
 import { Sparkles } from "lucide-react";
 
 export default function Widget() {
+  const [searchParams] = useSearchParams();
   const [isWidgetOpen, setIsWidgetOpen] = useState(true);
   const [productImages, setProductImages] = useState<string[]>([]);
+  const [productData, setProductData] = useState<any>(null);
 
   useEffect(() => {
+    // Get product data from URL query parameters
+    const productParam = searchParams.get("product");
+    if (productParam) {
+      try {
+        const data = JSON.parse(decodeURIComponent(productParam));
+        setProductData(data);
+        
+        // Use product images from URL if available
+        if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+          setProductImages(data.images);
+        }
+      } catch (error) {
+        console.error("Failed to parse product data:", error);
+      }
+    }
+
     // Initialize image extraction listener for iframe communication
     initializeImageExtractionListener();
 
-    // Extract real product images from the page
+    // Extract real product images from the page (if not from URL)
     const images = extractProductImages();
-    setProductImages(images);
+    if (images.length > 0 && productImages.length === 0) {
+      setProductImages(images);
+    }
 
     // Auto-open the widget on mount
     setIsWidgetOpen(true);
-  }, []);
+  }, [searchParams, productImages.length]);
 
   // Respond to parent commands (e.g., re-open modal on subsequent clicks)
   useEffect(() => {

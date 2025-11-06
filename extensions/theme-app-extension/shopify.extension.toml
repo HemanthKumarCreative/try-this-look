@@ -1,0 +1,13 @@
+# Theme App Extension Configuration
+# Learn more: https://shopify.dev/docs/apps/online-store/theme-app-extensions
+
+name = "nusense-tryon"
+
+uid = "758e32ff-8859-784f-cead-f69f86398211a673899b"
+
+type = "theme_app_extension"
+
+[build]
+command = ""
+watch = []
+

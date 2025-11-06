@@ -1,0 +1,37 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "nusense-tryon"
+client_id = "8c0ff99d006911df268ba38b356149d8"
+application_url = "https://a3ef1c377916.ngrok-free.app"
+embedded = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products,read_products,write_themes,read_themes"
+
+[auth]
+redirect_urls = [
+  "https://a3ef1c377916.ngrok-free.app/auth/callback",
+  "https://a3ef1c377916.ngrok-free.app/auth/shopify/callback",
+  "https://a3ef1c377916.ngrok-free.app/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-01"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "vto-demo.myshopify.com"
+
+[app_proxy]
+url = "https://a3ef1c377916.ngrok-free.app"
+subpath = "a"
+prefix = "apps"
+
+[[extensions]]
+type = "theme_app_extension"
+name = "nusense-tryon"
+

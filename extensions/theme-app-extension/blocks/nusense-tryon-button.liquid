@@ -1,0 +1,264 @@
+{% comment %}
+  NUSENSE TryON Button Block
+  This block can be added to product pages via the theme editor
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "NUSENSE Try-On Button",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Try Now"
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "Button Style",
+      "options": [
+        {
+          "value": "primary",
+          "label": "Primary"
+        },
+        {
+          "value": "secondary",
+          "label": "Secondary"
+        },
+        {
+          "value": "outline",
+          "label": "Outline"
+        },
+        {
+          "value": "minimal",
+          "label": "Minimal"
+        }
+      ],
+      "default": "primary"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_icon",
+      "label": "Show Icon",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "button_icon",
+      "label": "Button Icon (emoji)",
+      "default": "✨"
+    },
+    {
+      "type": "checkbox",
+      "id": "button_width_full",
+      "label": "Full Width Button",
+      "default": true,
+      "info": "Enable to make button full width. Disable to allow flexible width (can be placed next to other buttons)"
+    }
+  ]
+}
+{% endschema %}
+
+{% assign button_text = block.settings.button_text | default: 'Try Now' %}
+{% assign button_style = block.settings.button_style | default: 'primary' %}
+{% assign show_icon = block.settings.show_icon | default: true %}
+{% assign button_icon = block.settings.button_icon | default: '✨' %}
+{% assign button_width_full = block.settings.button_width_full | default: true %}
+
+{% comment %}
+  Build button classes based on style variant
+  Shopify themes typically use: button, button--secondary, button--outline, button--tertiary
+  Debug: button_style = {{ button_style }}
+{% endcomment %}
+{% assign button_classes = 'button' %}
+{% case button_style %}
+  {% when 'secondary' %}
+    {% assign button_classes = button_classes | append: ' button--secondary' %}
+  {% when 'outline' %}
+    {% assign button_classes = button_classes | append: ' button--outline' %}
+  {% when 'minimal' %}
+    {% assign button_classes = button_classes | append: ' button--tertiary' %}
+  {% else %}
+    {% comment %} Primary - no additional class needed {% endcomment %}
+{% endcase %}
+{% if button_width_full %}
+  {% assign button_classes = button_classes | append: ' button--full-width' %}
+{% endif %}
+
+<button 
+  id="nusense-tryon-btn-{{ block.id }}" 
+  class="{{ button_classes }}"
+  {{ block.shopify_attributes }}
+  aria-label="{{ button_text }}"
+  data-product-id="{{ product.id }}"
+  data-shop-domain="{{ shop.permanent_domain }}"
+  data-button-style="{{ button_style }}"
+  type="button"
+  style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;{% if button_width_full %} width: 100%;{% endif %}"
+>
+  {% if show_icon %}
+    <span class="button__icon">{{ button_icon }}</span>
+  {% endif %}
+  <span class="button__text">{{ button_text }}</span>
+</button>
+
+<script>
+  (function() {
+    const button = document.getElementById('nusense-tryon-btn-{{ block.id }}');
+    if (!button) return;
+    
+    // Ensure button style variant is applied correctly
+    // This handles cases where theme classes might not be present
+    const buttonStyle = button.dataset.buttonStyle || '{{ button_style }}' || 'primary';
+    
+    // Debug logging (remove in production)
+    console.log('NUSENSE Button Style:', buttonStyle);
+    console.log('NUSENSE Button Classes Before:', button.className);
+    
+    // Remove any existing style classes to avoid conflicts
+    let currentClasses = button.className;
+    currentClasses = currentClasses
+      .replace(/\s*button--secondary\s*/g, ' ')
+      .replace(/\s*button--outline\s*/g, ' ')
+      .replace(/\s*button--tertiary\s*/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Ensure base button class is present
+    if (!currentClasses.includes('button')) {
+      currentClasses = 'button ' + currentClasses;
+    }
+    
+    // Re-apply the correct style class based on buttonStyle
+    if (buttonStyle === 'secondary') {
+      currentClasses += ' button--secondary';
+    } else if (buttonStyle === 'outline') {
+      currentClasses += ' button--outline';
+    } else if (buttonStyle === 'minimal') {
+      currentClasses += ' button--tertiary';
+    }
+    // Primary doesn't need an additional class
+    
+    // Apply the updated classes
+    button.className = currentClasses.trim();
+    
+    console.log('NUSENSE Button Classes After:', button.className);
+    
+    // Function to apply button style
+    const applyButtonStyle = function() {
+      const style = button.dataset.buttonStyle || '{{ button_style }}' || 'primary';
+      let classes = button.className
+        .replace(/\s*button--secondary\s*/g, ' ')
+        .replace(/\s*button--outline\s*/g, ' ')
+        .replace(/\s*button--tertiary\s*/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      if (!classes.includes('button')) {
+        classes = 'button ' + classes;
+      }
+      
+      if (style === 'secondary') {
+        classes += ' button--secondary';
+      } else if (style === 'outline') {
+        classes += ' button--outline';
+      } else if (style === 'minimal') {
+        classes += ' button--tertiary';
+      }
+      
+      button.className = classes.trim();
+      console.log('NUSENSE Applied Style:', style, 'Classes:', button.className);
+    };
+    
+    // Watch for changes in the theme editor (when settings are updated)
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'attributes') {
+          if (mutation.attributeName === 'data-button-style' || mutation.attributeName === 'class') {
+            applyButtonStyle();
+          }
+        }
+      });
+    });
+    
+    observer.observe(button, {
+      attributes: true,
+      attributeFilter: ['data-button-style', 'class']
+    });
+    
+    // Also watch for when the block is re-rendered by theme editor
+    // Check periodically but less aggressively
+    let lastStyle = button.dataset.buttonStyle;
+    const styleChecker = setInterval(function() {
+      const currentStyle = button.dataset.buttonStyle;
+      if (currentStyle !== lastStyle) {
+        lastStyle = currentStyle;
+        applyButtonStyle();
+      }
+    }, 500);
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', function() {
+      observer.disconnect();
+      clearInterval(styleChecker);
+    });
+    
+    const productId = button.dataset.productId;
+    const shopDomain = button.dataset.shopDomain;
+    
+    button.addEventListener('click', function() {
+      // Open widget in modal or iframe
+      // App proxy URL format: /apps/apps/a/{path}
+      // Or use direct app URL if app proxy not needed
+      const widgetUrl = '{{ shop.metafields.nusense.widget_url | default: "https://a3ef1c377916.ngrok-free.app" }}/widget?product_id=' + productId;
+      
+      // Create modal overlay
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+      
+      const iframe = document.createElement('iframe');
+      iframe.src = widgetUrl;
+      iframe.style.cssText = `
+        width: 95vw;
+        max-width: 1200px;
+        height: 90vh;
+        border: none;
+        border-radius: 8px;
+        background: white;
+      `;
+      
+      overlay.appendChild(iframe);
+      document.body.appendChild(overlay);
+      
+      // Close on click outside
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+          document.body.removeChild(overlay);
+        }
+      });
+      
+      // Close on escape key
+      const closeHandler = function(e) {
+        if (e.key === 'Escape') {
+          document.body.removeChild(overlay);
+          document.removeEventListener('keydown', closeHandler);
+        }
+      };
+      document.addEventListener('keydown', closeHandler);
+    });
+  })();
+</script>
+

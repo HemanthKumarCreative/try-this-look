@@ -1,0 +1,12 @@
+{
+  "sections": {
+    "nusense-tryon-button": {
+      "name": "NUSENSE Try-On Button"
+    }
+  },
+  "blocks": {
+    "nusense-tryon-button": {
+      "name": "NUSENSE Try-On Button"
+    }
+  }
+}
