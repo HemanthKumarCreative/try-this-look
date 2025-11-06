@@ -36,7 +36,9 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   );
   const [statusVariant, setStatusVariant] = useState<"info" | "error">("info");
   const INFLIGHT_KEY = "nusense_tryon_inflight";
-  
+  // Track if we've already loaded images from URL/NUSENSE_PRODUCT_DATA to prevent parent images from overriding
+  const imagesLoadedRef = useRef<boolean>(false);
+
   useEffect(() => {
     // Load saved session on mount
     const savedImage = storage.getUploadedImage();
@@ -57,9 +59,46 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       setStatusMessage("Résultat prêt. Utilisez les actions ci-dessous.");
     }
 
-    // Extract product images from the current page
+    // Priority 1: Get product images from URL parameters (main product images)
+    const urlParams = new URLSearchParams(window.location.search);
+    const productParam = urlParams.get("product");
+    if (productParam) {
+      try {
+        const productData = JSON.parse(decodeURIComponent(productParam));
+        if (
+          productData.images &&
+          Array.isArray(productData.images) &&
+          productData.images.length > 0
+        ) {
+          setAvailableImages(productData.images);
+          imagesLoadedRef.current = true; // Mark as loaded to prevent parent override
+          return; // Use URL images, don't extract from page
+        }
+      } catch (error) {
+        console.error("Failed to parse product data from URL:", error);
+      }
+    }
+
+    // Priority 2: Get product images from window.NUSENSE_PRODUCT_DATA (if available)
+    if (typeof window !== "undefined" && (window as any).NUSENSE_PRODUCT_DATA) {
+      const productData = (window as any).NUSENSE_PRODUCT_DATA;
+      if (
+        productData.images &&
+        Array.isArray(productData.images) &&
+        productData.images.length > 0
+      ) {
+        setAvailableImages(productData.images);
+        imagesLoadedRef.current = true; // Mark as loaded to prevent parent override
+        return; // Use product data images, don't extract from page
+      }
+    }
+
+    // Priority 3: Extract product images from the current page (only main product images)
     const images = extractProductImages();
-    setAvailableImages(images);
+    if (images.length > 0) {
+      setAvailableImages(images);
+      imagesLoadedRef.current = true; // Mark as loaded to prevent parent override
+    }
 
     // If we're in an iframe, try to get images from parent window
     if (window.parent !== window) {
@@ -78,19 +117,24 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   // No longer needed - using fixed 185px width
 
   // Listen for messages from parent window
+  // Use empty dependency array to maintain persistent listener
+  // Check ref inside handler to determine if we should accept parent images
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === "NUSENSE_PRODUCT_IMAGES") {
         const parentImages = event.data.images || [];
-        if (parentImages.length > 0) {
+        // Only use parent images if we haven't already loaded images from URL/NUSENSE_PRODUCT_DATA
+        // Use ref to avoid stale closure issues
+        if (parentImages.length > 0 && !imagesLoadedRef.current) {
           setAvailableImages(parentImages);
+          imagesLoadedRef.current = true; // Mark as loaded to prevent future overrides
         }
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, []); // Empty dependency array - listener should persist
 
   const handlePhotoUpload = (dataURL: string) => {
     setUploadedImage(dataURL);
@@ -174,6 +218,39 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   };
 
   const handleRefreshImages = () => {
+    // Priority 1: Get product images from URL parameters (main product images)
+    const urlParams = new URLSearchParams(window.location.search);
+    const productParam = urlParams.get("product");
+    if (productParam) {
+      try {
+        const productData = JSON.parse(decodeURIComponent(productParam));
+        if (
+          productData.images &&
+          Array.isArray(productData.images) &&
+          productData.images.length > 0
+        ) {
+          setAvailableImages(productData.images);
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to parse product data from URL:", error);
+      }
+    }
+
+    // Priority 2: Get product images from window.NUSENSE_PRODUCT_DATA (if available)
+    if (typeof window !== "undefined" && (window as any).NUSENSE_PRODUCT_DATA) {
+      const productData = (window as any).NUSENSE_PRODUCT_DATA;
+      if (
+        productData.images &&
+        Array.isArray(productData.images) &&
+        productData.images.length > 0
+      ) {
+        setAvailableImages(productData.images);
+        return;
+      }
+    }
+
+    // Priority 3: Extract product images from the current page (only main product images)
     const images = extractProductImages();
     setAvailableImages(images);
   };
@@ -203,18 +280,30 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   };
 
   useEffect(() => {
-    // Check for inflight generation on mount
+    // Check for inflight generation after state updates are applied
+    // This ensures uploadedImage and selectedClothing are set before calling handleGenerate
     const inflight = localStorage.getItem(INFLIGHT_KEY) === "1";
-    const savedImage = storage.getUploadedImage();
-    const savedClothing = storage.getClothingUrl();
     const savedResult = storage.getGeneratedImage();
-    if (inflight && savedImage && savedClothing && !savedResult) {
-      // Restart generation to resume
-      setTimeout(() => {
+
+    // Only resume generation if:
+    // 1. There's an inflight generation
+    // 2. We have both uploadedImage and selectedClothing (state is set)
+    // 3. We don't already have a result
+    if (
+      inflight &&
+      uploadedImage &&
+      selectedClothing &&
+      !savedResult &&
+      !generatedImage
+    ) {
+      // Restart generation to resume after a short delay to ensure state is fully applied
+      const timeoutId = setTimeout(() => {
         handleGenerate();
       }, 300);
+
+      return () => clearTimeout(timeoutId);
     }
-  }, []);
+  }, [uploadedImage, selectedClothing, generatedImage]); // Depend on state to ensure it's set before resuming
 
   // Check if we're inside an iframe
   const isInIframe = typeof window !== "undefined" && window.parent !== window;
@@ -238,194 +327,191 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   };
 
   return (
-    <div 
+    <div
       className="w-full h-full overflow-y-auto"
       style={{ backgroundColor: "#fef3f3", minHeight: "100vh" }}
     >
-          {/* Header */}
-          <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 border-b border-border shadow-sm">
-            <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <div
-                className="inline-flex flex-col flex-shrink-0"
-                style={{ width: "185px" }}
-              >
-                <span
-                  aria-label="NULOOK"
-                  className="inline-flex items-center tracking-wide leading-none whitespace-nowrap"
-                  style={{ width: "185px", fontSize: "32px", fontWeight: 700 }}
-                >
-                  <span style={{ color: "#ce0003" }}>NU</span>
-                  <span style={{ color: "#564646" }}>LOOK</span>
-                </span>
-                <div
-                  className="mt-0.5 sm:mt-1 text-left leading-tight tracking-tight whitespace-nowrap"
-                  style={{
-                    width: "185px",
-                    fontSize: "12px",
-                    color: "#3D3232",
-                    fontWeight: 500,
-                  }}
-                >
-                  Essayage Virtuel Alimenté par IA
-                </div>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3 flex-shrink-0">
-                {!isGenerating && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleReset}
-                    className="group text-secondary-foreground hover:bg-secondary/80 transition-all duration-200 text-xs sm:text-sm px-3 sm:px-4 h-[44px] sm:h-9 md:h-10 whitespace-nowrap shadow-sm hover:shadow-md gap-2 flex items-center"
-                    aria-label="Réinitialiser"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:rotate-[-120deg] duration-500" />
-                    <span>Réinitialiser</span>
-                  </Button>
-                )}
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  onClick={handleClose}
-                  className="h-[44px] w-[44px] sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-md bg-error text-error-foreground hover:bg-error/90 border-error transition-all duration-200 group shadow-sm hover:shadow-md"
-                  aria-label="Fermer"
-                  title="Fermer"
-                >
-                  <X className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:rotate-90 duration-300" />
-                </Button>
-              </div>
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 border-b border-border shadow-sm">
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
+          <div
+            className="inline-flex flex-col flex-shrink-0"
+            style={{ width: "185px" }}
+          >
+            <span
+              aria-label="NULOOK"
+              className="inline-flex items-center tracking-wide leading-none whitespace-nowrap"
+              style={{ width: "185px", fontSize: "32px", fontWeight: 700 }}
+            >
+              <span style={{ color: "#ce0003" }}>NU</span>
+              <span style={{ color: "#564646" }}>LOOK</span>
+            </span>
+            <div
+              className="mt-0.5 sm:mt-1 text-left leading-tight tracking-tight whitespace-nowrap"
+              style={{
+                width: "185px",
+                fontSize: "12px",
+                color: "#3D3232",
+                fontWeight: 500,
+              }}
+            >
+              Essayage Virtuel Alimenté par IA
             </div>
           </div>
-
-          {/* Status Bar */}
-          <div className="px-3 sm:px-4 md:px-5 lg:px-6 pt-2 sm:pt-3">
-            <StatusBar message={statusMessage} variant={statusVariant} />
+          <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3 flex-shrink-0">
+            {!isGenerating && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleReset}
+                className="group text-secondary-foreground hover:bg-secondary/80 transition-all duration-200 text-xs sm:text-sm px-3 sm:px-4 h-[44px] sm:h-9 md:h-10 whitespace-nowrap shadow-sm hover:shadow-md gap-2 flex items-center"
+                aria-label="Réinitialiser"
+              >
+                <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:rotate-[-120deg] duration-500" />
+                <span>Réinitialiser</span>
+              </Button>
+            )}
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={handleClose}
+              className="h-[44px] w-[44px] sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-md bg-error text-error-foreground hover:bg-error/90 border-error transition-all duration-200 group shadow-sm hover:shadow-md"
+              aria-label="Fermer"
+              title="Fermer"
+            >
+              <X className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:rotate-90 duration-300" />
+            </Button>
           </div>
+        </div>
+      </div>
 
-          {/* Content */}
-          <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-4 sm:space-y-5 md:space-y-6">
-            {/* Two-state layout for selection phase */}
-            {currentStep <= 2 && !isGenerating && !generatedImage && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
-                {/* Left Panel: Upload / Preview */}
-                <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
-                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
-                      1
+      {/* Status Bar */}
+      <div className="px-3 sm:px-4 md:px-5 lg:px-6 pt-2 sm:pt-3">
+        <StatusBar message={statusMessage} variant={statusVariant} />
+      </div>
+
+      {/* Content */}
+      <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-4 sm:space-y-5 md:space-y-6">
+        {/* Two-state layout for selection phase */}
+        {currentStep <= 2 && !isGenerating && !generatedImage && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
+            {/* Left Panel: Upload / Preview */}
+            <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
+                  1
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base sm:text-lg font-semibold">
+                    Téléchargez Votre Photo
+                  </h2>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    Choisissez une photo claire de vous-même
+                  </p>
+                </div>
+              </div>
+
+              {!uploadedImage && (
+                <PhotoUpload onPhotoUpload={handlePhotoUpload} />
+              )}
+
+              {uploadedImage && (
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="relative rounded-lg bg-card p-2 sm:p-3 border border-border shadow-sm">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <h3 className="font-semibold text-sm sm:text-base">
+                        Votre Photo
+                      </h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleClearUploadedImage}
+                        className="group h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm flex-shrink-0 gap-1.5 border-border text-foreground hover:bg-muted hover:border-muted-foreground/20 hover:text-muted-foreground transition-all duration-200"
+                        aria-label="Effacer la photo"
+                      >
+                        <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:scale-110 duration-200" />
+                        <span>Effacer</span>
+                      </Button>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h2 className="text-base sm:text-lg font-semibold">
-                        Téléchargez Votre Photo
-                      </h2>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        Choisissez une photo claire de vous-même
-                      </p>
+                    <div className="aspect-[3/4] rounded overflow-hidden border border-border bg-card flex items-center justify-center shadow-sm">
+                      <img
+                        src={uploadedImage}
+                        alt="Uploaded"
+                        className="h-full w-auto object-contain"
+                      />
                     </div>
                   </div>
+                </div>
+              )}
+            </Card>
 
-                  {!uploadedImage && (
-                    <PhotoUpload onPhotoUpload={handlePhotoUpload} />
-                  )}
-
-                  {uploadedImage && (
-                    <div className="space-y-3 sm:space-y-4">
-                      <div className="relative rounded-lg bg-card p-2 sm:p-3 border border-border shadow-sm">
-                        <div className="flex items-center justify-between mb-2 gap-2">
-                          <h3 className="font-semibold text-sm sm:text-base">
-                            Votre Photo
-                          </h3>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleClearUploadedImage}
-                            className="group h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm flex-shrink-0 gap-1.5 border-border text-foreground hover:bg-muted hover:border-muted-foreground/20 hover:text-muted-foreground transition-all duration-200"
-                            aria-label="Effacer la photo"
-                          >
-                            <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:scale-110 duration-200" />
-                            <span>Effacer</span>
-                          </Button>
-                        </div>
-                        <div className="aspect-[3/4] rounded overflow-hidden border border-border bg-card flex items-center justify-center shadow-sm">
-                          <img
-                            src={uploadedImage}
-                            alt="Uploaded"
-                            className="h-full w-auto object-contain"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </Card>
-
-                {/* Right Panel: Clothing Selection */}
-                <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
-                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
-                      2
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h2 className="text-base sm:text-lg font-semibold">
-                        Sélectionner un Article de Vêtement
-                      </h2>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        Sélectionnez un article de vêtement sur cette page
-                      </p>
-                    </div>
-                  </div>
-
-                  <ClothingSelection
-                    images={availableImages}
-                    selectedImage={selectedClothing}
-                    onSelect={handleClothingSelect}
-                    onRefreshImages={handleRefreshImages}
-                  />
-                </Card>
+            {/* Right Panel: Clothing Selection */}
+            <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
+                  2
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base sm:text-lg font-semibold">
+                    Sélectionner un Article de Vêtement
+                  </h2>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    Sélectionnez un article de vêtement sur cette page
+                  </p>
+                </div>
               </div>
-            )}
 
-            {currentStep <= 2 && !isGenerating && !generatedImage && (
-              <div className="pt-1 sm:pt-2">
-                <Button
-                  onClick={handleGenerate}
-                  disabled={!selectedClothing || !uploadedImage || isGenerating}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11 sm:h-12 md:h-14 text-sm sm:text-base md:text-lg min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Générer l'essayage virtuel"
-                >
-                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                  Générer
-                </Button>
-              </div>
-            )}
-
-            {currentStep === 3 && (
-              <GenerationProgress
-                progress={progress}
-                isGenerating={isGenerating}
+              <ClothingSelection
+                images={availableImages}
+                selectedImage={selectedClothing}
+                onSelect={handleClothingSelect}
+                onRefreshImages={handleRefreshImages}
               />
-            )}
-
-            {currentStep === 4 && generatedImage && (
-              <ResultDisplay
-                generatedImage={generatedImage}
-                personImage={uploadedImage}
-                clothingImage={selectedClothing}
-              />
-            )}
-
-            {error && (
-              <Card className="p-6 bg-error/10 border-error">
-                <p className="text-error font-medium">{error}</p>
-                <Button
-                  variant="secondary"
-                  onClick={handleReset}
-                  className="group mt-4 gap-2 text-secondary-foreground hover:bg-secondary/80 transition-all duration-200"
-                  aria-label="Réessayer"
-                >
-                  <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-[-120deg] duration-500" />
-                  <span>Réessayer</span>
-                </Button>
-              </Card>
-            )}
+            </Card>
           </div>
+        )}
+
+        {currentStep <= 2 && !isGenerating && !generatedImage && (
+          <div className="pt-1 sm:pt-2">
+            <Button
+              onClick={handleGenerate}
+              disabled={!selectedClothing || !uploadedImage || isGenerating}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11 sm:h-12 md:h-14 text-sm sm:text-base md:text-lg min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Générer l'essayage virtuel"
+            >
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              Générer
+            </Button>
+          </div>
+        )}
+
+        {currentStep === 3 && (
+          <GenerationProgress progress={progress} isGenerating={isGenerating} />
+        )}
+
+        {currentStep === 4 && generatedImage && (
+          <ResultDisplay
+            generatedImage={generatedImage}
+            personImage={uploadedImage}
+            clothingImage={selectedClothing}
+          />
+        )}
+
+        {error && (
+          <Card className="p-6 bg-error/10 border-error">
+            <p className="text-error font-medium">{error}</p>
+            <Button
+              variant="secondary"
+              onClick={handleReset}
+              className="group mt-4 gap-2 text-secondary-foreground hover:bg-secondary/80 transition-all duration-200"
+              aria-label="Réessayer"
+            >
+              <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-[-120deg] duration-500" />
+              <span>Réessayer</span>
+            </Button>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

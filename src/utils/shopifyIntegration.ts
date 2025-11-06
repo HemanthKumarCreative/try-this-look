@@ -298,8 +298,14 @@ export function extractProductImages(): string[] {
   jsonLdImages.forEach(img => addImage(img));
 
   // 3. Extract from all img elements (including lazy-loaded)
+  // But exclude images from related/recommended product sections
   const imgElements = document.querySelectorAll('img');
   imgElements.forEach(img => {
+    // Skip images from related/recommended product sections
+    if (isInRelatedOrRecommendedSection(img)) {
+      return;
+    }
+
     // Check multiple source attributes
     const sources = [
       img.src,
@@ -327,7 +333,8 @@ export function extractProductImages(): string[] {
     });
   });
 
-  // 4. Extract from Shopify-specific selectors
+  // 4. Extract from Shopify-specific selectors (main product images only)
+  // Focus on main product gallery/thumbnails, exclude related/recommended sections
   const shopifySelectors = [
     '.product__media img',
     '.product-image img',
@@ -339,15 +346,22 @@ export function extractProductImages(): string[] {
     '[data-product-single-media-group] img',
     '.product-images img',
     '.product-media img',
+    '.product-thumbnails img',
+    '.thumbnail img',
+    // Carousel/slider selectors for main product galleries
+    // These are checked against isInRelatedOrRecommendedSection to ensure they're main product carousels
     '.flickity-slider img',
     '.swiper-slide img',
     '.carousel img',
-    '.product-thumbnails img',
-    '.thumbnail img',
   ];
 
   shopifySelectors.forEach(selector => {
     document.querySelectorAll(selector).forEach((img: Element) => {
+      // Skip if in related/recommended section
+      if (isInRelatedOrRecommendedSection(img)) {
+        return;
+      }
+
       if (img instanceof HTMLImageElement) {
         const sources = [
           img.src,
@@ -628,25 +642,16 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
     'pixel.gif',
     'transparent',
     '.svg', // Exclude SVG for product images (usually icons/logos)
+    'unsplash', // Exclude Unsplash demo images
+    'demo', // Exclude demo images
+    'demo_pics', // Exclude demo pictures
+    'demo-pics', // Exclude demo pictures
+    'assets/demo', // Exclude demo assets
   ];
 
   for (const pattern of excludePatterns) {
     if (lowerUrl.includes(pattern) || lowerAlt.includes(pattern)) {
       console.log('NUSENSE : Exclu en raison du motif :', pattern);
-      return false;
-    }
-  }
-
-  // Accept common image formats
-  const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif'];
-  const hasValidExtension = validExtensions.some(ext => lowerUrl.includes(ext));
-  
-  // Check size if metadata available
-  if (metadata) {
-    const { width, height } = metadata;
-    // Skip very small images (likely icons) - be more lenient for better detection
-    if (width && height && width < 50 && height < 50) {
-      console.log('NUSENSE : Exclu en raison de la petite taille :', width, 'x', height);
       return false;
     }
   }
@@ -659,6 +664,148 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
     return false;
   }
 
+  // Accept common image formats
+  const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif'];
+  const hasValidExtension = validExtensions.some(ext => lowerUrl.includes(ext));
+  
+  // Require valid image file extension
+  if (!hasValidExtension) {
+    console.log('NUSENSE : Exclu en raison de l\'absence d\'extension d\'image valide');
+    return false;
+  }
+  
+  // Check size if metadata available
+  if (metadata) {
+    const { width, height } = metadata;
+    // Skip very small images (likely icons) - be more lenient for better detection
+    if (width && height && width < 50 && height < 50) {
+      console.log('NUSENSE : Exclu en raison de la petite taille :', width, 'x', height);
+      return false;
+    }
+  }
+
   console.log('NUSENSE : Image acceptée :', url);
   return true;
+}
+
+/**
+ * Check if an image element is inside a related/recommended product section
+ */
+function isInRelatedOrRecommendedSection(img: Element): boolean {
+  let parent: Element | null = img.parentElement;
+  let depth = 0;
+  const maxDepth = 10; // Limit search depth
+
+  while (parent && depth < maxDepth) {
+    const className = parent.className?.toLowerCase() || '';
+    const id = parent.id?.toLowerCase() || '';
+    const tagName = parent.tagName?.toLowerCase() || '';
+    
+    // Check for related/recommended product section patterns
+    const relatedPatterns = [
+      'related',
+      'recommended',
+      'you-may-also-like',
+      'you-may-like',
+      'similar',
+      'also-bought',
+      'frequently-bought',
+      'complementary',
+      'upsell',
+      'cross-sell',
+      'product-recommendations',
+      'product-suggestions',
+      'recently-viewed',
+      'trending',
+      'featured-collection',
+      'collection-grid',
+      'product-grid',
+      'product-list',
+      'product-carousel',
+      'product-slider',
+    ];
+
+    // Check class names and IDs
+    for (const pattern of relatedPatterns) {
+      if (className.includes(pattern) || id.includes(pattern)) {
+        // But allow if it's the main product section
+        if (!isMainProductSection(parent)) {
+          return true;
+        }
+      }
+    }
+
+    // Check for specific Shopify sections
+    if (parent.hasAttribute('data-section-type')) {
+      const sectionType = parent.getAttribute('data-section-type')?.toLowerCase() || '';
+      if (sectionType.includes('related') || 
+          sectionType.includes('recommendation') ||
+          sectionType.includes('complementary')) {
+        return true;
+      }
+    }
+
+    parent = parent.parentElement;
+    depth++;
+  }
+
+  return false;
+}
+
+/**
+ * Check if an element is in the main product section (not related/recommended)
+ */
+function isMainProductSection(element: Element): boolean {
+  const className = element.className?.toLowerCase() || '';
+  const id = element.id?.toLowerCase() || '';
+  
+  const mainProductPatterns = [
+    'product-single',
+    'product-main',
+    'product-detail',
+    'product-form',
+    'product-gallery',
+    'product-media',
+    'product-photos',
+    'main-product',
+    'product__media',
+    'product-image',
+    'product-images',
+    'product-thumbnails',
+  ];
+
+  for (const pattern of mainProductPatterns) {
+    if (className.includes(pattern) || id.includes(pattern)) {
+      return true;
+    }
+  }
+
+  // Check if carousel/slider is within a main product container
+  // Look up the DOM tree to find main product indicators
+  let current: Element | null = element;
+  let depth = 0;
+  const maxDepth = 5; // Limit search depth for performance
+
+  while (current && depth < maxDepth) {
+    const currentClassName = current.className?.toLowerCase() || '';
+    const currentId = current.id?.toLowerCase() || '';
+    
+    // If we find a main product pattern in parent, this is a main product carousel
+    for (const pattern of mainProductPatterns) {
+      if (currentClassName.includes(pattern) || currentId.includes(pattern)) {
+        return true;
+      }
+    }
+    
+    // Check for data attributes that indicate main product
+    if (current.hasAttribute('data-product-image') || 
+        current.hasAttribute('data-product-single-media-group')) {
+      return true;
+    }
+
+    current = current.parentElement;
+    depth++;
+  }
+
+  return false;
 }
