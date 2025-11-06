@@ -42,3 +42,4 @@ Vercel serverless functions run from the root directory and need all dependencie
 
 **The dependencies should now be available to the serverless function!** ✅
 
+ok done
