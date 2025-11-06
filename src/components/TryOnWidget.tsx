@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import PhotoUpload from "./PhotoUpload";
@@ -17,8 +16,8 @@ import { Sparkles, X, RotateCcw, XCircle } from "lucide-react";
 import StatusBar from "./StatusBar";
 
 interface TryOnWidgetProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
@@ -37,46 +36,44 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   );
   const [statusVariant, setStatusVariant] = useState<"info" | "error">("info");
   const INFLIGHT_KEY = "nusense_tryon_inflight";
-  console.log("TryOnWidget", isOpen);
+  
   useEffect(() => {
-    if (isOpen) {
-      // Load saved session
-      const savedImage = storage.getUploadedImage();
-      const savedClothing = storage.getClothingUrl();
-      const savedResult = storage.getGeneratedImage();
-      if (savedImage) {
-        setUploadedImage(savedImage);
-        setCurrentStep(2);
-        setStatusMessage("Photo chargée. Sélectionnez un vêtement.");
-      }
-      if (savedClothing) {
-        setSelectedClothing(savedClothing);
-        setStatusMessage("Prêt à générer. Cliquez sur Générer.");
-      }
-      if (savedResult) {
-        setGeneratedImage(savedResult);
-        setCurrentStep(4);
-        setStatusMessage("Résultat prêt. Utilisez les actions ci-dessous.");
-      }
+    // Load saved session on mount
+    const savedImage = storage.getUploadedImage();
+    const savedClothing = storage.getClothingUrl();
+    const savedResult = storage.getGeneratedImage();
+    if (savedImage) {
+      setUploadedImage(savedImage);
+      setCurrentStep(2);
+      setStatusMessage("Photo chargée. Sélectionnez un vêtement.");
+    }
+    if (savedClothing) {
+      setSelectedClothing(savedClothing);
+      setStatusMessage("Prêt à générer. Cliquez sur Générer.");
+    }
+    if (savedResult) {
+      setGeneratedImage(savedResult);
+      setCurrentStep(4);
+      setStatusMessage("Résultat prêt. Utilisez les actions ci-dessous.");
+    }
 
-      // Extract product images from the current page
-      const images = extractProductImages();
-      setAvailableImages(images);
+    // Extract product images from the current page
+    const images = extractProductImages();
+    setAvailableImages(images);
 
-      // If we're in an iframe, try to get images from parent window
-      if (window.parent !== window) {
-        try {
-          // Request product images from parent window
-          window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
-        } catch (error) {
-          console.log(
-            "Impossible de communiquer avec la fenêtre parente :",
-            error
-          );
-        }
+    // If we're in an iframe, try to get images from parent window
+    if (window.parent !== window) {
+      try {
+        // Request product images from parent window
+        window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
+      } catch (error) {
+        console.log(
+          "Impossible de communiquer avec la fenêtre parente :",
+          error
+        );
       }
     }
-  }, [isOpen]);
+  }, []);
 
   // No longer needed - using fixed 185px width
 
@@ -206,7 +203,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   };
 
   useEffect(() => {
-    if (!isOpen) return;
+    // Check for inflight generation on mount
     const inflight = localStorage.getItem(INFLIGHT_KEY) === "1";
     const savedImage = storage.getUploadedImage();
     const savedClothing = storage.getClothingUrl();
@@ -217,7 +214,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         handleGenerate();
       }, 300);
     }
-  }, [isOpen]);
+  }, []);
 
   // Check if we're inside an iframe
   const isInIframe = typeof window !== "undefined" && window.parent !== window;
@@ -235,18 +232,16 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         );
       }
     }
-    onClose();
+    if (onClose) {
+      onClose();
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent
-        className="w-[100vw] sm:w-[95vw] sm:max-w-5xl max-h-[100dvh] sm:max-h-[90dvh] overflow-y-auto p-0 rounded-none sm:rounded-lg"
-        onInteractOutside={(e) => {
-          e.preventDefault();
-        }}
-      >
-        <div style={{ backgroundColor: "#fef3f3" }}>
+    <div 
+      className="w-full h-full overflow-y-auto"
+      style={{ backgroundColor: "#fef3f3", minHeight: "100vh" }}
+    >
           {/* Header */}
           <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 border-b border-border shadow-sm">
             <div className="flex items-center justify-between gap-2 sm:gap-3">
@@ -431,8 +426,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
               </Card>
             )}
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }
