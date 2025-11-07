@@ -85,17 +85,18 @@ export default function ResultDisplay({
             />
           </div>
 
-          {/* Right side: Action buttons - Responsive grid: 1 column on mobile, 2 columns on larger screens */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-3.5 md:gap-4 justify-center items-center">
+          {/* Right side: Action buttons - Inline flex with wrap for responsiveness */}
+          <div className="flex flex-wrap gap-2 sm:gap-2.5 md:gap-3 justify-center items-center">
             {/* Buy Now - Red border */}
             <Button
               onClick={handleBuyNow}
               variant="outline"
-              className="group relative w-full min-h-[48px] sm:min-h-[50px] md:min-h-[52px] lg:min-h-[56px] h-auto py-2.5 sm:py-3 md:py-3.5 lg:py-4 px-3 sm:px-4 md:px-5 lg:px-6 text-xs sm:text-sm md:text-base font-semibold border-2 border-red-500/80 bg-white hover:bg-red-50 hover:border-red-600 text-red-600 hover:text-red-700 active:bg-red-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-red-500/10 focus-visible:ring-2 focus-visible:ring-red-500/50 focus-visible:ring-offset-2"
+              size="sm"
+              className="group relative inline-flex items-center justify-center min-h-[40px] sm:min-h-[44px] h-auto py-1.5 sm:py-2 px-2.5 sm:px-3 md:px-4 text-[10px] sm:text-xs md:text-sm font-semibold border-2 border-red-500/80 bg-white hover:bg-red-50 hover:border-red-600 text-red-600 hover:text-red-700 active:bg-red-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-red-500/10 focus-visible:ring-2 focus-visible:ring-red-500/50 focus-visible:ring-offset-2"
               aria-label="Acheter Maintenant"
             >
-              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110 flex-shrink-0" />
-              <span className="leading-tight text-center">
+              <CreditCard className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" />
+              <span className="leading-tight whitespace-nowrap">
                 Acheter Maintenant
               </span>
             </Button>
@@ -104,11 +105,12 @@ export default function ResultDisplay({
             <Button
               onClick={handleAddToCart}
               variant="outline"
-              className="group relative w-full min-h-[48px] sm:min-h-[50px] md:min-h-[52px] lg:min-h-[56px] h-auto py-2.5 sm:py-3 md:py-3.5 lg:py-4 px-3 sm:px-4 md:px-5 lg:px-6 text-xs sm:text-sm md:text-base font-semibold border-2 border-green-500/80 bg-white hover:bg-green-50 hover:border-green-600 text-green-600 hover:text-green-700 active:bg-green-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-green-500/10 focus-visible:ring-2 focus-visible:ring-green-500/50 focus-visible:ring-offset-2"
+              size="sm"
+              className="group relative inline-flex items-center justify-center min-h-[40px] sm:min-h-[44px] h-auto py-1.5 sm:py-2 px-2.5 sm:px-3 md:px-4 text-[10px] sm:text-xs md:text-sm font-semibold border-2 border-green-500/80 bg-white hover:bg-green-50 hover:border-green-600 text-green-600 hover:text-green-700 active:bg-green-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-green-500/10 focus-visible:ring-2 focus-visible:ring-green-500/50 focus-visible:ring-offset-2"
               aria-label="Ajouter au Panier"
             >
-              <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110 flex-shrink-0" />
-              <span className="leading-tight text-center">
+              <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" />
+              <span className="leading-tight whitespace-nowrap">
                 Ajouter au Panier
               </span>
             </Button>
@@ -117,11 +119,12 @@ export default function ResultDisplay({
             <Button
               onClick={handleTryInStore}
               variant="outline"
-              className="group relative w-full min-h-[48px] sm:min-h-[50px] md:min-h-[52px] lg:min-h-[56px] h-auto py-2.5 sm:py-3 md:py-3.5 lg:py-4 px-3 sm:px-4 md:px-5 lg:px-6 text-xs sm:text-sm md:text-base font-semibold border-2 border-orange-500/80 bg-white hover:bg-orange-50 hover:border-orange-600 text-orange-600 hover:text-orange-700 active:bg-orange-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-orange-500/10 focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:ring-offset-2"
+              size="sm"
+              className="group relative inline-flex items-center justify-center min-h-[40px] sm:min-h-[44px] h-auto py-1.5 sm:py-2 px-2.5 sm:px-3 md:px-4 text-[10px] sm:text-xs md:text-sm font-semibold border-2 border-orange-500/80 bg-white hover:bg-orange-50 hover:border-orange-600 text-orange-600 hover:text-orange-700 active:bg-orange-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-orange-500/10 focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:ring-offset-2"
               aria-label="essayer en magasin"
             >
-              <Building className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110 flex-shrink-0" />
-              <span className="leading-tight text-center">
+              <Building className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" />
+              <span className="leading-tight whitespace-nowrap">
                 essayer en magasin
               </span>
             </Button>
@@ -130,11 +133,14 @@ export default function ResultDisplay({
             <Button
               onClick={handleDownload}
               variant="outline"
-              className="group relative w-full min-h-[48px] sm:min-h-[50px] md:min-h-[52px] lg:min-h-[56px] h-auto py-2.5 sm:py-3 md:py-3.5 lg:py-4 px-3 sm:px-4 md:px-5 lg:px-6 text-xs sm:text-sm md:text-base font-semibold border-2 border-blue-500/80 bg-white hover:bg-blue-50 hover:border-blue-600 text-blue-600 hover:text-blue-700 active:bg-blue-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-blue-500/10 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2"
+              size="sm"
+              className="group relative inline-flex items-center justify-center min-h-[40px] sm:min-h-[44px] h-auto py-1.5 sm:py-2 px-2.5 sm:px-3 md:px-4 text-[10px] sm:text-xs md:text-sm font-semibold border-2 border-blue-500/80 bg-white hover:bg-blue-50 hover:border-blue-600 text-blue-600 hover:text-blue-700 active:bg-blue-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-blue-500/10 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2"
               aria-label="Télécharger"
             >
-              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110 flex-shrink-0" />
-              <span className="leading-tight text-center">Télécharger</span>
+              <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" />
+              <span className="leading-tight whitespace-nowrap">
+                Télécharger
+              </span>
             </Button>
           </div>
         </div>
