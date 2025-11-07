@@ -2,7 +2,7 @@
   NUSENSE TryON App Embed Block
   This app embed block will appear in "Theme Settings > App embeds"
   It initializes the widget functionality and image extraction listener
-  Can inject a try-on button into the header automatically
+  Can inject a try-on button into the header next to the cart icon
 {% endcomment %}
 
 {% comment %} Include the snippet that sets up image extraction and communication {% endcomment %}
@@ -10,17 +10,13 @@
 
 {% comment %}
   Header Button Injection Script
-  This script injects a try-on button into the header on product pages
+  This script injects a try-on button into the header next to the cart icon
+  Works on all pages, not just product pages
 {% endcomment %}
 {% if block.settings.show_header_button %}
 <script>
   (function() {
     'use strict';
-    
-    // Only run on product pages
-    {% unless product %}
-    return;
-    {% endunless %}
     
     // Configuration from block settings
     const config = {
@@ -28,11 +24,13 @@
       buttonText: {{ block.settings.button_text | default: 'Try On' | json }},
       buttonIcon: {{ block.settings.button_icon | default: '✨' | json }},
       buttonStyle: {{ block.settings.button_style | default: 'minimal' | json }},
-      headerSelector: {{ block.settings.header_selector | default: 'header, .header, .site-header, [role="banner"]' | json }},
-      insertPosition: {{ block.settings.insert_position | default: 'end' | json }},
-      insertSelector: {{ block.settings.insert_selector | json }},
+      cartIconSelector: {{ block.settings.cart_icon_selector | default: 'a[href*="/cart"], .cart-icon, .cart-link, [data-cart-icon], .header__icon--cart, .site-header__cart, #cart-icon, .icon-cart, button[aria-label*="cart" i], a[aria-label*="cart" i], .header__cart, .cart, [data-cart]' | json }},
       debug: {{ block.settings.enable_debug | default: false }}
     };
+    
+    // Product data (available on product pages)
+    const productId = {% if product %}{{ product.id | json }}{% else %}null{% endif %};
+    const isProductPage = productId !== null;
     
     function log(message, data) {
       if (config.debug) {
@@ -48,10 +46,9 @@
       button.className = 'nusense-tryon-header-button';
       button.setAttribute('aria-label', config.buttonText);
       
-      // Set button content
+      // Set button content - icon only for header (compact)
       button.innerHTML = `
         <span class="nusense-button-icon">${config.buttonIcon}</span>
-        <span class="nusense-button-text">${config.buttonText}</span>
       `;
       
       // Apply button style classes
@@ -68,131 +65,170 @@
         e.preventDefault();
         e.stopPropagation();
         
-        const productId = {{ product.id | json }};
-        const widgetUrl = config.widgetUrl + '/widget?product_id=' + productId;
-        
-        log('Opening widget modal', { productId, widgetUrl });
-        
-        // Create modal overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'nusense-widget-overlay';
-        overlay.className = 'nusense-widget-overlay';
-        overlay.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 0, 0, 0.5);
-          z-index: 99999;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          backdrop-filter: blur(4px);
-        `;
-        
-        // Create container for iframe
-        const container = document.createElement('div');
-        container.className = 'nusense-widget-container';
-        container.style.cssText = `
-          position: relative;
-          width: 95vw;
-          max-width: 1200px;
-          height: 90vh;
-          background: white;
-          border-radius: 0.5rem;
-          overflow: hidden;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        `;
-        
-        // Close button
-        const closeBtn = document.createElement('button');
-        closeBtn.type = 'button';
-        closeBtn.className = 'nusense-widget-close';
-        closeBtn.innerHTML = '×';
-        closeBtn.style.cssText = `
-          position: absolute;
-          top: 1rem;
-          right: 1rem;
-          width: 2.5rem;
-          height: 2.5rem;
-          border-radius: 50%;
-          border: none;
-          background: rgba(255, 255, 255, 0.9);
-          color: #333;
-          font-size: 1.5rem;
-          cursor: pointer;
-          z-index: 100000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-        `;
-        closeBtn.addEventListener('mouseenter', function() {
-          this.style.background = '#fff';
-          this.style.transform = 'scale(1.1)';
-        });
-        closeBtn.addEventListener('mouseleave', function() {
-          this.style.background = 'rgba(255, 255, 255, 0.9)';
-          this.style.transform = 'scale(1)';
-        });
-        
-        // Close function
-        const closeWidget = function() {
-          if (overlay && overlay.parentNode) {
-            document.body.removeChild(overlay);
-            document.body.style.overflow = '';
-          }
-        };
-        
-        closeBtn.addEventListener('click', closeWidget);
-        overlay.addEventListener('click', function(e) {
-          if (e.target === overlay) {
-            closeWidget();
-          }
-        });
-        
-        // Create iframe
-        const iframe = document.createElement('iframe');
-        iframe.src = widgetUrl;
-        iframe.style.cssText = `
-          width: 100%;
-          height: 100%;
-          border: none;
-          background: white;
-        `;
-        iframe.allow = 'camera; microphone';
-        iframe.setAttribute('allowfullscreen', 'true');
-        
-        // Assemble modal
-        container.appendChild(closeBtn);
-        container.appendChild(iframe);
-        overlay.appendChild(container);
-        document.body.appendChild(overlay);
-        
-        // Prevent body scroll
-        document.body.style.overflow = 'hidden';
-        
-        // Close on escape key
-        const closeHandler = function(e) {
-          if (e.key === 'Escape') {
-            closeWidget();
-            document.removeEventListener('keydown', closeHandler);
-          }
-        };
-        document.addEventListener('keydown', closeHandler);
-        
-        // Listen for close messages from iframe
-        const messageHandler = function(e) {
-          if (e.data && e.data.type === 'NUSENSE_CLOSE_WIDGET') {
-            closeWidget();
-            window.removeEventListener('message', messageHandler);
-          }
-        };
-        window.addEventListener('message', messageHandler);
+        // Handle click based on page type
+        if (isProductPage && productId) {
+          // Product page: open widget with product
+          const widgetUrl = config.widgetUrl + '/widget?product_id=' + productId;
+          log('Opening widget modal on product page', { productId, widgetUrl });
+          openWidgetModal(widgetUrl);
+        } else {
+          // Non-product page: show message or redirect to first product
+          log('Button clicked on non-product page');
+          handleNonProductPageClick();
+        }
       });
       
       return button;
+    }
+    
+    function openWidgetModal(widgetUrl) {
+      // Create modal overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'nusense-widget-overlay';
+      overlay.className = 'nusense-widget-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+      `;
+      
+      // Create container for iframe
+      const container = document.createElement('div');
+      container.className = 'nusense-widget-container';
+      container.style.cssText = `
+        position: relative;
+        width: 95vw;
+        max-width: 1200px;
+        height: 90vh;
+        background: white;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      `;
+      
+      // Close button
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'nusense-widget-close';
+      closeBtn.innerHTML = '×';
+      closeBtn.style.cssText = `
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        font-size: 1.5rem;
+        cursor: pointer;
+        z-index: 100000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      `;
+      closeBtn.addEventListener('mouseenter', function() {
+        this.style.background = '#fff';
+        this.style.transform = 'scale(1.1)';
+      });
+      closeBtn.addEventListener('mouseleave', function() {
+        this.style.background = 'rgba(255, 255, 255, 0.9)';
+        this.style.transform = 'scale(1)';
+      });
+      
+      // Close function
+      const closeWidget = function() {
+        if (overlay && overlay.parentNode) {
+          document.body.removeChild(overlay);
+          document.body.style.overflow = '';
+        }
+      };
+      
+      closeBtn.addEventListener('click', closeWidget);
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+          closeWidget();
+        }
+      });
+      
+      // Create iframe
+      const iframe = document.createElement('iframe');
+      iframe.src = widgetUrl;
+      iframe.style.cssText = `
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: white;
+      `;
+      iframe.allow = 'camera; microphone';
+      iframe.setAttribute('allowfullscreen', 'true');
+      
+      // Assemble modal
+      container.appendChild(closeBtn);
+      container.appendChild(iframe);
+      overlay.appendChild(container);
+      document.body.appendChild(overlay);
+      
+      // Prevent body scroll
+      document.body.style.overflow = 'hidden';
+      
+      // Close on escape key
+      const closeHandler = function(e) {
+        if (e.key === 'Escape') {
+          closeWidget();
+          document.removeEventListener('keydown', closeHandler);
+        }
+      };
+      document.addEventListener('keydown', closeHandler);
+      
+      // Listen for close messages from iframe
+      const messageHandler = function(e) {
+        if (e.data && e.data.type === 'NUSENSE_CLOSE_WIDGET') {
+          closeWidget();
+          window.removeEventListener('message', messageHandler);
+        }
+      };
+      window.addEventListener('message', messageHandler);
+    }
+    
+    function handleNonProductPageClick() {
+      // On non-product pages, show a message or redirect to products
+      // Option 1: Show alert (simple)
+      alert('Please visit a product page to use the Try-On feature.');
+      
+      // Option 2: Redirect to collections/products page (uncomment if preferred)
+      // const collectionsUrl = '/collections/all';
+      // if (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) {
+      //   window.location.href = window.Shopify.routes.root + collectionsUrl;
+      // } else {
+      //   window.location.href = collectionsUrl;
+      // }
+    }
+    
+    function findCartIcon() {
+      // Try to find cart icon using common selectors
+      const selectors = config.cartIconSelector.split(',').map(s => s.trim());
+      
+      for (let i = 0; i < selectors.length; i++) {
+        const cartIcon = document.querySelector(selectors[i]);
+        if (cartIcon) {
+          log('Found cart icon using selector', selectors[i]);
+          return cartIcon;
+        }
+      }
+      
+      log('Cart icon not found using selectors');
+      return null;
     }
     
     function injectButton() {
@@ -202,71 +238,59 @@
         return;
       }
       
-      // Find header element
-      let header = null;
+      // Find cart icon
+      const cartIcon = findCartIcon();
       
-      // Try custom selector first (if provided and not empty)
-      if (config.insertSelector && typeof config.insertSelector === 'string' && config.insertSelector.trim() !== '') {
-        header = document.querySelector(config.insertSelector);
-        if (header) {
-          log('Found header using custom selector', config.insertSelector);
-        }
-      }
-      
-      // Try common header selectors
-      if (!header) {
-        const selectors = config.headerSelector.split(',').map(s => s.trim());
-        for (let i = 0; i < selectors.length; i++) {
-          header = document.querySelector(selectors[i]);
-          if (header) {
-            log('Found header using selector', selectors[i]);
-            break;
-          }
-        }
-      }
-      
-      if (!header) {
-        log('Header not found, cannot inject button');
+      if (!cartIcon) {
+        log('Cart icon not found, cannot inject button');
         return;
       }
       
       // Create button
       const button = createButton();
       
-      // Determine insertion point
-      let insertTarget = header;
+      // Insert button next to cart icon
+      // Try to find the parent container (usually a nav or div)
+      let parent = cartIcon.parentElement;
       
-      // If insert position is 'start', insert at beginning
-      if (config.insertPosition === 'start') {
-        header.insertBefore(button, header.firstChild);
-        log('Button inserted at start of header');
-      } else if (config.insertPosition === 'after') {
-        // Insert after header
-        if (header.nextSibling) {
-          header.parentNode.insertBefore(button, header.nextSibling);
+      // If cart icon is in a list item, insert after it
+      if (cartIcon.parentElement && cartIcon.parentElement.tagName === 'LI') {
+        const listItem = cartIcon.parentElement;
+        const newListItem = document.createElement('li');
+        newListItem.appendChild(button);
+        listItem.parentNode.insertBefore(newListItem, listItem.nextSibling);
+        log('Button inserted as sibling list item after cart icon');
+      } else if (parent) {
+        // Insert after cart icon in same parent
+        if (cartIcon.nextSibling) {
+          parent.insertBefore(button, cartIcon.nextSibling);
         } else {
-          header.parentNode.appendChild(button);
+          parent.appendChild(button);
         }
-        log('Button inserted after header');
+        log('Button inserted after cart icon');
       } else {
-        // Default: insert at end
-        header.appendChild(button);
-        log('Button inserted at end of header');
+        // Fallback: insert after cart icon
+        cartIcon.parentNode.insertBefore(button, cartIcon.nextSibling);
+        log('Button inserted after cart icon (fallback)');
       }
     }
     
     // Wait for DOM to be ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(injectButton, 100);
-      });
-    } else {
-      setTimeout(injectButton, 100);
+    function tryInject() {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(injectButton, 100);
+        });
+      } else {
+        injectButton();
+      }
     }
     
-    // Also try after a delay in case header loads dynamically
-    setTimeout(injectButton, 500);
-    setTimeout(injectButton, 1000);
+    // Try multiple times to handle dynamic loading
+    tryInject();
+    setTimeout(tryInject, 500);
+    setTimeout(tryInject, 1000);
+    setTimeout(tryInject, 2000);
   })();
 </script>
 
@@ -275,16 +299,19 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    gap: 0.25rem;
+    padding: 0.5rem;
     border: none;
     border-radius: 0.25rem;
-    font-size: 0.875rem;
+    font-size: 1.25rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
     text-decoration: none;
+    min-width: 44px;
+    min-height: 44px;
+    line-height: 1;
   }
   
   .nusense-tryon-header-button:hover {
@@ -296,8 +323,9 @@
   }
   
   .nusense-button-icon {
-    font-size: 1rem;
+    font-size: 1.25rem;
     line-height: 1;
+    display: inline-block;
   }
   
   .nusense-button-text {
@@ -349,9 +377,6 @@
 {
   "name": "NUSENSE Try-On Widget",
   "target": "body",
-  "enabled_on": {
-    "templates": ["product"]
-  },
   "settings": [
     {
       "type": "text",
@@ -376,21 +401,14 @@
       "id": "show_header_button",
       "label": "Show Try-On Button in Header",
       "default": true,
-      "info": "Automatically inject a try-on button into the header on product pages"
-    },
-    {
-      "type": "text",
-      "id": "button_text",
-      "label": "Button Text",
-      "default": "Try On",
-      "info": "Text to display on the button"
+      "info": "Automatically inject a try-on button next to the cart icon in the header on all pages"
     },
     {
       "type": "text",
       "id": "button_icon",
       "label": "Button Icon (emoji)",
       "default": "✨",
-      "info": "Emoji or icon to display before button text"
+      "info": "Emoji or icon to display on the button (icon only for compact header display)"
     },
     {
       "type": "select",
@@ -419,39 +437,11 @@
     },
     {
       "type": "text",
-      "id": "header_selector",
-      "label": "Header Selector (CSS)",
-      "default": "header, .header, .site-header, [role=\"banner\"]",
-      "info": "CSS selector to find the header element. Multiple selectors separated by commas."
-    },
-    {
-      "type": "select",
-      "id": "insert_position",
-      "label": "Button Position in Header",
-      "options": [
-        {
-          "value": "start",
-          "label": "Start of header"
-        },
-        {
-          "value": "end",
-          "label": "End of header (default)"
-        },
-        {
-          "value": "after",
-          "label": "After header"
-        }
-      ],
-      "default": "end",
-      "info": "Where to place the button relative to the header"
-    },
-    {
-      "type": "text",
-      "id": "insert_selector",
-      "label": "Custom Insert Selector (optional)",
-      "info": "Optional: Specific CSS selector where button should be inserted. Leave empty to use header selector."
+      "id": "cart_icon_selector",
+      "label": "Cart Icon Selector (CSS)",
+      "default": "a[href*=\"/cart\"], .cart-icon, .cart-link, [data-cart-icon], .header__icon--cart, .site-header__cart, #cart-icon, .icon-cart, button[aria-label*=\"cart\" i], a[aria-label*=\"cart\" i], .header__cart, .cart, [data-cart]",
+      "info": "CSS selector to find the cart icon. Multiple selectors separated by commas. The button will be placed next to this icon."
     }
   ]
 }
 {% endschema %}
-
