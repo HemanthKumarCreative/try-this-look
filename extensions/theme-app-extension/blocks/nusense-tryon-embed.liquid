@@ -24,7 +24,11 @@
       buttonText: {{ block.settings.button_text | default: 'Try On' | json }},
       buttonIcon: {{ block.settings.button_icon | default: '✨' | json }},
       buttonStyle: {{ block.settings.button_style | default: 'minimal' | json }},
+      positionStrategy: {{ block.settings.position_strategy | default: 'logo' | json }},
+      positionRelative: {{ block.settings.position_relative | default: 'after' | json }},
       logoSelector: {{ block.settings.logo_selector | json }},
+      cartIconSelector: {{ block.settings.cart_icon_selector | default: 'a[href*="/cart"], .cart-icon, .cart-link, [data-cart-icon], .header__icon--cart, .site-header__cart, #cart-icon, .icon-cart, button[aria-label*="cart" i], a[aria-label*="cart" i], .header__cart, .cart, [data-cart]' | json }},
+      customSelector: {{ block.settings.custom_selector | json }},
       debug: {{ block.settings.enable_debug | default: false }}
     };
     
@@ -253,6 +257,51 @@
       return null;
     }
     
+    function findCartIcon() {
+      // Try to find cart icon using common selectors
+      const selectors = config.cartIconSelector.split(',').map(s => s.trim());
+      
+      for (let i = 0; i < selectors.length; i++) {
+        const cartIcon = document.querySelector(selectors[i]);
+        if (cartIcon) {
+          log('Found cart icon using selector', selectors[i]);
+          return cartIcon;
+        }
+      }
+      
+      log('Cart icon not found using selectors');
+      return null;
+    }
+    
+    function findCustomElement() {
+      if (!config.customSelector || typeof config.customSelector !== 'string' || config.customSelector.trim() === '') {
+        return null;
+      }
+      
+      const element = document.querySelector(config.customSelector);
+      if (element) {
+        log('Found custom element using selector', config.customSelector);
+        return element;
+      }
+      
+      log('Custom element not found using selector', config.customSelector);
+      return null;
+    }
+    
+    function findTargetElement() {
+      // Find target element based on position strategy
+      switch (config.positionStrategy) {
+        case 'logo':
+          return findLogo();
+        case 'cart':
+          return findCartIcon();
+        case 'custom':
+          return findCustomElement();
+        default:
+          return findLogo(); // Default to logo
+      }
+    }
+    
     function injectButton() {
       // Check if button already exists
       if (document.getElementById('nusense-header-tryon-btn')) {
@@ -260,11 +309,11 @@
         return;
       }
       
-      // Find logo
-      const logo = findLogo();
+      // Find target element based on position strategy
+      const targetElement = findTargetElement();
       
-      if (!logo) {
-        log('Logo not found, cannot inject button');
+      if (!targetElement) {
+        log('Target element not found, cannot inject button');
         return;
       }
       
@@ -272,7 +321,7 @@
       const button = createButton();
       
       // Find the header container
-      let header = logo.closest('header');
+      let header = targetElement.closest('header');
       if (!header) {
         // Try common header selectors
         const headerSelectors = [
@@ -283,7 +332,7 @@
         ];
         for (let i = 0; i < headerSelectors.length; i++) {
           const found = document.querySelector(headerSelectors[i]);
-          if (found && found.contains(logo)) {
+          if (found && found.contains(targetElement)) {
             header = found;
             log('Found header using selector', headerSelectors[i]);
             break;
@@ -292,8 +341,8 @@
       }
       
       if (!header) {
-        log('Header not found, using logo parent');
-        header = logo.parentElement;
+        log('Header not found, using target element parent');
+        header = targetElement.parentElement;
       }
       
       if (!header) {
@@ -301,33 +350,43 @@
         return;
       }
       
-      // Find the container that holds the logo (usually a div or nav)
-      let logoContainer = logo.parentElement;
+      // Find the container that holds the target element (usually a div or nav)
+      let targetContainer = targetElement.parentElement;
       
-      // If logo is in a link, get the link's parent
-      if (logo.tagName === 'IMG' && logo.parentElement && logo.parentElement.tagName === 'A') {
-        logoContainer = logo.parentElement.parentElement;
-        log('Logo is in a link, using link parent as container');
+      // If target is in a link, get the link's parent
+      if (targetElement.tagName === 'IMG' && targetElement.parentElement && targetElement.parentElement.tagName === 'A') {
+        targetContainer = targetElement.parentElement.parentElement;
+        log('Target element is in a link, using link parent as container');
       }
       
-      // If logo container is the header itself, insert directly in header
-      if (logoContainer === header || !logoContainer) {
-        // Insert button as sibling to logo in header
-        if (logo.nextSibling) {
-          header.insertBefore(button, logo.nextSibling);
-          log('Button inserted after logo in header');
+      // If target container is the header itself, insert directly in header
+      if (targetContainer === header || !targetContainer) {
+        // Insert button relative to target element in header
+        if (config.positionRelative === 'before') {
+          header.insertBefore(button, targetElement);
+          log('Button inserted before target element in header');
         } else {
-          header.appendChild(button);
-          log('Button appended to header after logo');
+          if (targetElement.nextSibling) {
+            header.insertBefore(button, targetElement.nextSibling);
+            log('Button inserted after target element in header');
+          } else {
+            header.appendChild(button);
+            log('Button appended to header after target element');
+          }
         }
       } else {
-        // Insert button as sibling to logo in its container
-        if (logo.nextSibling) {
-          logoContainer.insertBefore(button, logo.nextSibling);
-          log('Button inserted after logo in container');
+        // Insert button relative to target element in its container
+        if (config.positionRelative === 'before') {
+          targetContainer.insertBefore(button, targetElement);
+          log('Button inserted before target element in container');
         } else {
-          logoContainer.appendChild(button);
-          log('Button appended to logo container');
+          if (targetElement.nextSibling) {
+            targetContainer.insertBefore(button, targetElement.nextSibling);
+            log('Button inserted after target element in container');
+          } else {
+            targetContainer.appendChild(button);
+            log('Button appended to container after target element');
+          }
         }
       }
     }
@@ -493,10 +552,65 @@
       "info": "Visual style of the button"
     },
     {
+      "type": "header",
+      "content": "Positioning Settings"
+    },
+    {
+      "type": "select",
+      "id": "position_strategy",
+      "label": "Position Relative To",
+      "options": [
+        {
+          "value": "logo",
+          "label": "Logo (default)"
+        },
+        {
+          "value": "cart",
+          "label": "Cart Icon"
+        },
+        {
+          "value": "custom",
+          "label": "Custom Element"
+        }
+      ],
+      "default": "logo",
+      "info": "Choose which element to position the button relative to"
+    },
+    {
+      "type": "select",
+      "id": "position_relative",
+      "label": "Button Position",
+      "options": [
+        {
+          "value": "before",
+          "label": "Before (to the left)"
+        },
+        {
+          "value": "after",
+          "label": "After (to the right)"
+        }
+      ],
+      "default": "after",
+      "info": "Position the button before or after the target element"
+    },
+    {
       "type": "text",
       "id": "logo_selector",
       "label": "Logo Selector (CSS) - Optional",
-      "info": "Optional: Custom CSS selector to find the logo. If not specified, common selectors will be used. The button will be placed as a sibling to the logo in the header."
+      "info": "Optional: Custom CSS selector to find the logo. If not specified, common selectors will be used."
+    },
+    {
+      "type": "text",
+      "id": "cart_icon_selector",
+      "label": "Cart Icon Selector (CSS) - Optional",
+      "default": "a[href*=\"/cart\"], .cart-icon, .cart-link, [data-cart-icon], .header__icon--cart, .site-header__cart, #cart-icon, .icon-cart, button[aria-label*=\"cart\" i], a[aria-label*=\"cart\" i], .header__cart, .cart, [data-cart]",
+      "info": "Optional: Custom CSS selector to find the cart icon. If not specified, common selectors will be used."
+    },
+    {
+      "type": "text",
+      "id": "custom_selector",
+      "label": "Custom Element Selector (CSS)",
+      "info": "Required if 'Custom Element' is selected. CSS selector to find the target element."
     }
   ]
 }
