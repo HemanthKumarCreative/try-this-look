@@ -157,38 +157,6 @@
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       `;
       
-      // Bouton de fermeture
-      const closeBtn = document.createElement('button');
-      closeBtn.type = 'button';
-      closeBtn.className = 'nusense-widget-close';
-      closeBtn.innerHTML = '×';
-      closeBtn.style.cssText = `
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        width: 2.5rem;
-        height: 2.5rem;
-        border-radius: 50%;
-        border: none;
-        background: rgba(255, 255, 255, 0.9);
-        color: #333;
-        font-size: 1.5rem;
-        cursor: pointer;
-        z-index: 100000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-      `;
-      closeBtn.addEventListener('mouseenter', function() {
-        this.style.background = '#fff';
-        this.style.transform = 'scale(1.1)';
-      });
-      closeBtn.addEventListener('mouseleave', function() {
-        this.style.background = 'rgba(255, 255, 255, 0.9)';
-        this.style.transform = 'scale(1)';
-      });
-      
       // Fonction de fermeture
       const closeWidget = function() {
         if (overlay && overlay.parentNode) {
@@ -197,7 +165,7 @@
         }
       };
       
-      closeBtn.addEventListener('click', closeWidget);
+      // Fermer en cliquant sur l'overlay (en dehors du conteneur)
       overlay.addEventListener('click', function(e) {
         if (e.target === overlay) {
           closeWidget();
@@ -217,7 +185,6 @@
       iframe.setAttribute('allowfullscreen', 'true');
       
       // Assembler la modale
-      container.appendChild(closeBtn);
       container.appendChild(iframe);
       overlay.appendChild(container);
       document.body.appendChild(overlay);
