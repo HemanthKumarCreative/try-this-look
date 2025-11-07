@@ -24,7 +24,7 @@
       buttonText: {{ block.settings.button_text | default: 'Try On' | json }},
       buttonIcon: {{ block.settings.button_icon | default: '✨' | json }},
       buttonStyle: {{ block.settings.button_style | default: 'minimal' | json }},
-      cartIconSelector: {{ block.settings.cart_icon_selector | default: 'a[href*="/cart"], .cart-icon, .cart-link, [data-cart-icon], .header__icon--cart, .site-header__cart, #cart-icon, .icon-cart, button[aria-label*="cart" i], a[aria-label*="cart" i], .header__cart, .cart, [data-cart]' | json }},
+      logoSelector: {{ block.settings.logo_selector | json }},
       debug: {{ block.settings.enable_debug | default: false }}
     };
     
@@ -215,19 +215,41 @@
       // }
     }
     
-    function findCartIcon() {
-      // Try to find cart icon using common selectors
-      const selectors = config.cartIconSelector.split(',').map(s => s.trim());
-      
-      for (let i = 0; i < selectors.length; i++) {
-        const cartIcon = document.querySelector(selectors[i]);
-        if (cartIcon) {
-          log('Found cart icon using selector', selectors[i]);
-          return cartIcon;
+    function findLogo() {
+      // Try custom selector first if provided
+      if (config.logoSelector && typeof config.logoSelector === 'string' && config.logoSelector.trim() !== '') {
+        const logo = document.querySelector(config.logoSelector);
+        if (logo) {
+          log('Found logo using custom selector', config.logoSelector);
+          return logo;
         }
       }
       
-      log('Cart icon not found using selectors');
+      // Try to find logo using common selectors
+      const logoSelectors = [
+        '.logo',
+        '.site-logo',
+        '.header__logo',
+        '.site-header__logo',
+        '.header-logo',
+        'a[href="/"]',
+        'a[href*="/"] img',
+        '.logo img',
+        '[data-logo]',
+        'h1 a',
+        '.brand',
+        '.site-brand'
+      ];
+      
+      for (let i = 0; i < logoSelectors.length; i++) {
+        const logo = document.querySelector(logoSelectors[i]);
+        if (logo) {
+          log('Found logo using selector', logoSelectors[i]);
+          return logo;
+        }
+      }
+      
+      log('Logo not found using selectors');
       return null;
     }
     
@@ -238,79 +260,75 @@
         return;
       }
       
-      // Find cart icon
-      const cartIcon = findCartIcon();
+      // Find logo
+      const logo = findLogo();
       
-      if (!cartIcon) {
-        log('Cart icon not found, cannot inject button');
+      if (!logo) {
+        log('Logo not found, cannot inject button');
         return;
       }
       
       // Create button
       const button = createButton();
       
-      // Find the container that holds the cart icon (usually a nav, div, or ul)
-      // This container should also hold other header icons
-      let container = cartIcon.parentElement;
-      
-      // If cart icon is inside a list item, get the list container
-      if (container && container.tagName === 'LI') {
-        container = container.parentElement; // Get the <ul> or <ol>
-        log('Cart icon is in a list item, using list container');
-      }
-      
-      // If we still don't have a good container, try to find a common header icon container
-      if (!container || container.tagName === 'HEADER' || container.tagName === 'BODY') {
-        // Look for common header icon container patterns
-        const containerSelectors = [
-          '.header__icons',
-          '.site-header__icons',
-          '.header-icons',
-          '.header__icon-list',
-          '.header__actions',
-          '.header-actions',
-          'nav[role="navigation"]',
-          '.header__nav',
-          '[class*="icon"]',
-          '[class*="action"]'
+      // Find the header container
+      let header = logo.closest('header');
+      if (!header) {
+        // Try common header selectors
+        const headerSelectors = [
+          'header',
+          '.header',
+          '.site-header',
+          '[role="banner"]'
         ];
-        
-        for (let i = 0; i < containerSelectors.length; i++) {
-          const found = document.querySelector(containerSelectors[i]);
-          if (found && found.contains(cartIcon)) {
-            container = found;
-            log('Found container using selector', containerSelectors[i]);
+        for (let i = 0; i < headerSelectors.length; i++) {
+          const found = document.querySelector(headerSelectors[i]);
+          if (found && found.contains(logo)) {
+            header = found;
+            log('Found header using selector', headerSelectors[i]);
             break;
           }
         }
       }
       
-      // If we still don't have a container, use the cart icon's immediate parent
-      if (!container || container.tagName === 'HEADER' || container.tagName === 'BODY') {
-        container = cartIcon.parentElement;
-        log('Using cart icon parent as container');
+      if (!header) {
+        log('Header not found, using logo parent');
+        header = logo.parentElement;
       }
       
-      if (!container) {
+      if (!header) {
         log('Could not find suitable container');
         return;
       }
       
-      // Insert button as a sibling to the cart icon within the container
-      // If cart icon is in a list item, we need to handle it differently
-      if (cartIcon.parentElement && cartIcon.parentElement.tagName === 'LI') {
-        // Cart icon is in a list item - create a new list item for our button
-        const cartListItem = cartIcon.parentElement;
-        const newListItem = document.createElement('li');
-        newListItem.className = cartListItem.className || ''; // Copy classes for consistency
-        newListItem.style.cssText = cartListItem.style.cssText || ''; // Copy styles
-        newListItem.appendChild(button);
-        container.insertBefore(newListItem, cartListItem);
-        log('Button inserted as new list item before cart icon list item');
+      // Find the container that holds the logo (usually a div or nav)
+      let logoContainer = logo.parentElement;
+      
+      // If logo is in a link, get the link's parent
+      if (logo.tagName === 'IMG' && logo.parentElement && logo.parentElement.tagName === 'A') {
+        logoContainer = logo.parentElement.parentElement;
+        log('Logo is in a link, using link parent as container');
+      }
+      
+      // If logo container is the header itself, insert directly in header
+      if (logoContainer === header || !logoContainer) {
+        // Insert button as sibling to logo in header
+        if (logo.nextSibling) {
+          header.insertBefore(button, logo.nextSibling);
+          log('Button inserted after logo in header');
+        } else {
+          header.appendChild(button);
+          log('Button appended to header after logo');
+        }
       } else {
-        // Cart icon is directly in the container - insert button before it
-        container.insertBefore(button, cartIcon);
-        log('Button inserted as sibling before cart icon in container');
+        // Insert button as sibling to logo in its container
+        if (logo.nextSibling) {
+          logoContainer.insertBefore(button, logo.nextSibling);
+          log('Button inserted after logo in container');
+        } else {
+          logoContainer.appendChild(button);
+          log('Button appended to logo container');
+        }
       }
     }
     
@@ -476,10 +494,9 @@
     },
     {
       "type": "text",
-      "id": "cart_icon_selector",
-      "label": "Cart Icon Selector (CSS)",
-      "default": "a[href*=\"/cart\"], .cart-icon, .cart-link, [data-cart-icon], .header__icon--cart, .site-header__cart, #cart-icon, .icon-cart, button[aria-label*=\"cart\" i], a[aria-label*=\"cart\" i], .header__cart, .cart, [data-cart]",
-      "info": "CSS selector to find the cart icon. Multiple selectors separated by commas. The button will be placed next to this icon."
+      "id": "logo_selector",
+      "label": "Logo Selector (CSS) - Optional",
+      "info": "Optional: Custom CSS selector to find the logo. If not specified, common selectors will be used. The button will be placed as a sibling to the logo in the header."
     }
   ]
 }
