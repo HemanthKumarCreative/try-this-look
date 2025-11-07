@@ -609,7 +609,11 @@ export function detectStoreOrigin(): StoreInfo {
       // If it's the 'shop' parameter, it's from app proxy (most reliable)
       result.method = urlParams.get('shop') ? 'url-param' : 'url-param';
       
-      console.log('NUSENSE: Store detected from URL parameter (Shopify app proxy):', shopDomain);
+      console.log('%c✅ NUSENSE: Store detected from URL parameter', 'color: #4CAF50; font-weight: bold;', {
+        shopDomain,
+        method: 'URL Parameter (Shopify App Proxy)',
+        origin
+      });
       return result;
     } catch (error) {
       console.warn('NUSENSE: Error parsing shop domain from URL parameter:', error);
@@ -633,7 +637,12 @@ export function detectStoreOrigin(): StoreInfo {
         result.fullUrl = referrer;
         result.method = 'referrer';
         
-        console.log('NUSENSE: Store detected from referrer:', hostname);
+        console.log('%c✅ NUSENSE: Store detected from referrer', 'color: #4CAF50; font-weight: bold;', {
+          shopDomain: hostname,
+          method: 'Document Referrer',
+          origin: referrerUrl.origin,
+          fullUrl: referrer
+        });
         return result;
       }
       
@@ -644,7 +653,12 @@ export function detectStoreOrigin(): StoreInfo {
       result.origin = referrerUrl.origin;
       result.method = 'referrer';
       
-      console.log('NUSENSE: Store detected from referrer (custom domain):', hostname);
+      console.log('%c✅ NUSENSE: Store detected from referrer (custom domain)', 'color: #4CAF50; font-weight: bold;', {
+        domain: hostname,
+        method: 'Document Referrer (Custom Domain)',
+        origin: referrerUrl.origin,
+        fullUrl: referrer
+      });
       return result;
     } catch (error) {
       console.warn('NUSENSE: Error parsing referrer:', error);
@@ -731,7 +745,7 @@ export function requestStoreInfoFromParent(
           method: 'parent-request'
         };
         
-        console.log('NUSENSE: Received store info from parent:', storeInfo);
+        console.log('%c✅ NUSENSE: Received store info from parent', 'color: #4CAF50; font-weight: bold;', storeInfo);
         
         if (callback) {
           callback(storeInfo);
@@ -775,7 +789,7 @@ export function getStoreOriginFromPostMessage(event: MessageEvent): StoreInfo | 
         method: 'postmessage'
       };
       
-      console.log('NUSENSE: Store origin detected from postMessage:', storeInfo);
+      console.log('%c✅ NUSENSE: Store origin detected from postMessage', 'color: #4CAF50; font-weight: bold;', storeInfo);
       return storeInfo;
     } catch (error) {
       console.warn('NUSENSE: Error parsing origin from postMessage:', error);

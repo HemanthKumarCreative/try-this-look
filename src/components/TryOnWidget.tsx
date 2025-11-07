@@ -56,16 +56,28 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   // Debug: Log when storeInfo changes
   useEffect(() => {
     if (storeInfo) {
+      const storeName = storeInfo.shopDomain || storeInfo.domain;
+      const detectionMethod = storeInfo.method;
+      
+      // Clear, prominent console log for store detection
       console.log(
-        "NUSENSE: Store info detected:",
-        storeInfo.shopDomain || storeInfo.domain,
-        "(method:",
-        storeInfo.method,
-        ")"
+        "%c🛍️ NUSENSE: Store Detected",
+        "color: #4CAF50; font-weight: bold; font-size: 14px;"
       );
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("📦 Store Domain:", storeName || "Unknown");
+      console.log("🌐 Full URL:", storeInfo.fullUrl || "N/A");
+      console.log("📍 Origin:", storeInfo.origin || "N/A");
+      console.log("🔍 Detection Method:", detectionMethod);
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      
+      // Also log as a single object for easy inspection
+      console.log("Store Info Object:", storeInfo);
+      
       // Expose store info globally for debugging/access
       if (typeof window !== 'undefined') {
         (window as any).NUSENSE_STORE_INFO = storeInfo;
+        console.log("💡 Access store info anytime via: window.NUSENSE_STORE_INFO");
       }
     }
   }, [storeInfo]);
@@ -97,7 +109,9 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     const detectedStore = detectStoreOrigin();
     if (detectedStore && detectedStore.method !== 'unknown') {
       setStoreInfo(detectedStore);
-      console.log('NUSENSE: Store detected on mount:', detectedStore);
+      // Store info will be logged by the useEffect above
+    } else {
+      console.log("%c⚠️ NUSENSE: Store not detected on mount. Will try other methods...", "color: #FF9800; font-weight: bold;");
     }
 
     // If we're in an iframe, ALWAYS prioritize images from the parent window (Shopify product page)
@@ -111,9 +125,9 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       if (!detectedStore || detectedStore.method === 'unknown' || detectedStore.method === 'postmessage') {
         requestStoreInfoFromParent((storeInfo) => {
           setStoreInfo(storeInfo);
-          console.log('NUSENSE: Store info received from parent:', storeInfo);
+          // Store info will be logged by the useEffect above
         }).catch((error) => {
-          console.warn('NUSENSE: Failed to get store info from parent:', error);
+          console.warn('%c⚠️ NUSENSE: Failed to get store info from parent:', "color: #FF9800; font-weight: bold;", error);
         });
       }
 
@@ -283,7 +297,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           method: 'parent-request'
         };
         setStoreInfo(storeInfo);
-        console.log('NUSENSE: Store info received via postMessage:', storeInfo);
+        // Store info will be logged by the useEffect above
       }
     };
 
