@@ -296,26 +296,14 @@ export default function ResultDisplay({
                     animation: "shimmer 2s infinite",
                   }}
                 />
-                {/* Loading indicator overlay */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 sm:gap-4 z-10">
+                {/* Loading indicator overlay - subtle icon only */}
+                <div className="absolute inset-0 flex items-center justify-center z-10">
                   <div className="relative">
                     <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/10 backdrop-blur-sm flex items-center justify-center border border-primary/20">
                       <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-primary animate-pulse" />
                     </div>
                     <div className="absolute inset-0 w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/20 animate-ping opacity-75" />
                   </div>
-                  {isGenerating && (
-                    <div className="text-center px-4">
-                      <p className="text-xs sm:text-sm font-medium text-foreground/90 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-md">
-                        Génération en cours...
-                      </p>
-                      {progress > 0 && (
-                        <p className="text-[10px] sm:text-xs text-muted-foreground/90 mt-2 bg-background/60 backdrop-blur-sm px-2 py-1 rounded">
-                          {progress}%
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             ) : (

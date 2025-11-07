@@ -241,7 +241,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     setCurrentStep(3);
     setStatusVariant("info");
     setStatusMessage(
-      "Génération en cours. Cela peut prendre 30 à 60 secondes…"
+      "Génération en cours. Cela peut prendre 15 à 20 secondes…"
     );
     try {
       localStorage.setItem(INFLIGHT_KEY, "1");
