@@ -164,6 +164,31 @@
         const seenUrls = new Set();
         const seenNormalizedUrls = new Set(); // Track normalized URLs (without query params) for better deduplication
         const mainProductImageSet = new Set();
+        const mainProductImageBasePaths = new Set(); // Track base image paths for better matching
+
+        // Helper to extract base image path (filename without query params or CDN variations)
+        function getBaseImagePath(url) {
+          try {
+            const urlObj = new URL(url, window.location.origin);
+            urlObj.search = '';
+            urlObj.hash = '';
+            const path = urlObj.pathname;
+            
+            // Extract just the filename or last part of path
+            const pathParts = path.split('/');
+            const filename = pathParts[pathParts.length - 1];
+            
+            // Also get a shorter path (last 2 parts) for better matching
+            if (pathParts.length >= 2) {
+              const shortPath = pathParts.slice(-2).join('/');
+              return shortPath.toLowerCase();
+            }
+            
+            return filename.toLowerCase();
+          } catch (e) {
+            return null;
+          }
+        }
 
         // Helper to normalize URL for comparison (remove query params)
         function normalizeUrlForComparison(url) {
@@ -171,41 +196,47 @@
             const urlObj = new URL(url, window.location.origin);
             urlObj.search = ''; // Remove query params
             urlObj.hash = ''; // Remove hash
-            return urlObj.href;
+            return urlObj.href.toLowerCase();
           } catch (e) {
             return null;
           }
         }
 
-        // Normalize main product images for comparison
+        // Normalize main product images for comparison - add all variations
         if (mainProductImages && Array.isArray(mainProductImages)) {
           mainProductImages.forEach(function(img) {
             try {
               const urlObj = new URL(img, window.location.origin);
-              mainProductImageSet.add(urlObj.href);
-              // Also add without query params for comparison
-              const normalizedForComparison = normalizeUrlForComparison(urlObj.href);
+              const absUrl = urlObj.href;
+              
+              // Add the absolute URL
+              mainProductImageSet.add(absUrl.toLowerCase());
+              
+              // Add normalized URL (without query params)
+              const normalizedForComparison = normalizeUrlForComparison(absUrl);
               if (normalizedForComparison) {
                 mainProductImageSet.add(normalizedForComparison);
               }
-            } catch (e) {}
+              
+              // Add base image path
+              const basePath = getBaseImagePath(absUrl);
+              if (basePath) {
+                mainProductImageBasePaths.add(basePath);
+              }
+            } catch (e) {
+              // Try to normalize the original URL anyway
+              try {
+                const normalizedForComparison = normalizeUrlForComparison(img);
+                if (normalizedForComparison) {
+                  mainProductImageSet.add(normalizedForComparison);
+                }
+                const basePath = getBaseImagePath(img);
+                if (basePath) {
+                  mainProductImageBasePaths.add(basePath);
+                }
+              } catch (e) {}
+            }
           });
-        }
-
-        // Helper to check if URL is a main product image
-        function isMainProductImage(url) {
-          try {
-            const urlObj = new URL(url, window.location.origin);
-            if (mainProductImageSet.has(urlObj.href)) {
-              return true;
-            }
-            // Also check without query params
-            const normalizedForComparison = normalizeUrlForComparison(urlObj.href);
-            if (normalizedForComparison && mainProductImageSet.has(normalizedForComparison)) {
-              return true;
-            }
-          } catch (e) {}
-          return false;
         }
 
         // Helper to add image if valid and not duplicate
@@ -226,12 +257,48 @@
             }
             
             // Also check the full URL
-            if (seenUrls.has(absUrl)) {
+            if (seenUrls.has(absUrl.toLowerCase())) {
               return;
             }
             
+            // Check if this is a main product image - check multiple variations
+            let isMainProductImage = false;
+            
+            // Check full URL
+            if (mainProductImageSet.has(absUrl.toLowerCase()) || 
+                mainProductImageSet.has(normalizedForComparison) ||
+                mainProductImageSet.has(url.toLowerCase())) {
+              isMainProductImage = true;
+            }
+            
+            // Check base image path (filename)
+            if (!isMainProductImage) {
+              const basePath = getBaseImagePath(absUrl);
+              if (basePath && mainProductImageBasePaths.has(basePath)) {
+                isMainProductImage = true;
+              }
+            }
+            
+            // Double-check by comparing with all main product images using base path
+            if (!isMainProductImage && mainProductImages && mainProductImages.length > 0) {
+              const currentBasePath = getBaseImagePath(absUrl);
+              if (currentBasePath) {
+                for (var i = 0; i < mainProductImages.length; i++) {
+                  const mainImg = mainProductImages[i];
+                  const mainBasePath = getBaseImagePath(mainImg);
+                  if (mainBasePath && mainBasePath === currentBasePath) {
+                    isMainProductImage = true;
+                    break;
+                  }
+                }
+              }
+            }
+            
             // Skip if it's a main product image
-            if (isMainProductImage(absUrl)) return;
+            if (isMainProductImage) {
+              console.log('NUSENSE: Skipping main product image from recommended:', absUrl);
+              return;
+            }
             
             // Basic validation: must be a valid image URL
             if (absUrl.match(/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i)) {
@@ -251,8 +318,8 @@
               if (shouldExclude) return;
               
               allImages.push(absUrl);
-              seenUrls.add(absUrl);
-              seenUrls.add(url);
+              seenUrls.add(absUrl.toLowerCase());
+              seenUrls.add(url.toLowerCase());
               seenNormalizedUrls.add(normalizedForComparison);
             }
           } catch (e) {

@@ -247,6 +247,33 @@ function extractRecommendedProductsImages(mainProductImages: string[]): string[]
   const seenUrls = new Set<string>();
   const seenNormalizedUrls = new Set<string>(); // Track normalized URLs (without query params) for better deduplication
   const mainProductImageSet = new Set<string>();
+  const mainProductImageBasePaths = new Set<string>(); // Track base image paths for better matching
+
+  // Helper to extract base image path (filename without query params or CDN variations)
+  const getBaseImagePath = (url: string): string | null => {
+    try {
+      const urlObj = new URL(url, window.location.origin);
+      // Remove all query params
+      urlObj.search = '';
+      urlObj.hash = '';
+      const path = urlObj.pathname;
+      
+      // Extract just the filename or last part of path
+      // For Shopify CDN URLs like: /cdn/shop/files/image.jpg or /files/image.jpg
+      const pathParts = path.split('/');
+      const filename = pathParts[pathParts.length - 1];
+      
+      // Also get a shorter path (last 2 parts) for better matching
+      if (pathParts.length >= 2) {
+        const shortPath = pathParts.slice(-2).join('/');
+        return shortPath.toLowerCase();
+      }
+      
+      return filename.toLowerCase();
+    } catch {
+      return null;
+    }
+  };
 
   // Helper to normalize URL for comparison (remove query params)
   const normalizeUrlForComparison = (url: string): string | null => {
@@ -254,25 +281,65 @@ function extractRecommendedProductsImages(mainProductImages: string[]): string[]
       const urlObj = new URL(url, window.location.origin);
       urlObj.search = ''; // Remove query params
       urlObj.hash = ''; // Remove hash
-      return urlObj.href;
+      return urlObj.href.toLowerCase();
     } catch {
       return null;
     }
   };
 
-  // Normalize main product images for comparison
+  // Normalize main product images for comparison - add all variations
   mainProductImages.forEach(img => {
     try {
       const normalized = cleanImageUrl(img);
       if (normalized) {
-        mainProductImageSet.add(normalized);
-        // Also add without query params for comparison
+        // Add the cleaned URL
+        mainProductImageSet.add(normalized.toLowerCase());
+        
+        // Add normalized URL (without query params)
         const normalizedForComparison = normalizeUrlForComparison(normalized);
         if (normalizedForComparison) {
           mainProductImageSet.add(normalizedForComparison);
         }
+        
+        // Add base image path
+        const basePath = getBaseImagePath(normalized);
+        if (basePath) {
+          mainProductImageBasePaths.add(basePath);
+        }
+        
+        // Also add the original URL if different
+        try {
+          const originalNormalized = normalizeUrlForComparison(img);
+          if (originalNormalized && originalNormalized !== normalizedForComparison) {
+            mainProductImageSet.add(originalNormalized);
+          }
+        } catch {}
+      } else {
+        // Even if cleanImageUrl fails, try to normalize the original
+        try {
+          const normalizedForComparison = normalizeUrlForComparison(img);
+          if (normalizedForComparison) {
+            mainProductImageSet.add(normalizedForComparison);
+          }
+          const basePath = getBaseImagePath(img);
+          if (basePath) {
+            mainProductImageBasePaths.add(basePath);
+          }
+        } catch {}
       }
-    } catch {}
+    } catch {
+      // Try to normalize the original URL anyway
+      try {
+        const normalizedForComparison = normalizeUrlForComparison(img);
+        if (normalizedForComparison) {
+          mainProductImageSet.add(normalizedForComparison);
+        }
+        const basePath = getBaseImagePath(img);
+        if (basePath) {
+          mainProductImageBasePaths.add(basePath);
+        }
+      } catch {}
+    }
   });
 
   // Helper to add image if valid and not duplicate
@@ -281,10 +348,10 @@ function extractRecommendedProductsImages(mainProductImages: string[]): string[]
     
     try {
       const cleanUrl = cleanImageUrl(url);
-      if (!cleanUrl) return;
+      const urlToCheck = cleanUrl || url;
       
       // Normalize URL for comparison (without query params)
-      const normalizedForComparison = normalizeUrlForComparison(cleanUrl);
+      const normalizedForComparison = normalizeUrlForComparison(urlToCheck);
       if (!normalizedForComparison) return;
       
       // Check if we've already seen this normalized URL (deduplication)
@@ -293,23 +360,52 @@ function extractRecommendedProductsImages(mainProductImages: string[]): string[]
       }
       
       // Also check the full URL
-      if (seenUrls.has(cleanUrl)) {
+      if (seenUrls.has(urlToCheck.toLowerCase())) {
         return;
       }
       
-      // Check if this is a main product image
+      // Check if this is a main product image - check multiple variations
       let isMainProductImage = false;
-      if (mainProductImageSet.has(cleanUrl) || mainProductImageSet.has(normalizedForComparison)) {
+      
+      // Check full URL (both cleaned and original)
+      if (mainProductImageSet.has(urlToCheck.toLowerCase()) || 
+          mainProductImageSet.has(normalizedForComparison) ||
+          mainProductImageSet.has(url.toLowerCase())) {
         isMainProductImage = true;
+      }
+      
+      // Check base image path (filename)
+      if (!isMainProductImage) {
+        const basePath = getBaseImagePath(urlToCheck);
+        if (basePath && mainProductImageBasePaths.has(basePath)) {
+          isMainProductImage = true;
+        }
+      }
+      
+      // Double-check by comparing with all main product images using base path
+      if (!isMainProductImage && mainProductImages.length > 0) {
+        const currentBasePath = getBaseImagePath(urlToCheck);
+        if (currentBasePath) {
+          for (const mainImg of mainProductImages) {
+            const mainBasePath = getBaseImagePath(mainImg);
+            if (mainBasePath && mainBasePath === currentBasePath) {
+              isMainProductImage = true;
+              break;
+            }
+          }
+        }
       }
 
       // Skip if it's a main product image
-      if (isMainProductImage) return;
+      if (isMainProductImage) {
+        console.log('NUSENSE: Skipping main product image from recommended:', urlToCheck);
+        return;
+      }
 
       // Basic validation: must be a valid image URL
-      if (cleanUrl.match(/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i)) {
+      if (urlToCheck.match(/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i)) {
         // Exclude common non-product images
-        const lowerUrl = cleanUrl.toLowerCase();
+        const lowerUrl = urlToCheck.toLowerCase();
         const excludePatterns = [
           'logo', 'icon', 'badge', 'payment', 'trust', 'review', 'star',
           'avatar', 'user', 'profile', 'social', 'facebook', 'twitter',
@@ -323,11 +419,11 @@ function extractRecommendedProductsImages(mainProductImages: string[]): string[]
 
         // Ensure absolute URL
         try {
-          const absUrl = new URL(cleanUrl, window.location.origin).href;
+          const absUrl = new URL(urlToCheck, window.location.origin).href;
           if (absUrl) {
             allImages.push(absUrl);
-            seenUrls.add(absUrl);
-            seenUrls.add(cleanUrl);
+            seenUrls.add(absUrl.toLowerCase());
+            seenUrls.add(urlToCheck.toLowerCase());
             seenNormalizedUrls.add(normalizedForComparison);
           }
         } catch {
