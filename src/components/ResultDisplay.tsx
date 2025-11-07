@@ -1,12 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Sparkles,
-  CreditCard,
-  ShoppingCart,
-  Building,
-  Download,
-} from "lucide-react";
+import { Sparkles, CreditCard, ShoppingCart, Download } from "lucide-react";
 
 interface ResultDisplayProps {
   generatedImage: string;
@@ -30,13 +24,6 @@ export default function ResultDisplay({
     // Send message to parent window to trigger add to cart action
     if (window.parent !== window) {
       window.parent.postMessage({ type: "NUSENSE_ADD_TO_CART" }, "*");
-    }
-  };
-
-  const handleTryInStore = () => {
-    // Send message to parent window to trigger try in store action
-    if (window.parent !== window) {
-      window.parent.postMessage({ type: "NUSENSE_TRY_IN_STORE" }, "*");
     }
   };
 
@@ -112,20 +99,6 @@ export default function ResultDisplay({
               <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" />
               <span className="leading-tight whitespace-nowrap">
                 Ajouter au Panier
-              </span>
-            </Button>
-
-            {/* Try in Store - Orange border */}
-            <Button
-              onClick={handleTryInStore}
-              variant="outline"
-              size="sm"
-              className="group relative w-full inline-flex items-center justify-center min-h-[40px] sm:min-h-[44px] h-auto py-1.5 sm:py-2 px-2.5 sm:px-3 md:px-4 text-[10px] sm:text-xs md:text-sm font-semibold border-2 border-orange-500/80 bg-white hover:bg-orange-50 hover:border-orange-600 text-orange-600 hover:text-orange-700 active:bg-orange-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-orange-500/10 focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:ring-offset-2"
-              aria-label="essayer en magasin"
-            >
-              <Building className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" />
-              <span className="leading-tight whitespace-nowrap">
-                essayer en magasin
               </span>
             </Button>
 
