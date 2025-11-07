@@ -7,7 +7,6 @@ import ResultDisplay from "./ResultDisplay";
 import {
   extractShopifyProductInfo,
   extractProductImages,
-  extractRecommendedProductImages,
 } from "@/utils/shopifyIntegration";
 import { storage } from "@/utils/storage";
 import { generateTryOn, dataURLToBlob } from "@/services/tryonApi";
@@ -175,15 +174,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         console.log("NUSENSE: No images found from page extraction");
       }
     }
-
-    // Extract recommended product images (always, regardless of iframe mode)
-    // Always update state, even if empty, to clear stale data
-    const recommendedImgs = extractRecommendedProductImages();
-    console.log(
-      "NUSENSE: Recommended images extracted:",
-      recommendedImgs.length
-    );
-    setRecommendedImages(recommendedImgs);
   }, []);
 
   // No longer needed - using fixed 185px width
@@ -196,18 +186,23 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       // Only process messages from parent window
       if (event.data && event.data.type === "NUSENSE_PRODUCT_IMAGES") {
         const parentImages = event.data.images || [];
+        const parentRecommendedImages = event.data.recommendedImages || [];
         console.log(
           "NUSENSE: Received images from Shopify product page (parent window):",
           parentImages.length,
-          parentImages
+          "main images and",
+          parentRecommendedImages.length,
+          "recommended images"
         );
 
         if (parentImages.length > 0) {
           // Always prioritize and use parent images - they come from the actual Shopify product page
           // These are extracted using Shopify Liquid objects (product.media/product.images)
           console.log(
-            "NUSENSE: Successfully received images from Shopify product page. Total:",
-            parentImages.length
+            "NUSENSE: Successfully received images from Shopify product page. Main:",
+            parentImages.length,
+            "Recommended:",
+            parentRecommendedImages.length
           );
           setAvailableImages(parentImages);
           imagesLoadedRef.current = true;
@@ -216,19 +211,15 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
             "NUSENSE: Parent window (Shopify page) sent empty images array. Product may have no images."
           );
         }
-      }
 
-      // Handle recommended images from parent window
-      // Always update state, even if empty, to clear stale data
-      if (event.data && event.data.type === "NUSENSE_RECOMMENDED_IMAGES") {
-        const parentRecommendedImages = event.data.images || [];
-        console.log(
-          "NUSENSE: Received recommended images from Shopify product page (parent window):",
-          parentRecommendedImages.length,
-          parentRecommendedImages
-        );
-
-        setRecommendedImages(parentRecommendedImages);
+        // Set recommended images if available
+        if (parentRecommendedImages.length > 0) {
+          console.log(
+            "NUSENSE: Setting recommended products images:",
+            parentRecommendedImages.length
+          );
+          setRecommendedImages(parentRecommendedImages);
+        }
       }
     };
 
@@ -383,11 +374,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         imagesFound = true;
       }
     }
-
-    // Extract recommended product images
-    // Always update state, even if empty, to clear stale data
-    const recommendedImgs = extractRecommendedProductImages();
-    setRecommendedImages(recommendedImgs);
   };
 
   const handleClearUploadedImage = () => {

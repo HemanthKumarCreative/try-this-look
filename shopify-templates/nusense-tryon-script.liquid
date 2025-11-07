@@ -157,12 +157,144 @@
         return images;
       }
 
+      // Extract all images from the page that are NOT main product images
+      // This finds any images on the page and filters out the main product images
+      function extractRecommendedProductsImages(mainProductImages) {
+        const allImages = [];
+        const seenUrls = new Set();
+        const mainProductImageSet = new Set();
+
+        // Normalize main product images for comparison
+        if (mainProductImages && Array.isArray(mainProductImages)) {
+          mainProductImages.forEach(function(img) {
+            try {
+              const urlObj = new URL(img, window.location.origin);
+              mainProductImageSet.add(urlObj.href);
+              // Also add without query params for comparison
+              urlObj.search = '';
+              mainProductImageSet.add(urlObj.href);
+            } catch (e) {}
+          });
+        }
+
+        // Helper to check if URL is a main product image
+        function isMainProductImage(url) {
+          try {
+            const urlObj = new URL(url, window.location.origin);
+            if (mainProductImageSet.has(urlObj.href)) {
+              return true;
+            }
+            // Also check without query params
+            urlObj.search = '';
+            if (mainProductImageSet.has(urlObj.href)) {
+              return true;
+            }
+          } catch (e) {}
+          return false;
+        }
+
+        // Helper to add image if valid and not duplicate
+        function addImage(url) {
+          if (!url || seenUrls.has(url)) return;
+          
+          try {
+            const urlObj = new URL(url, window.location.origin);
+            const absUrl = urlObj.href;
+            
+            if (seenUrls.has(absUrl)) return;
+            
+            // Skip if it's a main product image
+            if (isMainProductImage(absUrl)) return;
+            
+            // Basic validation: must be a valid image URL
+            if (absUrl.match(/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i)) {
+              // Exclude common non-product images
+              const lowerUrl = absUrl.toLowerCase();
+              const excludePatterns = [
+                'logo', 'icon', 'badge', 'payment', 'trust', 'review', 'star',
+                'avatar', 'user', 'profile', 'social', 'facebook', 'twitter',
+                'instagram', 'pinterest', 'google', 'analytics', 'tracking',
+                'pixel', 'spacer', 'blank', 'placeholder', '1x1', 'pixel.gif',
+                'transparent', '.svg'
+              ];
+              
+              const shouldExclude = excludePatterns.some(function(pattern) {
+                return lowerUrl.includes(pattern);
+              });
+              if (shouldExclude) return;
+              
+              allImages.push(absUrl);
+              seenUrls.add(absUrl);
+              seenUrls.add(url);
+            }
+          } catch (e) {
+            // Skip invalid URLs
+          }
+        }
+
+        try {
+          // Extract ALL images from the page
+          const allImgElements = document.querySelectorAll('img');
+          allImgElements.forEach(function(img) {
+            if (img instanceof HTMLImageElement) {
+              const sources = [
+                img.src,
+                img.dataset.src,
+                img.dataset.lazySrc,
+                img.dataset.originalSrc,
+                img.dataset.productImage,
+                img.currentSrc,
+                img.getAttribute('data-original'),
+                img.getAttribute('data-lazy')
+              ].filter(Boolean);
+
+              // Extract from srcset
+              if (img.srcset) {
+                const srcsetEntries = img.srcset.split(',');
+                srcsetEntries.forEach(function(entry) {
+                  const parts = entry.trim().split(/\s+/);
+                  if (parts[0]) {
+                    sources.push(parts[0]);
+                  }
+                });
+              }
+
+              sources.forEach(function(src) {
+                addImage(src);
+              });
+            }
+          });
+
+          // Also check background images
+          const bgImageElements = document.querySelectorAll('[style*="background-image"]');
+          bgImageElements.forEach(function(el) {
+            const style = window.getComputedStyle(el);
+            const bgImage = style.backgroundImage;
+            if (bgImage && bgImage !== 'none') {
+              const urlMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+              if (urlMatch && urlMatch[1]) {
+                addImage(urlMatch[1]);
+              }
+            }
+          });
+
+          if (allImages.length > 0) {
+            console.log('NUSENSE: Extracted', allImages.length, 'non-product images as recommended products');
+          }
+        } catch (e) {
+          console.error('NUSENSE: Error extracting recommended products images', e);
+        }
+
+        return allImages;
+      }
+
       // Listen for image requests from iframe
       window.addEventListener("message", (event) => {
         if (event.data && event.data.type === "NUSENSE_REQUEST_IMAGES") {
           console.log('NUSENSE: Received image request from iframe');
           
           let images = [];
+          let recommendedImages = [];
           
           // Priority 1: Use NUSENSE_PRODUCT_DATA if available (most reliable)
           if (window.NUSENSE_PRODUCT_DATA && window.NUSENSE_PRODUCT_DATA.images) {
@@ -177,13 +309,18 @@
             images = extractProductImages();
             console.log('NUSENSE: Extracted images from page:', images.length);
           }
+
+          // Extract all other images from the page that are NOT main product images
+          recommendedImages = extractRecommendedProductsImages(images);
+          console.log('NUSENSE: Extracted recommended products images (non-product images):', recommendedImages.length);
           
           // Send images back to iframe
           if (event.source && event.source !== window) {
-            console.log('NUSENSE: Sending', images.length, 'images to iframe');
+            console.log('NUSENSE: Sending', images.length, 'main images and', recommendedImages.length, 'recommended images to iframe');
             (event.source).postMessage({
               type: "NUSENSE_PRODUCT_IMAGES",
-              images: images
+              images: images,
+              recommendedImages: recommendedImages
             }, "*");
           } else {
             console.warn('NUSENSE: Invalid event source for image request');

@@ -238,12 +238,146 @@ function generateProductId(): string {
  * Initialize image extraction listener for iframe communication
  * This should be called on the parent window to listen for image requests
  */
+/**
+ * Extract all images from the page that are NOT main product images
+ * This finds any images on the page and filters out the main product images
+ */
+function extractRecommendedProductsImages(mainProductImages: string[]): string[] {
+  const allImages: string[] = [];
+  const seenUrls = new Set<string>();
+  const mainProductImageSet = new Set<string>();
+
+  // Normalize main product images for comparison
+  mainProductImages.forEach(img => {
+    try {
+      const normalized = cleanImageUrl(img);
+      if (normalized) {
+        mainProductImageSet.add(normalized);
+        // Also add without query params for comparison
+        try {
+          const url = new URL(normalized);
+          url.search = '';
+          mainProductImageSet.add(url.href);
+        } catch {}
+      }
+    } catch {}
+  });
+
+  // Helper to add image if valid and not duplicate
+  const addImage = (url: string) => {
+    if (!url || seenUrls.has(url)) return;
+    
+    try {
+      const cleanUrl = cleanImageUrl(url);
+      if (!cleanUrl || seenUrls.has(cleanUrl)) return;
+      
+      // Check if this is a main product image
+      let isMainProductImage = false;
+      try {
+        const normalized = cleanImageUrl(url);
+        if (normalized && mainProductImageSet.has(normalized)) {
+          isMainProductImage = true;
+        } else {
+          // Also check without query params
+          const urlObj = new URL(normalized || url, window.location.origin);
+          urlObj.search = '';
+          if (mainProductImageSet.has(urlObj.href)) {
+            isMainProductImage = true;
+          }
+        }
+      } catch {}
+
+      // Skip if it's a main product image
+      if (isMainProductImage) return;
+
+      // Basic validation: must be a valid image URL
+      if (cleanUrl.match(/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i)) {
+        // Exclude common non-product images
+        const lowerUrl = cleanUrl.toLowerCase();
+        const excludePatterns = [
+          'logo', 'icon', 'badge', 'payment', 'trust', 'review', 'star',
+          'avatar', 'user', 'profile', 'social', 'facebook', 'twitter',
+          'instagram', 'pinterest', 'google', 'analytics', 'tracking',
+          'pixel', 'spacer', 'blank', 'placeholder', '1x1', 'pixel.gif',
+          'transparent', '.svg'
+        ];
+
+        const shouldExclude = excludePatterns.some(pattern => lowerUrl.includes(pattern));
+        if (shouldExclude) return;
+
+        // Ensure absolute URL
+        try {
+          const absUrl = new URL(cleanUrl, window.location.origin).href;
+          if (absUrl && !seenUrls.has(absUrl)) {
+            allImages.push(absUrl);
+            seenUrls.add(absUrl);
+            seenUrls.add(cleanUrl);
+          }
+        } catch {
+          // Invalid URL, skip
+        }
+      }
+    } catch {
+      // Skip invalid URLs
+    }
+  };
+
+  try {
+    // Extract ALL images from the page
+    const allImgElements = document.querySelectorAll('img');
+    allImgElements.forEach((img) => {
+      if (img instanceof HTMLImageElement) {
+        const sources = [
+          img.src,
+          img.dataset.src,
+          img.dataset.lazySrc,
+          img.dataset.originalSrc,
+          img.dataset.productImage,
+          img.currentSrc,
+          img.getAttribute('data-original'),
+          img.getAttribute('data-lazy'),
+        ].filter(Boolean) as string[];
+
+        // Extract from srcset
+        if (img.srcset) {
+          const srcsetUrls = parseSrcset(img.srcset);
+          sources.push(...srcsetUrls);
+        }
+
+        sources.forEach(src => addImage(src));
+      }
+    });
+
+    // Also check background images
+    const bgImageElements = document.querySelectorAll('[style*="background-image"]');
+    bgImageElements.forEach(el => {
+      const style = window.getComputedStyle(el);
+      const bgImage = style.backgroundImage;
+      if (bgImage && bgImage !== 'none') {
+        const urlMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+        if (urlMatch && urlMatch[1]) {
+          addImage(urlMatch[1]);
+        }
+      }
+    });
+
+    if (allImages.length > 0) {
+      console.log('NUSENSE: Extracted', allImages.length, 'non-product images as recommended products');
+    }
+  } catch (e) {
+    console.error('NUSENSE: Error extracting recommended products images', e);
+  }
+
+  return allImages;
+}
+
 export function initializeImageExtractionListener(): void {
   window.addEventListener("message", (event) => {
     if (event.data && event.data.type === "NUSENSE_REQUEST_IMAGES") {
       console.log('NUSENSE: Received image request from iframe (via initializeImageExtractionListener)');
       
       let images: string[] = [];
+      let recommendedImages: string[] = [];
       
       // Priority 1: Use NUSENSE_PRODUCT_DATA if available (most reliable)
       if (typeof window !== "undefined" && (window as any).NUSENSE_PRODUCT_DATA) {
@@ -259,27 +393,20 @@ export function initializeImageExtractionListener(): void {
         images = extractProductImages();
         console.log('NUSENSE: Extracted images from page:', images.length);
       }
-      
-      // Extract recommended images
-      const recommendedImages = extractRecommendedProductImages();
-      console.log('NUSENSE: Extracted recommended images from page:', recommendedImages.length);
+
+      // Extract all other images from the page that are NOT main product images
+      // This will find any images on the page and filter out the main product images
+      recommendedImages = extractRecommendedProductsImages(images);
+      console.log('NUSENSE: Extracted recommended products images (non-product images):', recommendedImages.length);
       
       // Send images back to the iframe
       if (event.source && event.source !== window) {
-        console.log('NUSENSE: Sending', images.length, 'images to iframe');
+        console.log('NUSENSE: Sending', images.length, 'main images and', recommendedImages.length, 'recommended images to iframe');
         (event.source as Window).postMessage({
           type: "NUSENSE_PRODUCT_IMAGES",
-          images: images
+          images: images,
+          recommendedImages: recommendedImages
         }, "*");
-        
-        // Also send recommended images if available
-        if (recommendedImages.length > 0) {
-          console.log('NUSENSE: Sending', recommendedImages.length, 'recommended images to iframe');
-          (event.source as Window).postMessage({
-            type: "NUSENSE_RECOMMENDED_IMAGES",
-            images: recommendedImages
-          }, "*");
-        }
       } else {
         console.warn('NUSENSE: Invalid event source for image request');
       }
@@ -843,120 +970,4 @@ function isMainProductSection(element: Element): boolean {
   }
 
   return false;
-}
-
-/**
- * Extract images specifically from "You may also like" / recommended product sections
- * This function is the opposite of extractProductImages - it ONLY gets images from recommended sections
- */
-export function extractRecommendedProductImages(): string[] {
-  const images: string[] = [];
-  const seenUrls = new Set<string>();
-
-  // Helper to add image if valid and not duplicate
-  const addImage = (url: string, metadata?: { width?: number; height?: number; alt?: string }) => {
-    if (!url || seenUrls.has(url)) return;
-    
-    const cleanUrl = cleanImageUrl(url);
-    if (!cleanUrl || seenUrls.has(cleanUrl)) return;
-    
-    if (isValidProductImageUrl(cleanUrl, metadata)) {
-      images.push(cleanUrl);
-      seenUrls.add(cleanUrl);
-    }
-  };
-
-  // Find all "You may also like" / recommended product sections
-  // Based on Shopify's Product Recommendations API patterns:
-  // - Uses .product-recommendations class (most common)
-  // - Uses data-url attribute with recommendations URL
-  // - Section headings like "You may also like" for related products
-  const recommendedSectionSelectors = [
-    '.product-recommendations', // Shopify's standard class for recommendations
-    '[class*="product-recommendations"]',
-    '[class*="you-may-also-like"]',
-    '[class*="you-may-like"]',
-    '[class*="recommended"]',
-    '[class*="related"]',
-    '[id*="product-recommendations"]',
-    '[id*="you-may-also-like"]',
-    '[id*="you-may-like"]',
-    '[id*="recommended"]',
-    '[id*="related"]',
-    '[data-url*="recommendations"]', // Shopify uses data-url with recommendations URL
-    '[data-section-type*="recommendation"]',
-    '[data-section-type*="related"]',
-    '[data-section-type*="complementary"]',
-  ];
-
-  const recommendedSections: Element[] = [];
-  recommendedSectionSelectors.forEach(selector => {
-    try {
-      const elements = document.querySelectorAll(selector);
-      elements.forEach(el => {
-        // Verify it's actually a recommended section (not main product)
-        if (!isMainProductSection(el)) {
-          recommendedSections.push(el);
-        }
-      });
-    } catch (e) {
-      // Continue if selector fails
-    }
-  });
-
-  // Extract images from recommended sections
-  recommendedSections.forEach(section => {
-    // Get all img elements within this section
-    const imgElements = section.querySelectorAll('img');
-    imgElements.forEach(img => {
-      if (img instanceof HTMLImageElement) {
-        const sources = [
-          img.src,
-          img.dataset.src,
-          img.dataset.lazySrc,
-          img.dataset.originalSrc,
-          img.dataset.productImage,
-          img.currentSrc,
-          img.getAttribute('data-original'),
-          img.getAttribute('data-lazy'),
-        ].filter(Boolean) as string[];
-
-        // Extract from srcset
-        if (img.srcset) {
-          const srcsetUrls = parseSrcset(img.srcset);
-          sources.push(...srcsetUrls);
-        }
-
-        sources.forEach(src => {
-          addImage(src, {
-            width: img.naturalWidth || img.width,
-            height: img.naturalHeight || img.height,
-            alt: img.alt,
-          });
-        });
-      }
-    });
-
-    // Also check for background images in this section
-    const bgImageElements = section.querySelectorAll('[style*="background-image"]');
-    bgImageElements.forEach(el => {
-      const style = window.getComputedStyle(el);
-      const bgImage = style.backgroundImage;
-      if (bgImage && bgImage !== 'none') {
-        const urlMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
-        if (urlMatch && urlMatch[1]) {
-          addImage(urlMatch[1], {
-            width: el instanceof HTMLElement ? el.offsetWidth : 0,
-            height: el instanceof HTMLElement ? el.offsetHeight : 0,
-          });
-        }
-      }
-    });
-  });
-
-  // Debug: Log detected recommended images
-  console.log('NUSENSE: Recommended product images detected:', images);
-  console.log('NUSENSE: Total recommended images found:', images.length);
-  
-  return images;
 }

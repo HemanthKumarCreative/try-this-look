@@ -52,6 +52,7 @@
         {% endfor %}
       {% endif %}
     ],
+    recommendedProductsUrl: "{{ routes.product_recommendations_url }}?product_id={{ product.id }}&limit=10&intent=related",
     description: {{ product.description | strip_html | truncate: 200 | json }},
     variants: [
       {% for variant in product.variants %}
@@ -339,6 +340,143 @@
       }
       
       return images;
+    }
+    
+    // Extract all images from the page that are NOT main product images
+    // This finds any images on the page and filters out the main product images
+    function getRecommendedProductsImages(mainProductImages) {
+      const allImages = [];
+      const seenUrls = new Set();
+      const mainProductImageSet = new Set();
+      
+      // Normalize main product images for comparison
+      if (mainProductImages && Array.isArray(mainProductImages)) {
+        mainProductImages.forEach(function(img) {
+          try {
+            const normalized = ensureAbsoluteUrl(img);
+            if (normalized) {
+              mainProductImageSet.add(normalized);
+              // Also add without query params for comparison
+              try {
+                const url = new URL(normalized);
+                url.search = '';
+                mainProductImageSet.add(url.href);
+              } catch (e) {}
+            }
+          } catch (e) {}
+        });
+      }
+      
+      // Helper to check if URL is a main product image
+      function isMainProductImage(url) {
+        try {
+          const normalized = ensureAbsoluteUrl(url);
+          if (normalized && mainProductImageSet.has(normalized)) {
+            return true;
+          }
+          // Also check without query params
+          try {
+            const urlObj = new URL(normalized || url, window.location.origin);
+            urlObj.search = '';
+            if (mainProductImageSet.has(urlObj.href)) {
+              return true;
+            }
+          } catch (e) {}
+        } catch (e) {}
+        return false;
+      }
+      
+      // Helper to add image if valid and not duplicate
+      function addImage(url) {
+        if (!url || seenUrls.has(url)) return;
+        
+        try {
+          const cleanUrl = ensureAbsoluteUrl(url);
+          if (!cleanUrl || seenUrls.has(cleanUrl)) return;
+          
+          // Skip if it's a main product image
+          if (isMainProductImage(cleanUrl)) return;
+          
+          // Basic validation: must be a valid image URL
+          if (cleanUrl.match(/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i)) {
+            // Exclude common non-product images
+            const lowerUrl = cleanUrl.toLowerCase();
+            const excludePatterns = [
+              'logo', 'icon', 'badge', 'payment', 'trust', 'review', 'star',
+              'avatar', 'user', 'profile', 'social', 'facebook', 'twitter',
+              'instagram', 'pinterest', 'google', 'analytics', 'tracking',
+              'pixel', 'spacer', 'blank', 'placeholder', '1x1', 'pixel.gif',
+              'transparent', '.svg'
+            ];
+            
+            const shouldExclude = excludePatterns.some(function(pattern) {
+              return lowerUrl.includes(pattern);
+            });
+            if (shouldExclude) return;
+            
+            allImages.push(cleanUrl);
+            seenUrls.add(cleanUrl);
+            seenUrls.add(url);
+          }
+        } catch (e) {
+          // Skip invalid URLs
+        }
+      }
+      
+      try {
+        // Extract ALL images from the page
+        const allImgElements = document.querySelectorAll('img');
+        allImgElements.forEach(function(img) {
+          if (img instanceof HTMLImageElement) {
+            const sources = [
+              img.src,
+              img.dataset.src,
+              img.dataset.lazySrc,
+              img.dataset.originalSrc,
+              img.dataset.productImage,
+              img.currentSrc,
+              img.getAttribute('data-original'),
+              img.getAttribute('data-lazy')
+            ].filter(Boolean);
+            
+            // Extract from srcset
+            if (img.srcset) {
+              const srcsetEntries = img.srcset.split(',');
+              srcsetEntries.forEach(function(entry) {
+                const parts = entry.trim().split(/\s+/);
+                if (parts[0]) {
+                  sources.push(parts[0]);
+                }
+              });
+            }
+            
+            sources.forEach(function(src) {
+              addImage(src);
+            });
+          }
+        });
+        
+        // Also check background images
+        const bgImageElements = document.querySelectorAll('[style*="background-image"]');
+        bgImageElements.forEach(function(el) {
+          const style = window.getComputedStyle(el);
+          const bgImage = style.backgroundImage;
+          if (bgImage && bgImage !== 'none') {
+            const urlMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+            if (urlMatch && urlMatch[1]) {
+              addImage(urlMatch[1]);
+            }
+          }
+        });
+        
+        if (allImages.length > 0) {
+          console.log('NUSENSE [Image Listener]: ✅ Extracted', allImages.length, 'non-product images as recommended products');
+        }
+      } catch (e) {
+        console.error('NUSENSE [Image Listener]: Error extracting recommended products images', e);
+      }
+      
+      return allImages;
     }
     
     // Get product images with priority order
@@ -661,24 +799,30 @@
       
       log('Received image request from iframe', event.origin);
       
-      // Get product images
+      // Get main product images
       const images = getProductImages();
       
-      console.log('NUSENSE [Image Listener]: Extracted', images.length, 'images, preparing to send to iframe');
+      // Get all other images from the page that are NOT main product images
+      const recommendedImages = getRecommendedProductsImages(images);
+      
+      console.log('NUSENSE [Image Listener]: Extracted', images.length, 'main product images and', recommendedImages.length, 'recommended product images, preparing to send to iframe');
       
       // Send images back to iframe - ALWAYS send a response, even if empty
       if (event.source && event.source !== window) {
         try {
           event.source.postMessage({
             type: 'NUSENSE_PRODUCT_IMAGES',
-            images: images
+            images: images,
+            recommendedImages: recommendedImages
           }, '*'); // Use '*' for development, restrict in production
           
-          console.log('NUSENSE [Image Listener]: ✅ Successfully sent', images.length, 'images to iframe');
-          console.log('NUSENSE [Image Listener]: Images sent:', images);
+          console.log('NUSENSE [Image Listener]: ✅ Successfully sent', images.length, 'main images and', recommendedImages.length, 'recommended images to iframe');
+          console.log('NUSENSE [Image Listener]: Main images sent:', images);
+          console.log('NUSENSE [Image Listener]: Recommended images sent:', recommendedImages);
           
           log('Sent images to iframe', {
-            count: images.length,
+            mainCount: images.length,
+            recommendedCount: recommendedImages.length,
             origin: event.origin
           });
         } catch (e) {
