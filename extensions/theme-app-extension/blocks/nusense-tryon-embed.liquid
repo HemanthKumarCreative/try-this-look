@@ -249,29 +249,25 @@
       // Create button
       const button = createButton();
       
-      // Insert button next to cart icon
+      // Insert button BEFORE cart icon (to the left)
       // Try to find the parent container (usually a nav or div)
       let parent = cartIcon.parentElement;
       
-      // If cart icon is in a list item, insert after it
+      // If cart icon is in a list item, insert before it
       if (cartIcon.parentElement && cartIcon.parentElement.tagName === 'LI') {
         const listItem = cartIcon.parentElement;
         const newListItem = document.createElement('li');
         newListItem.appendChild(button);
-        listItem.parentNode.insertBefore(newListItem, listItem.nextSibling);
-        log('Button inserted as sibling list item after cart icon');
+        listItem.parentNode.insertBefore(newListItem, listItem);
+        log('Button inserted as sibling list item before cart icon');
       } else if (parent) {
-        // Insert after cart icon in same parent
-        if (cartIcon.nextSibling) {
-          parent.insertBefore(button, cartIcon.nextSibling);
-        } else {
-          parent.appendChild(button);
-        }
-        log('Button inserted after cart icon');
+        // Insert before cart icon in same parent
+        parent.insertBefore(button, cartIcon);
+        log('Button inserted before cart icon');
       } else {
-        // Fallback: insert after cart icon
-        cartIcon.parentNode.insertBefore(button, cartIcon.nextSibling);
-        log('Button inserted after cart icon (fallback)');
+        // Fallback: insert before cart icon
+        cartIcon.parentNode.insertBefore(button, cartIcon);
+        log('Button inserted before cart icon (fallback)');
       }
     }
     
