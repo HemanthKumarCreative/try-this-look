@@ -85,50 +85,56 @@ export default function ResultDisplay({
             />
           </div>
 
-          {/* Right side: Action buttons */}
-          <div className="flex flex-col justify-center gap-3 sm:gap-3.5 md:gap-4">
+          {/* Right side: Action buttons - Responsive grid: 1 column on mobile, 2 columns on larger screens */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-3.5 md:gap-4 justify-center items-center">
             {/* Buy Now - Red border */}
             <Button
               onClick={handleBuyNow}
               variant="outline"
-              className="group relative w-full min-h-[48px] sm:min-h-[52px] md:min-h-[56px] h-auto py-3 sm:py-3.5 md:py-4 px-4 sm:px-5 md:px-6 text-sm sm:text-base font-semibold border-2 border-red-500/80 bg-white hover:bg-red-50 hover:border-red-600 text-red-600 hover:text-red-700 active:bg-red-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-red-500/10 focus-visible:ring-2 focus-visible:ring-red-500/50 focus-visible:ring-offset-2"
+              className="group relative w-full min-h-[48px] sm:min-h-[50px] md:min-h-[52px] lg:min-h-[56px] h-auto py-2.5 sm:py-3 md:py-3.5 lg:py-4 px-3 sm:px-4 md:px-5 lg:px-6 text-xs sm:text-sm md:text-base font-semibold border-2 border-red-500/80 bg-white hover:bg-red-50 hover:border-red-600 text-red-600 hover:text-red-700 active:bg-red-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-red-500/10 focus-visible:ring-2 focus-visible:ring-red-500/50 focus-visible:ring-offset-2"
               aria-label="Acheter Maintenant"
             >
-              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110" />
-              <span className="leading-tight">Acheter Maintenant</span>
+              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110 flex-shrink-0" />
+              <span className="leading-tight text-center">
+                Acheter Maintenant
+              </span>
             </Button>
 
             {/* Add to Cart - Green border */}
             <Button
               onClick={handleAddToCart}
               variant="outline"
-              className="group relative w-full min-h-[48px] sm:min-h-[52px] md:min-h-[56px] h-auto py-3 sm:py-3.5 md:py-4 px-4 sm:px-5 md:px-6 text-sm sm:text-base font-semibold border-2 border-green-500/80 bg-white hover:bg-green-50 hover:border-green-600 text-green-600 hover:text-green-700 active:bg-green-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-green-500/10 focus-visible:ring-2 focus-visible:ring-green-500/50 focus-visible:ring-offset-2"
+              className="group relative w-full min-h-[48px] sm:min-h-[50px] md:min-h-[52px] lg:min-h-[56px] h-auto py-2.5 sm:py-3 md:py-3.5 lg:py-4 px-3 sm:px-4 md:px-5 lg:px-6 text-xs sm:text-sm md:text-base font-semibold border-2 border-green-500/80 bg-white hover:bg-green-50 hover:border-green-600 text-green-600 hover:text-green-700 active:bg-green-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-green-500/10 focus-visible:ring-2 focus-visible:ring-green-500/50 focus-visible:ring-offset-2"
               aria-label="Ajouter au Panier"
             >
-              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110" />
-              <span className="leading-tight">Ajouter au Panier</span>
+              <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110 flex-shrink-0" />
+              <span className="leading-tight text-center">
+                Ajouter au Panier
+              </span>
             </Button>
 
             {/* Try in Store - Orange border */}
             <Button
               onClick={handleTryInStore}
               variant="outline"
-              className="group relative w-full min-h-[48px] sm:min-h-[52px] md:min-h-[56px] h-auto py-3 sm:py-3.5 md:py-4 px-4 sm:px-5 md:px-6 text-sm sm:text-base font-semibold border-2 border-orange-500/80 bg-white hover:bg-orange-50 hover:border-orange-600 text-orange-600 hover:text-orange-700 active:bg-orange-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-orange-500/10 focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:ring-offset-2"
+              className="group relative w-full min-h-[48px] sm:min-h-[50px] md:min-h-[52px] lg:min-h-[56px] h-auto py-2.5 sm:py-3 md:py-3.5 lg:py-4 px-3 sm:px-4 md:px-5 lg:px-6 text-xs sm:text-sm md:text-base font-semibold border-2 border-orange-500/80 bg-white hover:bg-orange-50 hover:border-orange-600 text-orange-600 hover:text-orange-700 active:bg-orange-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-orange-500/10 focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:ring-offset-2"
               aria-label="essayer en magasin"
             >
-              <Building className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110" />
-              <span className="leading-tight">essayer en magasin</span>
+              <Building className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110 flex-shrink-0" />
+              <span className="leading-tight text-center">
+                essayer en magasin
+              </span>
             </Button>
 
             {/* Download - Blue border */}
             <Button
               onClick={handleDownload}
               variant="outline"
-              className="group relative w-full min-h-[48px] sm:min-h-[52px] md:min-h-[56px] h-auto py-3 sm:py-3.5 md:py-4 px-4 sm:px-5 md:px-6 text-sm sm:text-base font-semibold border-2 border-blue-500/80 bg-white hover:bg-blue-50 hover:border-blue-600 text-blue-600 hover:text-blue-700 active:bg-blue-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-blue-500/10 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2"
+              className="group relative w-full min-h-[48px] sm:min-h-[50px] md:min-h-[52px] lg:min-h-[56px] h-auto py-2.5 sm:py-3 md:py-3.5 lg:py-4 px-3 sm:px-4 md:px-5 lg:px-6 text-xs sm:text-sm md:text-base font-semibold border-2 border-blue-500/80 bg-white hover:bg-blue-50 hover:border-blue-600 text-blue-600 hover:text-blue-700 active:bg-blue-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-blue-500/10 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2"
               aria-label="Télécharger"
             >
-              <Download className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110" />
-              <span className="leading-tight">Télécharger</span>
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110 flex-shrink-0" />
+              <span className="leading-tight text-center">Télécharger</span>
             </Button>
           </div>
         </div>

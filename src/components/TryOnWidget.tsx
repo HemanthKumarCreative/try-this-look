@@ -441,27 +441,15 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 border-b border-border shadow-sm">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
-          <div
-            className="inline-flex flex-col flex-shrink-0"
-            style={{ width: "185px" }}
-          >
+          <div className="inline-flex flex-col flex-shrink-0 min-w-0">
             <span
               aria-label="NULOOK"
-              className="inline-flex items-center tracking-wide leading-none whitespace-nowrap"
-              style={{ width: "185px", fontSize: "32px", fontWeight: 700 }}
+              className="inline-flex items-center tracking-wide leading-none whitespace-nowrap text-2xl sm:text-3xl md:text-4xl font-bold"
             >
               <span style={{ color: "#ce0003" }}>NU</span>
               <span style={{ color: "#564646" }}>LOOK</span>
             </span>
-            <div
-              className="mt-0.5 sm:mt-1 text-left leading-tight tracking-tight whitespace-nowrap"
-              style={{
-                width: "185px",
-                fontSize: "12px",
-                color: "#3D3232",
-                fontWeight: 500,
-              }}
-            >
+            <div className="mt-0.5 sm:mt-1 text-left leading-tight tracking-tight whitespace-nowrap text-[10px] sm:text-xs md:text-sm text-[#3D3232] font-medium">
               Essayage Virtuel Alimenté par IA
             </div>
           </div>
