@@ -26,8 +26,11 @@
       buttonStyle: {{ block.settings.button_style | default: 'minimal' | json }},
       positionLeft: {{ block.settings.position_left | default: '' | json }},
       positionRight: {{ block.settings.position_right | default: '' | json }},
-      positionTop: {{ block.settings.position_top | default: '' | json }},
-      positionBottom: {{ block.settings.position_bottom | default: '' | json }},
+      positionLeftMobile: {{ block.settings.position_left_mobile | default: '' | json }},
+      positionRightMobile: {{ block.settings.position_right_mobile | default: '' | json }},
+      alignWithElement: {{ block.settings.align_with_element | default: 'cart' | json }},
+      cartIconSelector: {{ block.settings.cart_icon_selector | default: 'a[href*="/cart"], .cart-icon, .cart-link, [data-cart-icon], .header__icon--cart, .site-header__cart, #cart-icon, .icon-cart, button[aria-label*="cart" i], a[aria-label*="cart" i], .header__cart, .cart, [data-cart]' | json }},
+      logoSelector: {{ block.settings.logo_selector | default: '' | json }},
       debug: {{ block.settings.enable_debug | default: false }}
     };
     
@@ -67,7 +70,7 @@
       button.style.position = 'absolute';
       button.style.zIndex = '9999';
       
-      // Appliquer les valeurs de positionnement en pixels
+      // Appliquer les valeurs de positionnement horizontal en pixels (desktop)
       if (config.positionLeft && config.positionLeft.trim() !== '') {
         const leftValue = config.positionLeft.trim();
         button.style.left = leftValue.includes('px') ? leftValue : leftValue + 'px';
@@ -78,21 +81,26 @@
         button.style.right = rightValue.includes('px') ? rightValue : rightValue + 'px';
       }
       
-      if (config.positionTop && config.positionTop.trim() !== '') {
-        const topValue = config.positionTop.trim();
-        button.style.top = topValue.includes('px') ? topValue : topValue + 'px';
+      // Appliquer les valeurs de positionnement horizontal en pixels (mobile)
+      if (config.positionLeftMobile && config.positionLeftMobile.trim() !== '') {
+        const leftValueMobile = config.positionLeftMobile.trim();
+        const leftValue = leftValueMobile.includes('px') ? leftValueMobile : leftValueMobile + 'px';
+        button.setAttribute('data-mobile-left', leftValue);
+        button.style.setProperty('--mobile-left', leftValue);
       }
       
-      if (config.positionBottom && config.positionBottom.trim() !== '') {
-        const bottomValue = config.positionBottom.trim();
-        button.style.bottom = bottomValue.includes('px') ? bottomValue : bottomValue + 'px';
+      if (config.positionRightMobile && config.positionRightMobile.trim() !== '') {
+        const rightValueMobile = config.positionRightMobile.trim();
+        const rightValue = rightValueMobile.includes('px') ? rightValueMobile : rightValueMobile + 'px';
+        button.setAttribute('data-mobile-right', rightValue);
+        button.style.setProperty('--mobile-right', rightValue);
       }
       
       log('Positionnement absolu appliqué', {
         left: config.positionLeft,
         right: config.positionRight,
-        top: config.positionTop,
-        bottom: config.positionBottom
+        leftMobile: config.positionLeftMobile,
+        rightMobile: config.positionRightMobile
       });
       
       // Ajouter le gestionnaire de clic
@@ -250,6 +258,93 @@
       // }
     }
     
+    function findReferenceElement() {
+      // Trouver l'élément de référence pour l'alignement vertical
+      if (config.alignWithElement === 'cart') {
+        // Chercher l'icône du panier
+        const selectors = config.cartIconSelector.split(',').map(s => s.trim());
+        for (let i = 0; i < selectors.length; i++) {
+          const element = document.querySelector(selectors[i]);
+          if (element) {
+            log('Élément de référence trouvé (cart)', selectors[i]);
+            return element;
+          }
+        }
+      } else if (config.alignWithElement === 'logo') {
+        // Chercher le logo
+        if (config.logoSelector && config.logoSelector.trim() !== '') {
+          const logo = document.querySelector(config.logoSelector);
+          if (logo) {
+            log('Élément de référence trouvé (logo)', config.logoSelector);
+            return logo;
+          }
+        }
+        // Essayer des sélecteurs communs pour le logo
+        const logoSelectors = [
+          '.logo',
+          '.site-logo',
+          '.header__logo',
+          '.site-header__logo',
+          '.header-logo',
+          'a[href="/"]',
+          '[data-logo]',
+          'h1 a',
+          '.brand',
+          '.site-brand'
+        ];
+        for (let i = 0; i < logoSelectors.length; i++) {
+          const logo = document.querySelector(logoSelectors[i]);
+          if (logo) {
+            log('Élément de référence trouvé (logo)', logoSelectors[i]);
+            return logo;
+          }
+        }
+      }
+      
+      log('Aucun élément de référence trouvé');
+      return null;
+    }
+    
+    function alignButtonVertically(button, referenceElement) {
+      if (!referenceElement) {
+        // Si aucun élément de référence, centrer verticalement dans le header
+        const header = button.parentElement;
+        if (header) {
+          const headerRect = header.getBoundingClientRect();
+          const buttonRect = button.getBoundingClientRect();
+          const headerHeight = headerRect.height;
+          const buttonHeight = buttonRect.height;
+          const topPosition = (headerHeight - buttonHeight) / 2;
+          button.style.top = topPosition + 'px';
+          button.style.transform = 'translateY(0)';
+          log('Bouton centré verticalement dans l\'en-tête (sans référence)');
+        }
+        return;
+      }
+      
+      // Obtenir la position de l'élément de référence
+      const referenceRect = referenceElement.getBoundingClientRect();
+      const header = button.parentElement;
+      const headerRect = header.getBoundingClientRect();
+      
+      // Calculer la position verticale relative au header
+      const referenceTopRelative = referenceRect.top - headerRect.top;
+      const referenceCenterY = referenceTopRelative + (referenceRect.height / 2);
+      
+      // Centrer le bouton verticalement avec l'élément de référence
+      const buttonHeight = button.offsetHeight || 44; // Hauteur par défaut
+      const buttonTop = referenceCenterY - (buttonHeight / 2);
+      
+      button.style.top = buttonTop + 'px';
+      button.style.transform = 'translateY(0)';
+      
+      log('Bouton aligné verticalement avec l\'élément de référence', {
+        referenceTop: referenceTopRelative,
+        referenceCenter: referenceCenterY,
+        buttonTop: buttonTop
+      });
+    }
+    
     function injectButton() {
       // Vérifier si le bouton existe déjà
       if (document.getElementById('nusense-header-tryon-btn')) {
@@ -295,7 +390,26 @@
       
       // Ajouter le bouton à l'en-tête
       header.appendChild(button);
-      log('Bouton ajouté à l\'en-tête avec positionnement absolu');
+      
+      // Aligner verticalement le bouton avec l'élément de référence
+      const referenceElement = findReferenceElement();
+      alignButtonVertically(button, referenceElement);
+      
+      // Réaligner après un court délai pour gérer les chargements dynamiques
+      setTimeout(function() {
+        alignButtonVertically(button, referenceElement);
+      }, 100);
+      
+      // Réaligner lors du redimensionnement de la fenêtre
+      let resizeTimeout;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+          alignButtonVertically(button, findReferenceElement());
+        }, 100);
+      });
+      
+      log('Bouton ajouté à l\'en-tête avec positionnement absolu et alignement vertical');
     }
     
     // Attendre que le DOM soit prêt
@@ -335,6 +449,19 @@
     min-width: 44px;
     min-height: 44px;
     line-height: 1;
+  }
+  
+  /* Mobile-specific positioning */
+  @media (max-width: 768px) {
+    .nusense-tryon-header-button[data-mobile-left] {
+      left: var(--mobile-left) !important;
+      right: auto !important;
+    }
+    
+    .nusense-tryon-header-button[data-mobile-right] {
+      right: var(--mobile-right) !important;
+      left: auto !important;
+    }
   }
   
   .nusense-tryon-header-button:hover {
@@ -463,6 +590,40 @@
       "content": "Paramètres de Positionnement"
     },
     {
+      "type": "select",
+      "id": "align_with_element",
+      "label": "Aligner Verticalement Avec",
+      "options": [
+        {
+          "value": "cart",
+          "label": "Icône du Panier (par défaut)"
+        },
+        {
+          "value": "logo",
+          "label": "Logo"
+        }
+      ],
+      "default": "cart",
+      "info": "Choisir l'élément avec lequel aligner verticalement le bouton (même ligne horizontale)"
+    },
+    {
+      "type": "text",
+      "id": "logo_selector",
+      "label": "Sélecteur du Logo (CSS) - Optionnel",
+      "info": "Optionnel : Sélecteur CSS personnalisé pour trouver le logo. Si non spécifié, des sélecteurs communs seront utilisés."
+    },
+    {
+      "type": "text",
+      "id": "cart_icon_selector",
+      "label": "Sélecteur de l'Icône du Panier (CSS) - Optionnel",
+      "default": "a[href*=\"/cart\"], .cart-icon, .cart-link, [data-cart-icon], .header__icon--cart, .site-header__cart, #cart-icon, .icon-cart, button[aria-label*=\"cart\" i], a[aria-label*=\"cart\" i], .header__cart, .cart, [data-cart]",
+      "info": "Optionnel : Sélecteur CSS personnalisé pour trouver l'icône du panier. Si non spécifié, des sélecteurs communs seront utilisés."
+    },
+    {
+      "type": "header",
+      "content": "Positionnement Horizontal (Desktop)"
+    },
+    {
       "type": "text",
       "id": "position_left",
       "label": "Position Gauche (px)",
@@ -475,16 +636,20 @@
       "info": "Distance depuis la droite en pixels (ex: 20px ou 20). Laissez vide pour ne pas définir."
     },
     {
-      "type": "text",
-      "id": "position_top",
-      "label": "Position Haut (px)",
-      "info": "Distance depuis le haut en pixels (ex: 20px ou 20). Laissez vide pour ne pas définir."
+      "type": "header",
+      "content": "Positionnement Horizontal (Mobile)"
     },
     {
       "type": "text",
-      "id": "position_bottom",
-      "label": "Position Bas (px)",
-      "info": "Distance depuis le bas en pixels (ex: 20px ou 20). Laissez vide pour ne pas définir."
+      "id": "position_left_mobile",
+      "label": "Position Gauche Mobile (px)",
+      "info": "Distance depuis la gauche en pixels sur mobile (ex: 10px ou 10). Laissez vide pour utiliser la valeur desktop."
+    },
+    {
+      "type": "text",
+      "id": "position_right_mobile",
+      "label": "Position Droite Mobile (px)",
+      "info": "Distance depuis la droite en pixels sur mobile (ex: 10px ou 10). Laissez vide pour utiliser la valeur desktop."
     }
   ]
 }
