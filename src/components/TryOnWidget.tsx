@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import PhotoUpload from "./PhotoUpload";
 import ClothingSelection from "./ClothingSelection";
-import GenerationProgress from "./GenerationProgress";
 import ResultDisplay from "./ResultDisplay";
 import {
   extractShopifyProductInfo,
@@ -487,9 +486,8 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
 
       {/* Content */}
       <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-4 sm:space-y-5 md:space-y-6">
-        {/* Selection sections - always show when not generating */}
-        {!isGenerating && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
+        {/* Selection sections - always visible */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
             {/* Left Panel: Upload / Preview */}
             <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
               <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
@@ -564,10 +562,9 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
               />
             </Card>
           </div>
-        )}
 
-        {/* Generate button - show when not generating and no results yet */}
-        {!isGenerating && !generatedImage && (
+        {/* Generate button - show when not generating */}
+        {!isGenerating && (
           <div className="pt-1 sm:pt-2">
             <Button
               onClick={handleGenerate}
@@ -581,21 +578,16 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           </div>
         )}
 
-        {/* Generation progress - show when generating */}
-        {isGenerating && (
-          <GenerationProgress progress={progress} isGenerating={isGenerating} />
-        )}
-
-        {/* Results section - show below selection sections when results are available */}
-        {generatedImage && (
-          <div className="pt-2 sm:pt-4">
-            <ResultDisplay
-              generatedImage={generatedImage}
-              personImage={uploadedImage}
-              clothingImage={selectedClothing}
-            />
-          </div>
-        )}
+        {/* Results section - always visible with skeleton when loading */}
+        <div className="pt-2 sm:pt-4">
+          <ResultDisplay
+            generatedImage={generatedImage}
+            personImage={uploadedImage}
+            clothingImage={selectedClothing}
+            isGenerating={isGenerating}
+            progress={progress}
+          />
+        </div>
 
         {error && (
           <Card className="p-6 bg-error/10 border-error">
