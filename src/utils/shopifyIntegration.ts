@@ -260,6 +260,10 @@ export function initializeImageExtractionListener(): void {
         console.log('NUSENSE: Extracted images from page:', images.length);
       }
       
+      // Extract recommended images
+      const recommendedImages = extractRecommendedProductImages();
+      console.log('NUSENSE: Extracted recommended images from page:', recommendedImages.length);
+      
       // Send images back to the iframe
       if (event.source && event.source !== window) {
         console.log('NUSENSE: Sending', images.length, 'images to iframe');
@@ -267,6 +271,15 @@ export function initializeImageExtractionListener(): void {
           type: "NUSENSE_PRODUCT_IMAGES",
           images: images
         }, "*");
+        
+        // Also send recommended images if available
+        if (recommendedImages.length > 0) {
+          console.log('NUSENSE: Sending', recommendedImages.length, 'recommended images to iframe');
+          (event.source as Window).postMessage({
+            type: "NUSENSE_RECOMMENDED_IMAGES",
+            images: recommendedImages
+          }, "*");
+        }
       } else {
         console.warn('NUSENSE: Invalid event source for image request');
       }
@@ -830,4 +843,120 @@ function isMainProductSection(element: Element): boolean {
   }
 
   return false;
+}
+
+/**
+ * Extract images specifically from "You may also like" / recommended product sections
+ * This function is the opposite of extractProductImages - it ONLY gets images from recommended sections
+ */
+export function extractRecommendedProductImages(): string[] {
+  const images: string[] = [];
+  const seenUrls = new Set<string>();
+
+  // Helper to add image if valid and not duplicate
+  const addImage = (url: string, metadata?: { width?: number; height?: number; alt?: string }) => {
+    if (!url || seenUrls.has(url)) return;
+    
+    const cleanUrl = cleanImageUrl(url);
+    if (!cleanUrl || seenUrls.has(cleanUrl)) return;
+    
+    if (isValidProductImageUrl(cleanUrl, metadata)) {
+      images.push(cleanUrl);
+      seenUrls.add(cleanUrl);
+    }
+  };
+
+  // Find all "You may also like" / recommended product sections
+  // Based on Shopify's Product Recommendations API patterns:
+  // - Uses .product-recommendations class (most common)
+  // - Uses data-url attribute with recommendations URL
+  // - Section headings like "You may also like" for related products
+  const recommendedSectionSelectors = [
+    '.product-recommendations', // Shopify's standard class for recommendations
+    '[class*="product-recommendations"]',
+    '[class*="you-may-also-like"]',
+    '[class*="you-may-like"]',
+    '[class*="recommended"]',
+    '[class*="related"]',
+    '[id*="product-recommendations"]',
+    '[id*="you-may-also-like"]',
+    '[id*="you-may-like"]',
+    '[id*="recommended"]',
+    '[id*="related"]',
+    '[data-url*="recommendations"]', // Shopify uses data-url with recommendations URL
+    '[data-section-type*="recommendation"]',
+    '[data-section-type*="related"]',
+    '[data-section-type*="complementary"]',
+  ];
+
+  const recommendedSections: Element[] = [];
+  recommendedSectionSelectors.forEach(selector => {
+    try {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(el => {
+        // Verify it's actually a recommended section (not main product)
+        if (!isMainProductSection(el)) {
+          recommendedSections.push(el);
+        }
+      });
+    } catch (e) {
+      // Continue if selector fails
+    }
+  });
+
+  // Extract images from recommended sections
+  recommendedSections.forEach(section => {
+    // Get all img elements within this section
+    const imgElements = section.querySelectorAll('img');
+    imgElements.forEach(img => {
+      if (img instanceof HTMLImageElement) {
+        const sources = [
+          img.src,
+          img.dataset.src,
+          img.dataset.lazySrc,
+          img.dataset.originalSrc,
+          img.dataset.productImage,
+          img.currentSrc,
+          img.getAttribute('data-original'),
+          img.getAttribute('data-lazy'),
+        ].filter(Boolean) as string[];
+
+        // Extract from srcset
+        if (img.srcset) {
+          const srcsetUrls = parseSrcset(img.srcset);
+          sources.push(...srcsetUrls);
+        }
+
+        sources.forEach(src => {
+          addImage(src, {
+            width: img.naturalWidth || img.width,
+            height: img.naturalHeight || img.height,
+            alt: img.alt,
+          });
+        });
+      }
+    });
+
+    // Also check for background images in this section
+    const bgImageElements = section.querySelectorAll('[style*="background-image"]');
+    bgImageElements.forEach(el => {
+      const style = window.getComputedStyle(el);
+      const bgImage = style.backgroundImage;
+      if (bgImage && bgImage !== 'none') {
+        const urlMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+        if (urlMatch && urlMatch[1]) {
+          addImage(urlMatch[1], {
+            width: el instanceof HTMLElement ? el.offsetWidth : 0,
+            height: el instanceof HTMLElement ? el.offsetHeight : 0,
+          });
+        }
+      }
+    });
+  });
+
+  // Debug: Log detected recommended images
+  console.log('NUSENSE: Recommended product images detected:', images);
+  console.log('NUSENSE: Total recommended images found:', images.length);
+  
+  return images;
 }

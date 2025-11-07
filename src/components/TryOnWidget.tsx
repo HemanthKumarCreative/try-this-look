@@ -7,6 +7,7 @@ import ResultDisplay from "./ResultDisplay";
 import {
   extractShopifyProductInfo,
   extractProductImages,
+  extractRecommendedProductImages,
 } from "@/utils/shopifyIntegration";
 import { storage } from "@/utils/storage";
 import { generateTryOn, dataURLToBlob } from "@/services/tryonApi";
@@ -25,6 +26,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedClothing, setSelectedClothing] = useState<string | null>(null);
   const [availableImages, setAvailableImages] = useState<string[]>([]);
+  const [recommendedImages, setRecommendedImages] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -173,6 +175,15 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         console.log("NUSENSE: No images found from page extraction");
       }
     }
+
+    // Extract recommended product images (always, regardless of iframe mode)
+    // Always update state, even if empty, to clear stale data
+    const recommendedImgs = extractRecommendedProductImages();
+    console.log(
+      "NUSENSE: Recommended images extracted:",
+      recommendedImgs.length
+    );
+    setRecommendedImages(recommendedImgs);
   }, []);
 
   // No longer needed - using fixed 185px width
@@ -205,6 +216,19 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
             "NUSENSE: Parent window (Shopify page) sent empty images array. Product may have no images."
           );
         }
+      }
+
+      // Handle recommended images from parent window
+      // Always update state, even if empty, to clear stale data
+      if (event.data && event.data.type === "NUSENSE_RECOMMENDED_IMAGES") {
+        const parentRecommendedImages = event.data.images || [];
+        console.log(
+          "NUSENSE: Received recommended images from Shopify product page (parent window):",
+          parentRecommendedImages.length,
+          parentRecommendedImages
+        );
+
+        setRecommendedImages(parentRecommendedImages);
       }
     };
 
@@ -359,6 +383,11 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         imagesFound = true;
       }
     }
+
+    // Extract recommended product images
+    // Always update state, even if empty, to clear stale data
+    const recommendedImgs = extractRecommendedProductImages();
+    setRecommendedImages(recommendedImgs);
   };
 
   const handleClearUploadedImage = () => {
@@ -488,80 +517,81 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-4 sm:space-y-5 md:space-y-6">
         {/* Selection sections - always visible */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
-            {/* Left Panel: Upload / Preview */}
-            <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
-                  1
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base sm:text-lg font-semibold">
-                    Téléchargez Votre Photo
-                  </h2>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Choisissez une photo claire de vous-même
-                  </p>
-                </div>
+          {/* Left Panel: Upload / Preview */}
+          <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
+                1
               </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base sm:text-lg font-semibold">
+                  Téléchargez Votre Photo
+                </h2>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Choisissez une photo claire de vous-même
+                </p>
+              </div>
+            </div>
 
-              {!uploadedImage && (
-                <PhotoUpload onPhotoUpload={handlePhotoUpload} />
-              )}
+            {!uploadedImage && (
+              <PhotoUpload onPhotoUpload={handlePhotoUpload} />
+            )}
 
-              {uploadedImage && (
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="relative rounded-lg bg-card p-2 sm:p-3 border border-border shadow-sm">
-                    <div className="flex items-center justify-between mb-2 gap-2">
-                      <h3 className="font-semibold text-sm sm:text-base">
-                        Votre Photo
-                      </h3>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleClearUploadedImage}
-                        className="group h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm flex-shrink-0 gap-1.5 border-border text-foreground hover:bg-muted hover:border-muted-foreground/20 hover:text-muted-foreground transition-all duration-200"
-                        aria-label="Effacer la photo"
-                      >
-                        <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:scale-110 duration-200" />
-                        <span>Effacer</span>
-                      </Button>
-                    </div>
-                    <div className="aspect-[3/4] rounded overflow-hidden border border-border bg-card flex items-center justify-center shadow-sm">
-                      <img
-                        src={uploadedImage}
-                        alt="Uploaded"
-                        className="h-full w-auto object-contain"
-                      />
-                    </div>
+            {uploadedImage && (
+              <div className="space-y-3 sm:space-y-4">
+                <div className="relative rounded-lg bg-card p-2 sm:p-3 border border-border shadow-sm">
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <h3 className="font-semibold text-sm sm:text-base">
+                      Votre Photo
+                    </h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearUploadedImage}
+                      className="group h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm flex-shrink-0 gap-1.5 border-border text-foreground hover:bg-muted hover:border-muted-foreground/20 hover:text-muted-foreground transition-all duration-200"
+                      aria-label="Effacer la photo"
+                    >
+                      <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:scale-110 duration-200" />
+                      <span>Effacer</span>
+                    </Button>
+                  </div>
+                  <div className="aspect-[3/4] rounded overflow-hidden border border-border bg-card flex items-center justify-center shadow-sm">
+                    <img
+                      src={uploadedImage}
+                      alt="Uploaded"
+                      className="h-full w-auto object-contain"
+                    />
                   </div>
                 </div>
-              )}
-            </Card>
-
-            {/* Right Panel: Clothing Selection */}
-            <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
-                  2
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base sm:text-lg font-semibold">
-                    Sélectionner un Article de Vêtement
-                  </h2>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Sélectionnez un article de vêtement sur cette page
-                  </p>
-                </div>
               </div>
+            )}
+          </Card>
 
-              <ClothingSelection
-                images={availableImages}
-                selectedImage={selectedClothing}
-                onSelect={handleClothingSelect}
-                onRefreshImages={handleRefreshImages}
-              />
-            </Card>
-          </div>
+          {/* Right Panel: Clothing Selection */}
+          <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
+                2
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base sm:text-lg font-semibold">
+                  Sélectionner un Article de Vêtement
+                </h2>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Sélectionnez un article de vêtement sur cette page
+                </p>
+              </div>
+            </div>
+
+            <ClothingSelection
+              images={availableImages}
+              recommendedImages={recommendedImages}
+              selectedImage={selectedClothing}
+              onSelect={handleClothingSelect}
+              onRefreshImages={handleRefreshImages}
+            />
+          </Card>
+        </div>
 
         {/* Generate button - show when not generating */}
         {!isGenerating && (

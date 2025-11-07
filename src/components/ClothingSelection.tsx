@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 interface ClothingSelectionProps {
   images: string[];
+  recommendedImages?: string[];
   selectedImage: string | null;
   onSelect: (imageUrl: string) => void;
   onRefreshImages?: () => void;
@@ -12,18 +13,41 @@ interface ClothingSelectionProps {
 
 export default function ClothingSelection({
   images,
+  recommendedImages = [],
   selectedImage,
   onSelect,
   onRefreshImages,
 }: ClothingSelectionProps) {
   const [validImages, setValidImages] = useState<string[]>([]);
+  const [validRecommendedImages, setValidRecommendedImages] = useState<
+    string[]
+  >([]);
 
   // Initialize with provided images; only remove on actual load error
   useEffect(() => {
     const unique = Array.from(new Set(images.filter(Boolean)));
-    console.log('NUSENSE: ClothingSelection received images:', images.length, 'unique:', unique.length, unique);
+    console.log(
+      "NUSENSE: ClothingSelection received images:",
+      images.length,
+      "unique:",
+      unique.length,
+      unique
+    );
     setValidImages(unique);
   }, [images]);
+
+  // Initialize recommended images
+  useEffect(() => {
+    const unique = Array.from(new Set(recommendedImages.filter(Boolean)));
+    console.log(
+      "NUSENSE: ClothingSelection received recommended images:",
+      recommendedImages.length,
+      "unique:",
+      unique.length,
+      unique
+    );
+    setValidRecommendedImages(unique);
+  }, [recommendedImages]);
   if (validImages.length === 0 && !selectedImage) {
     return (
       <Card className="p-4 sm:p-6 md:p-8 text-center bg-warning/10 border-warning">
@@ -45,7 +69,7 @@ export default function ClothingSelection({
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
           {validImages.slice(0, 9).map((image, index) => (
             <Card
-              key={index}
+              key={image}
               className={`overflow-hidden cursor-pointer transition-all transform hover:scale-105 relative ${
                 selectedImage === image
                   ? "ring-4 ring-primary shadow-lg scale-105"
@@ -78,7 +102,9 @@ export default function ClothingSelection({
       {selectedImage && (
         <Card className="p-3 sm:p-4">
           <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
-            <p className="font-semibold text-sm sm:text-base md:text-lg">Article Sélectionné</p>
+            <p className="font-semibold text-sm sm:text-base md:text-lg">
+              Article Sélectionné
+            </p>
             <Button
               variant="outline"
               size="sm"
@@ -98,6 +124,44 @@ export default function ClothingSelection({
             />
           </div>
         </Card>
+      )}
+
+      {/* Recommended Products Section */}
+      {!selectedImage && validRecommendedImages.length > 0 && (
+        <div className="space-y-3 sm:space-y-4">
+          <h3 className="text-sm sm:text-base md:text-lg font-semibold text-foreground">
+            Recommended products
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+            {validRecommendedImages.slice(0, 9).map((image, index) => (
+              <Card
+                key={`recommended-${image}`}
+                className="overflow-hidden cursor-pointer transition-all transform hover:scale-105 relative hover:ring-2 hover:ring-primary/50"
+                onClick={() => onSelect(image)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Sélectionner le produit recommandé ${index + 1}`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") onSelect(image);
+                }}
+              >
+                <div className="relative bg-muted/30 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={image}
+                    alt={`Produit recommandé ${index + 1}`}
+                    className="w-full h-auto object-contain"
+                    loading="lazy"
+                    onError={() => {
+                      setValidRecommendedImages((prev) =>
+                        prev.filter((u) => u !== image)
+                      );
+                    }}
+                  />
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
