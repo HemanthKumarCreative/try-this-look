@@ -44,41 +44,10 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   // Track if we've already loaded images from URL/NUSENSE_PRODUCT_DATA to prevent parent images from overriding
   const imagesLoadedRef = useRef<boolean>(false);
 
-  // Debug: Log when availableImages changes
+  // Expose store info globally for access
   useEffect(() => {
-    console.log(
-      "NUSENSE: availableImages updated:",
-      availableImages.length,
-      availableImages
-    );
-  }, [availableImages]);
-
-  // Debug: Log when storeInfo changes
-  useEffect(() => {
-    if (storeInfo) {
-      const storeName = storeInfo.shopDomain || storeInfo.domain;
-      const detectionMethod = storeInfo.method;
-      
-      // Clear, prominent console log for store detection
-      console.log(
-        "%c🛍️ NUSENSE: Store Detected",
-        "color: #4CAF50; font-weight: bold; font-size: 14px;"
-      );
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("📦 Store Domain:", storeName || "Unknown");
-      console.log("🌐 Full URL:", storeInfo.fullUrl || "N/A");
-      console.log("📍 Origin:", storeInfo.origin || "N/A");
-      console.log("🔍 Detection Method:", detectionMethod);
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      
-      // Also log as a single object for easy inspection
-      console.log("Store Info Object:", storeInfo);
-      
-      // Expose store info globally for debugging/access
-      if (typeof window !== 'undefined') {
-        (window as any).NUSENSE_STORE_INFO = storeInfo;
-        console.log("💡 Access store info anytime via: window.NUSENSE_STORE_INFO");
-      }
+    if (storeInfo && typeof window !== 'undefined') {
+      (window as any).NUSENSE_STORE_INFO = storeInfo;
     }
   }, [storeInfo]);
 
@@ -109,39 +78,25 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     const detectedStore = detectStoreOrigin();
     if (detectedStore && detectedStore.method !== 'unknown') {
       setStoreInfo(detectedStore);
-      // Store info will be logged by the useEffect above
-    } else {
-      console.log("%c⚠️ NUSENSE: Store not detected on mount. Will try other methods...", "color: #FF9800; font-weight: bold;");
     }
 
     // If we're in an iframe, ALWAYS prioritize images from the parent window (Shopify product page)
     // Do NOT extract images from the widget's own page (/widget page)
     if (isInIframe) {
-      console.log(
-        "NUSENSE: Widget is in iframe mode - requesting images from Shopify product page (parent window)"
-      );
-
       // Request store info from parent if not already detected
       if (!detectedStore || detectedStore.method === 'unknown' || detectedStore.method === 'postmessage') {
         requestStoreInfoFromParent((storeInfo) => {
           setStoreInfo(storeInfo);
-          // Store info will be logged by the useEffect above
-        }).catch((error) => {
-          console.warn('%c⚠️ NUSENSE: Failed to get store info from parent:', "color: #FF9800; font-weight: bold;", error);
+        }).catch(() => {
+          // Failed to get store info from parent
         });
       }
 
       const requestImages = () => {
         try {
-          console.log(
-            "NUSENSE: Requesting images from parent window (Shopify product page)"
-          );
           window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
         } catch (error) {
-          console.error(
-            "NUSENSE: Error communicating with parent window:",
-            error
-          );
+          // Error communicating with parent window
         }
       };
 
@@ -155,9 +110,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         setTimeout(() => {
           // Only retry if we haven't received images yet
           if (!imagesLoadedRef.current) {
-            console.log(
-              `NUSENSE: Retrying image request from parent window (delay: ${delay}ms)`
-            );
             requestImages();
           }
         }, delay);
@@ -180,16 +132,12 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           Array.isArray(productData.images) &&
           productData.images.length > 0
         ) {
-          console.log(
-            "NUSENSE: Images loaded from URL parameters:",
-            productData.images.length
-          );
           setAvailableImages(productData.images);
           imagesLoadedRef.current = true;
           imagesFound = true;
         }
       } catch (error) {
-        console.error("Failed to parse product data from URL:", error);
+        // Failed to parse product data from URL
       }
     }
 
@@ -205,10 +153,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         Array.isArray(productData.images) &&
         productData.images.length > 0
       ) {
-        console.log(
-          "NUSENSE: Images loaded from NUSENSE_PRODUCT_DATA:",
-          productData.images.length
-        );
         setAvailableImages(productData.images);
         imagesLoadedRef.current = true;
         imagesFound = true;
@@ -219,12 +163,9 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     if (!imagesFound) {
       const images = extractProductImages();
       if (images.length > 0) {
-        console.log("NUSENSE: Images extracted from page:", images.length);
         setAvailableImages(images);
         imagesLoadedRef.current = true;
         imagesFound = true;
-      } else {
-        console.log("NUSENSE: No images found from page extraction");
       }
     }
   }, []);
@@ -252,37 +193,16 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       if (event.data && event.data.type === "NUSENSE_PRODUCT_IMAGES") {
         const parentImages = event.data.images || [];
         const parentRecommendedImages = event.data.recommendedImages || [];
-        console.log(
-          "NUSENSE: Received images from Shopify product page (parent window):",
-          parentImages.length,
-          "main images and",
-          parentRecommendedImages.length,
-          "recommended images"
-        );
 
         if (parentImages.length > 0) {
           // Always prioritize and use parent images - they come from the actual Shopify product page
           // These are extracted using Shopify Liquid objects (product.media/product.images)
-          console.log(
-            "NUSENSE: Successfully received images from Shopify product page. Main:",
-            parentImages.length,
-            "Recommended:",
-            parentRecommendedImages.length
-          );
           setAvailableImages(parentImages);
           imagesLoadedRef.current = true;
-        } else {
-          console.warn(
-            "NUSENSE: Parent window (Shopify page) sent empty images array. Product may have no images."
-          );
         }
 
         // Set recommended images if available
         if (parentRecommendedImages.length > 0) {
-          console.log(
-            "NUSENSE: Setting recommended products images:",
-            parentRecommendedImages.length
-          );
           setRecommendedImages(parentRecommendedImages);
         }
       }
@@ -391,16 +311,10 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
 
     // If in iframe, always request images from parent window (Shopify product page)
     if (isInIframe) {
-      console.log(
-        "NUSENSE: Refreshing images - requesting from Shopify product page (parent window)"
-      );
       try {
         window.parent.postMessage({ type: "NUSENSE_REQUEST_IMAGES" }, "*");
       } catch (error) {
-        console.error(
-          "NUSENSE: Failed to request images from parent window:",
-          error
-        );
+        // Failed to request images from parent window
       }
       return;
     }
@@ -423,7 +337,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           imagesFound = true;
         }
       } catch (error) {
-        console.error("Failed to parse product data from URL:", error);
+        // Failed to parse product data from URL
       }
     }
 
@@ -514,10 +428,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       try {
         window.parent.postMessage({ type: "NUSENSE_CLOSE_WIDGET" }, "*");
       } catch (error) {
-        console.error(
-          "Échec de l'envoi du message de fermeture au parent :",
-          error
-        );
+        // Failed to send close message to parent
       }
     }
     if (onClose) {

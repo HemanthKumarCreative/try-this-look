@@ -263,7 +263,6 @@
           const lowerAlt = (metadata?.alt || "").toLowerCase();
 
           // For this test, be more lenient with validation
-          console.log("Validating image:", url, "metadata:", metadata);
 
           const excludePatterns = [
             "logo",
@@ -296,7 +295,6 @@
 
           for (const pattern of excludePatterns) {
             if (lowerUrl.includes(pattern) || lowerAlt.includes(pattern)) {
-              console.log("Excluded due to pattern:", pattern);
               return false;
             }
           }
@@ -319,7 +317,6 @@
             const { width, height } = metadata;
             // Only exclude very small images (likely icons)
             if (width && height && width < 50 && height < 50) {
-              console.log("Excluded due to small size:", width, "x", height);
               return false;
             }
           }
@@ -328,20 +325,16 @@
           try {
             new URL(url, window.location.href);
           } catch {
-            console.log("Excluded due to invalid URL");
             return false;
           }
 
-          console.log("Image accepted:", url);
           return true;
         }
 
         // Extract from all img elements
         const imgElements = document.querySelectorAll("img");
-        console.log("Found img elements:", imgElements.length);
 
         imgElements.forEach((img, index) => {
-          console.log(`Processing img ${index}:`, img.src, img.alt);
 
           const sources = [
             img.src,
@@ -366,7 +359,6 @@
           }
 
           sources.forEach((src) => {
-            console.log(`Adding image source: ${src}`);
             addImage(src, {
               width: img.naturalWidth || img.width,
               height: img.naturalHeight || img.height,
@@ -386,12 +378,8 @@
 
         productImageSelectors.forEach((selector) => {
           const elements = document.querySelectorAll(selector);
-          console.log(
-            `Found ${elements.length} elements for selector: ${selector}`
-          );
           elements.forEach((img, index) => {
             if (img instanceof HTMLImageElement) {
-              console.log(`Product image ${index}:`, img.src, img.alt);
               addImage(img.src, {
                 width: img.naturalWidth || img.width,
                 height: img.naturalHeight || img.height,
@@ -410,8 +398,6 @@
         document.getElementById(
           "image-count"
         ).textContent = `${images.length} product images detected`;
-
-        console.log("Detected product images:", images);
       });
 
       // Listen for image requests from iframe

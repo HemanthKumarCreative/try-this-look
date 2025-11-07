@@ -13,7 +13,6 @@ export default function handler(req, res) {
     expressApp(req, res);
   } catch (error) {
     // Catch any initialization errors
-    console.error("Serverless function error:", error);
     if (!res.headersSent) {
       res.status(500).json({
         error: "Internal server error",

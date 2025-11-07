@@ -84,12 +84,10 @@
       script.async = true;
       script.defer = true;
       script.onload = function() {
-        if (window.NUSENSE_CONFIG && window.NUSENSE_CONFIG.debug) {
-          console.log('NUSENSE TryON Widget loaded successfully');
-        }
+        // Widget loaded
       };
       script.onerror = function() {
-        console.error('Failed to load NUSENSE TryON Widget from {{ widget_url }}');
+        // Failed to load widget
       };
       document.head.appendChild(script);
     }
@@ -118,21 +116,12 @@
       widgetUrl: '{{ widget_url | default: "https://try-this-look.vercel.app" }}'
     };
     
-    // Logging helper - always log critical messages, detailed logs only if debug enabled
+    // Logging helper - removed console logs
     function log(message, data) {
-      // Always log critical messages
-      const criticalMessages = ['Image transmission listener initialized', 'Received image request from iframe', 'Sent images to iframe', 'Using images from NUSENSE_PRODUCT_DATA', 'No product images found on Shopify page', 'Error'];
-      const isCritical = criticalMessages.some(function(crit) {
-        return message.indexOf(crit) !== -1;
-      });
-      
-      if (CONFIG.debug || isCritical) {
-        console.log('NUSENSE [Image Listener]:', message, data || '');
-      }
+      // Logging disabled
     }
     
-    // Always log initialization (critical)
-    console.log('NUSENSE [Image Listener]: Initializing image extraction listener on Shopify product page');
+    // Initializing image extraction listener
     
     // Validate origin (optional security measure)
     function isValidOrigin(origin) {
@@ -501,7 +490,6 @@
           
           // Skip if it's a main product image
           if (isMainProductImage) {
-            console.log('NUSENSE [Image Listener]: Skipping main product image from recommended:', urlToCheck);
             return;
           }
           
@@ -578,11 +566,8 @@
           }
         });
         
-        if (allImages.length > 0) {
-          console.log('NUSENSE [Image Listener]: ✅ Extracted', allImages.length, 'non-product images as recommended products');
-        }
       } catch (e) {
-        console.error('NUSENSE [Image Listener]: Error extracting recommended products images', e);
+        // Error extracting recommended products images
       }
       
       return allImages;
@@ -594,13 +579,6 @@
     function getProductImages() {
       let images = [];
       
-      // Debug: Always log what we're checking
-      console.log('NUSENSE [Image Listener]: getProductImages called');
-      console.log('NUSENSE [Image Listener]: window.NUSENSE_PRODUCT_DATA exists?', !!window.NUSENSE_PRODUCT_DATA);
-      if (window.NUSENSE_PRODUCT_DATA) {
-        console.log('NUSENSE [Image Listener]: NUSENSE_PRODUCT_DATA.images', window.NUSENSE_PRODUCT_DATA.images);
-      }
-      
       // Priority 1: Use NUSENSE_PRODUCT_DATA (most reliable - from Liquid)
       // This is populated by the Liquid template with product.media/product.images
       {% if product %}
@@ -609,39 +587,27 @@
           return img && typeof img === 'string' && img.trim().length > 0;
         });
         if (images.length > 0) {
-          console.log('NUSENSE [Image Listener]: ✅ Using images from NUSENSE_PRODUCT_DATA (Liquid template)', images.length, images);
           return images;
-        } else {
-          console.log('NUSENSE [Image Listener]: ⚠️ NUSENSE_PRODUCT_DATA.images is empty or invalid');
         }
-      } else {
-        console.log('NUSENSE [Image Listener]: ⚠️ NUSENSE_PRODUCT_DATA not found or invalid');
       }
-      {% else %}
-      console.log('NUSENSE [Image Listener]: ⚠️ Not on a product page (product object not available)');
       {% endif %}
       
       // Priority 2: Extract from Shopify product JSON (from theme's script tags)
       images = extractFromShopifyJSON();
       if (images.length > 0) {
-        console.log('NUSENSE [Image Listener]: ✅ Using images from Shopify JSON', images.length);
         return images;
       }
       
       // Priority 3: Extract from DOM (fallback - less reliable)
       images = extractFromDOM();
       if (images.length > 0) {
-        console.log('NUSENSE [Image Listener]: ✅ Using images from DOM extraction', images.length);
         return images;
       }
-      
-      console.log('NUSENSE [Image Listener]: ❌ No product images found on Shopify page');
       return [];
     }
     
     // Handle widget action buttons (buy now, add to cart, etc.)
     function handleWidgetAction(actionType, event) {
-      console.log('NUSENSE [Image Listener]: Processing action:', actionType);
       
       {% if product %}
       // Get product form and variant selector
@@ -682,7 +648,7 @@
       }
       
       if (!variantId) {
-        console.error('NUSENSE [Image Listener]: No variant ID found. Cannot add to cart.');
+        // No variant ID found
         // Send error message back to iframe
         if (event.source && event.source !== window) {
           event.source.postMessage({
@@ -726,7 +692,6 @@
       switch (actionType) {
         case 'NUSENSE_BUY_NOW':
           // Trigger buy now (add to cart and redirect to checkout)
-          console.log('NUSENSE [Image Listener]: Buy Now clicked for variant:', variantId);
           
           fetch(cartAddUrl, {
             method: 'POST',
@@ -738,7 +703,6 @@
           .then(function(response) {
             return response.json().then(function(data) {
               if (response.ok) {
-                console.log('NUSENSE [Image Listener]: Product added to cart successfully, redirecting to checkout');
                 // Redirect to checkout
                 const checkoutUrl = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root)
                   ? window.Shopify.routes.root + 'checkout'
@@ -747,7 +711,6 @@
               } else {
                 // Handle error response
                 const errorMessage = data.description || data.message || 'Failed to add product to cart';
-                console.error('NUSENSE [Image Listener]: Failed to add to cart:', errorMessage);
                 
                 // Send error back to iframe
                 if (event.source && event.source !== window) {
@@ -767,7 +730,7 @@
             });
           })
           .catch(function(error) {
-            console.error('NUSENSE [Image Listener]: Error in buy now:', error);
+            // Error in buy now
             
             // Send error back to iframe
             if (event.source && event.source !== window) {
@@ -788,7 +751,6 @@
           
         case 'NUSENSE_ADD_TO_CART':
           // Add product to cart
-          console.log('NUSENSE [Image Listener]: Add to Cart clicked for variant:', variantId);
           
           fetch(cartAddUrl, {
             method: 'POST',
@@ -800,7 +762,6 @@
           .then(function(response) {
             return response.json().then(function(data) {
               if (response.ok) {
-                console.log('NUSENSE [Image Listener]: Product added to cart successfully');
                 
                 // Trigger cart drawer/notification events for theme compatibility
                 if (typeof window.dispatchEvent !== 'undefined') {
@@ -826,7 +787,6 @@
               } else {
                 // Handle error response
                 const errorMessage = data.description || data.message || 'Failed to add product to cart';
-                console.error('NUSENSE [Image Listener]: Failed to add to cart:', errorMessage);
                 
                 // Send error back to iframe
                 if (event.source && event.source !== window) {
@@ -840,7 +800,7 @@
             });
           })
           .catch(function(error) {
-            console.error('NUSENSE [Image Listener]: Error adding to cart:', error);
+            // Error adding to cart
             
             // Send error back to iframe
             if (event.source && event.source !== window) {
@@ -855,26 +815,21 @@
           
         case 'NUSENSE_TRY_IN_STORE':
           // Try in store - could redirect to store locator or show message
-          console.log('NUSENSE [Image Listener]: Try in Store clicked');
           // This would need to be customized based on the store's setup
           // For now, just log it - merchant can customize this action
           alert('Fonctionnalité "essayer en magasin" - À configurer selon votre magasin');
           break;
           
         default:
-          console.log('NUSENSE [Image Listener]: Unknown action type:', actionType);
+          // Unknown action type
       }
       {% else %}
-      console.warn('NUSENSE [Image Listener]: Not on a product page - cannot handle action');
+      // Not on a product page - cannot handle action
       {% endif %}
     }
     
     // Handle incoming messages from iframe
     function handleMessage(event) {
-      // Always log all messages for debugging (filter out non-NUSENSE messages)
-      if (event.data && event.data.type) {
-        console.log('NUSENSE [Image Listener]: Received message:', event.data.type, 'from', event.origin);
-      }
       
       // Handle store info requests
       if (event.data && event.data.type === 'NUSENSE_REQUEST_STORE_INFO') {
@@ -908,26 +863,20 @@
     
     // Handle image request from iframe
     function handleImageRequest(event) {
-      console.log('NUSENSE [Image Listener]: ✅ Processing NUSENSE_REQUEST_IMAGES from', event.origin);
       
       // Optional: Validate origin (security)
       // Uncomment and configure for production
       /*
       if (!isValidOrigin(event.origin)) {
-        console.log('NUSENSE [Image Listener]: ❌ Invalid origin', event.origin);
         return;
       }
       */
-      
-      log('Received image request from iframe', event.origin);
       
       // Get main product images
       const images = getProductImages();
       
       // Get all other images from the page that are NOT main product images
       const recommendedImages = getRecommendedProductsImages(images);
-      
-      console.log('NUSENSE [Image Listener]: Extracted', images.length, 'main product images and', recommendedImages.length, 'recommended product images, preparing to send to iframe');
       
       // Send images back to iframe - ALWAYS send a response, even if empty
       if (event.source && event.source !== window) {
@@ -937,72 +886,23 @@
             images: images,
             recommendedImages: recommendedImages
           }, '*'); // Use '*' for development, restrict in production
-          
-          console.log('NUSENSE [Image Listener]: ✅ Successfully sent', images.length, 'main images and', recommendedImages.length, 'recommended images to iframe');
-          console.log('NUSENSE [Image Listener]: Main images sent:', images);
-          console.log('NUSENSE [Image Listener]: Recommended images sent:', recommendedImages);
-          
-          log('Sent images to iframe', {
-            mainCount: images.length,
-            recommendedCount: recommendedImages.length,
-            origin: event.origin
-          });
         } catch (e) {
-          console.error('NUSENSE [Image Listener]: ❌ Error sending images to iframe', e);
-          log('Error sending images to iframe', e);
+          // Error sending images to iframe
         }
-      } else {
-        console.error('NUSENSE [Image Listener]: ❌ Invalid event source for image request');
-        log('Invalid event source for image request');
       }
     }
     
     // Initialize message listener
     window.addEventListener('message', handleMessage);
     
-    // Always log initialization (critical)
-    console.log('NUSENSE [Image Listener]: ✅ Message listener attached to window');
-    console.log('NUSENSE [Image Listener]: Listening for NUSENSE_REQUEST_IMAGES messages');
-    
-    // Log NUSENSE_PRODUCT_DATA status immediately
-    {% if product %}
-    console.log('NUSENSE [Image Listener]: Product page detected');
-    console.log('NUSENSE [Image Listener]: NUSENSE_PRODUCT_DATA available:', window.NUSENSE_PRODUCT_DATA ? 'YES' : 'NO');
-    if (window.NUSENSE_PRODUCT_DATA) {
-      console.log('NUSENSE [Image Listener]: NUSENSE_PRODUCT_DATA.images count:', window.NUSENSE_PRODUCT_DATA.images ? window.NUSENSE_PRODUCT_DATA.images.length : 'undefined');
-      if (window.NUSENSE_PRODUCT_DATA.images && window.NUSENSE_PRODUCT_DATA.images.length > 0) {
-        console.log('NUSENSE [Image Listener]: Sample images:', window.NUSENSE_PRODUCT_DATA.images.slice(0, 3));
-      }
-    } else {
-      console.log('NUSENSE [Image Listener]: ⚠️ NUSENSE_PRODUCT_DATA not yet available - will check again');
-      // Check again after a short delay in case it loads asynchronously
-      setTimeout(function() {
-        if (window.NUSENSE_PRODUCT_DATA) {
-          console.log('NUSENSE [Image Listener]: ✅ NUSENSE_PRODUCT_DATA now available (delayed check)');
-          if (window.NUSENSE_PRODUCT_DATA.images) {
-            console.log('NUSENSE [Image Listener]: NUSENSE_PRODUCT_DATA.images count:', window.NUSENSE_PRODUCT_DATA.images.length);
-          }
-        } else {
-          console.log('NUSENSE [Image Listener]: ⚠️ NUSENSE_PRODUCT_DATA still not available after delay');
-        }
-      }, 500);
-    }
-    {% else %}
-    console.log('NUSENSE [Image Listener]: ⚠️ Not on a product page');
-    {% endif %}
-    
-    log('Image transmission listener initialized');
-    
     // Also listen for widget script load completion
     // This ensures the listener is ready before widget requests images
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function() {
-        console.log('NUSENSE [Image Listener]: DOM ready - listener active');
-        log('DOM ready - listener active');
+        // DOM ready - listener active
       });
     } else {
-      console.log('NUSENSE [Image Listener]: DOM already ready - listener active');
-      log('DOM already ready - listener active');
+      // DOM already ready - listener active
     }
   })();
 </script>

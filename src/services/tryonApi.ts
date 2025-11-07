@@ -27,7 +27,6 @@ export async function generateTryOn(
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Erreur lors de la génération de l\'essayage:', error);
     return {
       status: 'error',
       error_message: {

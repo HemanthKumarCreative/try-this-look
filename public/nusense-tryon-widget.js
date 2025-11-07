@@ -130,9 +130,7 @@
       }
     });
 
-    if (config.debug) {
-      console.log('NUSENSE Widget opened', { productData, config });
-    }
+    // Widget opened
   }
 
   // Close widget
@@ -179,7 +177,5 @@
     productData: productData
   };
 
-  if (config.debug) {
-    console.log('NUSENSE TryON Widget loaded', window.NUSENSE_WIDGET);
-  }
+  // Widget loaded
 })();

@@ -58,7 +58,6 @@ export default function ResultDisplay({
       }
     } catch (error) {
       // Cross-origin access might fail, that's okay
-      console.debug("Could not access product data:", error);
     }
     return null;
   };
@@ -80,7 +79,7 @@ export default function ResultDisplay({
             return (window as any).NUSENSE_PRODUCT_DATA;
           }
         } catch (error) {
-          console.debug("Could not access product data:", error);
+          // Could not access product data
         }
         return null;
       };
@@ -195,7 +194,6 @@ export default function ResultDisplay({
         });
       }
     } catch (error) {
-      console.error("Error in buy now:", error);
       setIsBuyNowLoading(false);
       toast.error("Erreur", {
         description: "Impossible de procéder à l'achat. Veuillez réessayer.",
@@ -242,7 +240,6 @@ export default function ResultDisplay({
         });
       }
     } catch (error) {
-      console.error("Error adding to cart:", error);
       setIsAddToCartLoading(false);
       toast.error("Erreur", {
         description:
@@ -338,7 +335,6 @@ export default function ResultDisplay({
         description: "L'image a été téléchargée avec succès.",
       });
     } catch (error) {
-      console.error("Error downloading image:", error);
       setIsDownloadLoading(false);
 
       // Fallback: try to open in new tab

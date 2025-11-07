@@ -17,7 +17,7 @@ if (process.env.VERCEL !== "1" && !process.env.VERCEL_ENV) {
   try {
     dotenv.config({ path: join(__dirname, "../.env") });
   } catch (error) {
-    console.warn("Could not load .env file:", error.message);
+    // Could not load .env file
   }
 }
 
@@ -31,7 +31,7 @@ const apiSecret = process.env.SHOPIFY_API_SECRET;
 const appUrl = process.env.SHOPIFY_APP_URL;
 
 if (!apiKey || !apiSecret) {
-  console.error("Missing required environment variables: SHOPIFY_API_KEY or SHOPIFY_API_SECRET");
+  // Missing required environment variables
 }
 
 // Extract hostname from app URL safely
@@ -97,7 +97,6 @@ app.get("/auth", async (req, res) => {
     });
     res.redirect(authRoute);
   } catch (error) {
-    console.error("OAuth error:", error);
     if (!res.headersSent) {
       res.status(500).json({ 
         error: "Failed to initiate OAuth",
@@ -132,7 +131,6 @@ app.get("/auth/callback", async (req, res) => {
     
     res.redirect(redirectUrl);
   } catch (error) {
-    console.error("OAuth callback error:", error);
     if (!res.headersSent) {
       res.status(500).json({ 
         error: "OAuth callback failed", 
@@ -177,7 +175,6 @@ app.post("/api/tryon/generate", async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (error) {
-    console.error("Try-on generation error:", error);
     res.status(500).json({ 
       error: "Failed to generate try-on image",
       message: error.message 
@@ -208,7 +205,6 @@ app.get("/api/products/:productId", async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Product fetch error:", error);
     res.status(500).json({ error: "Failed to fetch product", message: error.message });
   }
 });
@@ -254,7 +250,6 @@ if (!isVercel) {
 
 // Error handling middleware (must be last)
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
   if (!res.headersSent) {
     res.status(err.status || 500).json({
       error: err.message || "Internal server error",
@@ -265,10 +260,7 @@ app.use((err, req, res, next) => {
 // Only start server if not in Vercel environment
 if (!isVercel) {
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    if (isDev) {
-      console.log(`Development server: http://localhost:${PORT}`);
-    }
+    // Server running
   });
 }
 

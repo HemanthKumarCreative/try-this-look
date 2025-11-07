@@ -43,7 +43,7 @@ export default function PhotoUpload({ onPhotoUpload }: PhotoUploadProps) {
       };
       reader.readAsDataURL(blob);
     } catch (error) {
-      console.error("Erreur lors du chargement de la photo de démo :", error);
+      // Error loading demo photo
     }
   };
 

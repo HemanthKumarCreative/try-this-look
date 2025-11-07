@@ -27,8 +27,5 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Development server running at http://localhost:${PORT}`);
-  console.log(`📱 Test integration page: http://localhost:${PORT}/test`);
-  console.log(`🎯 Widget page: http://localhost:${PORT}/widget`);
-  console.log(`🛍️  Demo page: http://localhost:${PORT}/demo`);
+  // Development server running
 });

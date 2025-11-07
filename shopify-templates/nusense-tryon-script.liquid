@@ -296,7 +296,6 @@
             
             // Skip if it's a main product image
             if (isMainProductImage) {
-              console.log('NUSENSE: Skipping main product image from recommended:', absUrl);
               return;
             }
             
@@ -373,11 +372,8 @@
             }
           });
 
-          if (allImages.length > 0) {
-            console.log('NUSENSE: Extracted', allImages.length, 'non-product images as recommended products');
-          }
-        } catch (e) {
-          console.error('NUSENSE: Error extracting recommended products images', e);
+          } catch (e) {
+          // Error extracting recommended products images
         }
 
         return allImages;
@@ -386,8 +382,6 @@
       // Listen for image requests from iframe
       window.addEventListener("message", (event) => {
         if (event.data && event.data.type === "NUSENSE_REQUEST_IMAGES") {
-          console.log('NUSENSE: Received image request from iframe');
-          
           let images = [];
           let recommendedImages = [];
           
@@ -396,42 +390,32 @@
             images = Array.isArray(window.NUSENSE_PRODUCT_DATA.images) 
               ? window.NUSENSE_PRODUCT_DATA.images 
               : [];
-            console.log('NUSENSE: Using images from NUSENSE_PRODUCT_DATA:', images.length);
           }
           
           // Priority 2: Extract from page if NUSENSE_PRODUCT_DATA not available or empty
           if (images.length === 0) {
             images = extractProductImages();
-            console.log('NUSENSE: Extracted images from page:', images.length);
           }
 
           // Extract all other images from the page that are NOT main product images
           recommendedImages = extractRecommendedProductsImages(images);
-          console.log('NUSENSE: Extracted recommended products images (non-product images):', recommendedImages.length);
           
           // Send images back to iframe
           if (event.source && event.source !== window) {
-            console.log('NUSENSE: Sending', images.length, 'main images and', recommendedImages.length, 'recommended images to iframe');
             (event.source).postMessage({
               type: "NUSENSE_PRODUCT_IMAGES",
               images: images,
               recommendedImages: recommendedImages
             }, "*");
-          } else {
-            console.warn('NUSENSE: Invalid event source for image request');
           }
         }
       });
-
-      console.log('NUSENSE TryON: Image extraction listener initialized on parent window');
     })();
   </script>
 
   <script src="{{ settings.nusense_widget_url | default: 'https://try-this-look.vercel.app' }}/nusense-tryon-widget.js" 
           async 
-          defer
-          onload="console.log('NUSENSE TryON Widget loaded successfully')"
-          onerror="console.error('Failed to load NUSENSE TryON Widget')">
+          defer>
   </script>
 
   <style>

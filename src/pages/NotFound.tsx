@@ -5,7 +5,7 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.error("Erreur 404 : L'utilisateur a tenté d'accéder à une route inexistante :", location.pathname);
+    // 404 - Route not found
   }, [location.pathname]);
 
   return (

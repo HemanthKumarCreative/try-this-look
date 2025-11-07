@@ -63,11 +63,11 @@
       script.defer = true;
       script.onload = function() {
         if (window.NUSENSE_CONFIG && window.NUSENSE_CONFIG.debug) {
-          console.log('NUSENSE TryON Widget loaded successfully');
+          // Widget loaded
         }
       };
       script.onerror = function() {
-        console.error('Failed to load NUSENSE TryON Widget from {{ widget_url }}');
+        // Failed to load widget
       };
       document.head.appendChild(script);
     }

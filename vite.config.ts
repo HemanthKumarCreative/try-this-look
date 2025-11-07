@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => ({
             path.resolve(__dirname, "dist/nusense-tryon-widget.js")
           );
         } catch (error) {
-          console.warn("Widget script copy failed:", error);
+          // Widget script copy failed
         }
       },
     },

@@ -44,7 +44,6 @@ export function extractShopifyProductInfo(): ProductInfo | null {
       availability: 'InStock',
     };
   } catch (error) {
-    console.error('Erreur lors de l\'extraction des informations produit :', error);
     return null;
   }
 }
@@ -398,7 +397,6 @@ function extractRecommendedProductsImages(mainProductImages: string[]): string[]
 
       // Skip if it's a main product image
       if (isMainProductImage) {
-        console.log('NUSENSE: Skipping main product image from recommended:', urlToCheck);
         return;
       }
 
@@ -474,11 +472,8 @@ function extractRecommendedProductsImages(mainProductImages: string[]): string[]
       }
     });
 
-    if (allImages.length > 0) {
-      console.log('NUSENSE: Extracted', allImages.length, 'non-product images as recommended products');
-    }
   } catch (e) {
-    console.error('NUSENSE: Error extracting recommended products images', e);
+    // Error extracting recommended products images
   }
 
   return allImages;
@@ -487,8 +482,6 @@ function extractRecommendedProductsImages(mainProductImages: string[]): string[]
 export function initializeImageExtractionListener(): void {
   window.addEventListener("message", (event) => {
     if (event.data && event.data.type === "NUSENSE_REQUEST_IMAGES") {
-      console.log('NUSENSE: Received image request from iframe (via initializeImageExtractionListener)');
-      
       let images: string[] = [];
       let recommendedImages: string[] = [];
       
@@ -497,35 +490,28 @@ export function initializeImageExtractionListener(): void {
         const productData = (window as any).NUSENSE_PRODUCT_DATA;
         if (productData.images && Array.isArray(productData.images) && productData.images.length > 0) {
           images = productData.images;
-          console.log('NUSENSE: Using images from NUSENSE_PRODUCT_DATA:', images.length);
         }
       }
       
       // Priority 2: Extract from page if NUSENSE_PRODUCT_DATA not available or empty
       if (images.length === 0) {
         images = extractProductImages();
-        console.log('NUSENSE: Extracted images from page:', images.length);
       }
 
       // Extract all other images from the page that are NOT main product images
       // This will find any images on the page and filter out the main product images
       recommendedImages = extractRecommendedProductsImages(images);
-      console.log('NUSENSE: Extracted recommended products images (non-product images):', recommendedImages.length);
       
       // Send images back to the iframe
       if (event.source && event.source !== window) {
-        console.log('NUSENSE: Sending', images.length, 'main images and', recommendedImages.length, 'recommended images to iframe');
         (event.source as Window).postMessage({
           type: "NUSENSE_PRODUCT_IMAGES",
           images: images,
           recommendedImages: recommendedImages
         }, "*");
-      } else {
-        console.warn('NUSENSE: Invalid event source for image request');
       }
     }
   });
-  console.log('NUSENSE: Image extraction listener initialized on parent window');
 }
 
 /**
@@ -609,14 +595,9 @@ export function detectStoreOrigin(): StoreInfo {
       // If it's the 'shop' parameter, it's from app proxy (most reliable)
       result.method = urlParams.get('shop') ? 'url-param' : 'url-param';
       
-      console.log('%c✅ NUSENSE: Store detected from URL parameter', 'color: #4CAF50; font-weight: bold;', {
-        shopDomain,
-        method: 'URL Parameter (Shopify App Proxy)',
-        origin
-      });
       return result;
     } catch (error) {
-      console.warn('NUSENSE: Error parsing shop domain from URL parameter:', error);
+      // Error parsing shop domain from URL parameter
     }
   }
 
@@ -636,13 +617,6 @@ export function detectStoreOrigin(): StoreInfo {
         result.origin = referrerUrl.origin;
         result.fullUrl = referrer;
         result.method = 'referrer';
-        
-        console.log('%c✅ NUSENSE: Store detected from referrer', 'color: #4CAF50; font-weight: bold;', {
-          shopDomain: hostname,
-          method: 'Document Referrer',
-          origin: referrerUrl.origin,
-          fullUrl: referrer
-        });
         return result;
       }
       
@@ -652,16 +626,9 @@ export function detectStoreOrigin(): StoreInfo {
       result.fullUrl = referrer;
       result.origin = referrerUrl.origin;
       result.method = 'referrer';
-      
-      console.log('%c✅ NUSENSE: Store detected from referrer (custom domain)', 'color: #4CAF50; font-weight: bold;', {
-        domain: hostname,
-        method: 'Document Referrer (Custom Domain)',
-        origin: referrerUrl.origin,
-        fullUrl: referrer
-      });
       return result;
     } catch (error) {
-      console.warn('NUSENSE: Error parsing referrer:', error);
+      // Error parsing referrer
     }
   }
 
@@ -669,7 +636,6 @@ export function detectStoreOrigin(): StoreInfo {
   // we can request it from parent (Method 4 will handle this)
   const isInIframe = typeof window !== 'undefined' && window.parent !== window;
   if (isInIframe) {
-    console.log('NUSENSE: In iframe mode - store info can be obtained from postMessage events');
     // Store info will be available when receiving messages from parent
     result.method = 'postmessage';
   }
@@ -718,14 +684,12 @@ export function requestStoreInfoFromParent(
     const isInIframe = typeof window !== 'undefined' && window.parent !== window;
     
     if (!isInIframe) {
-      console.warn('NUSENSE: Not in iframe, cannot request store info from parent');
       resolve(null);
       return;
     }
 
     const timeout = setTimeout(() => {
       window.removeEventListener('message', messageHandler);
-      console.warn('NUSENSE: Timeout waiting for store info from parent');
       resolve(null);
     }, 5000);
 
@@ -745,8 +709,6 @@ export function requestStoreInfoFromParent(
           method: 'parent-request'
         };
         
-        console.log('%c✅ NUSENSE: Received store info from parent', 'color: #4CAF50; font-weight: bold;', storeInfo);
-        
         if (callback) {
           callback(storeInfo);
         }
@@ -760,11 +722,9 @@ export function requestStoreInfoFromParent(
     // Request store info from parent
     try {
       window.parent.postMessage({ type: 'NUSENSE_REQUEST_STORE_INFO' }, '*');
-      console.log('NUSENSE: Requested store info from parent window');
     } catch (error) {
       clearTimeout(timeout);
       window.removeEventListener('message', messageHandler);
-      console.error('NUSENSE: Error requesting store info from parent:', error);
       resolve(null);
     }
   });
@@ -789,10 +749,9 @@ export function getStoreOriginFromPostMessage(event: MessageEvent): StoreInfo | 
         method: 'postmessage'
       };
       
-      console.log('%c✅ NUSENSE: Store origin detected from postMessage', 'color: #4CAF50; font-weight: bold;', storeInfo);
       return storeInfo;
     } catch (error) {
-      console.warn('NUSENSE: Error parsing origin from postMessage:', error);
+      // Error parsing origin from postMessage
     }
   }
   
@@ -1009,8 +968,6 @@ export function extractProductImages(): string[] {
   });
 
   // Debug: Log detected images
-  console.log('NUSENSE : Images produit détectées :', images);
-  console.log('NUSENSE : Nombre total d\'images trouvées :', images.length);
   
   return images;
 }
@@ -1090,7 +1047,7 @@ function extractShopifyProductJSON(): any {
       return (window as any).product;
     }
   } catch (e) {
-    console.error('Erreur lors de l\'extraction du JSON produit Shopify :', e);
+    // Error extracting Shopify product JSON
   }
   
   return null;
@@ -1146,7 +1103,7 @@ function extractJSONLDImages(): string[] {
       }
     });
   } catch (e) {
-    console.error('Erreur lors de l\'extraction des images JSON-LD :', e);
+    // Error extracting JSON-LD images
   }
 
   return images;
@@ -1160,9 +1117,6 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
   
   const lowerUrl = url.toLowerCase();
   const lowerAlt = (metadata?.alt || '').toLowerCase();
-  
-  // Debug logging for troubleshooting
-  console.log('NUSENSE : Validation de l\'image :', url, 'métadonnées :', metadata);
   
   // Filter out common non-product image patterns
   const excludePatterns = [
@@ -1201,7 +1155,6 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
 
   for (const pattern of excludePatterns) {
     if (lowerUrl.includes(pattern) || lowerAlt.includes(pattern)) {
-      console.log('NUSENSE : Exclu en raison du motif :', pattern);
       return false;
     }
   }
@@ -1210,7 +1163,6 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
   try {
     new URL(url, window.location.href);
   } catch {
-    console.log('NUSENSE : Exclu en raison d\'une URL invalide');
     return false;
   }
 
@@ -1220,7 +1172,6 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
   
   // Require valid image file extension
   if (!hasValidExtension) {
-    console.log('NUSENSE : Exclu en raison de l\'absence d\'extension d\'image valide');
     return false;
   }
   
@@ -1229,12 +1180,10 @@ function isValidProductImageUrl(url: string, metadata?: { width?: number; height
     const { width, height } = metadata;
     // Skip very small images (likely icons) - be more lenient for better detection
     if (width && height && width < 50 && height < 50) {
-      console.log('NUSENSE : Exclu en raison de la petite taille :', width, 'x', height);
       return false;
     }
   }
 
-  console.log('NUSENSE : Image acceptée :', url);
   return true;
 }
 
