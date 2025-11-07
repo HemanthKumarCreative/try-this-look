@@ -19,6 +19,29 @@ redirect_urls = [
 [webhooks]
 api_version = "2024-01"
 
+# Mandatory compliance webhooks
+# These webhooks are required for app compliance and GDPR
+# See: https://shopify.dev/docs/apps/build/compliance/privacy-law-compliance
+
+# App lifecycle webhook - recommended for app uninstallation handling
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "https://try-this-look.vercel.app/webhooks/app/uninstalled"
+
+# GDPR compliance webhooks - required for data protection compliance
+# These are mandatory for apps distributed through the Shopify App Store
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request"]
+uri = "https://try-this-look.vercel.app/webhooks/customers/data_request"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/redact"]
+uri = "https://try-this-look.vercel.app/webhooks/customers/redact"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["shop/redact"]
+uri = "https://try-this-look.vercel.app/webhooks/shop/redact"
+
 [pos]
 embedded = false
 

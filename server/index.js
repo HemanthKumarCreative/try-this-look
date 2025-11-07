@@ -6,6 +6,7 @@ import { join } from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import dotenv from "dotenv";
+import crypto from "crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,7 +43,10 @@ if (appUrl) {
     hostName = url.hostname;
   } catch (error) {
     // If URL parsing fails, try to extract hostname manually
-    hostName = appUrl.replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
+    hostName = appUrl
+      .replace(/^https?:\/\//, "")
+      .split("/")[0]
+      .split(":")[0];
   }
 }
 
@@ -59,7 +63,77 @@ const shopify = shopifyApi({
 const app = express();
 
 // Middleware
-app.use(express.json());
+// For webhooks, we need raw body for HMAC verification
+app.use((req, res, next) => {
+  if (req.path.startsWith("/webhooks/")) {
+    express.raw({ type: "application/json" })(req, res, next);
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
+// HMAC signature verification middleware for webhooks
+const verifyWebhookSignature = (req, res, next) => {
+  const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
+  const topicHeader = req.get("X-Shopify-Topic");
+  const shopHeader = req.get("X-Shopify-Shop-Domain");
+
+  if (!hmacHeader || !topicHeader || !shopHeader) {
+    return res.status(401).json({
+      error: "Unauthorized",
+      message: "Missing required webhook headers",
+    });
+  }
+
+  if (!apiSecret) {
+    return res.status(500).json({
+      error: "Server configuration error",
+      message: "API secret not configured",
+    });
+  }
+
+  // Calculate HMAC
+  // Shopify sends HMAC as base64-encoded string in X-Shopify-Hmac-Sha256 header
+  // We need to calculate HMAC from raw body and compare with the provided base64 HMAC
+  const calculatedHmacDigest = crypto
+    .createHmac("sha256", apiSecret)
+    .update(req.body)
+    .digest("base64");
+
+  // Compare HMAC signatures using constant-time comparison
+  // Both provided and calculated HMACs are base64-encoded strings
+  const providedHmac = Buffer.from(hmacHeader, "base64");
+  const calculatedHmac = Buffer.from(calculatedHmacDigest, "base64");
+
+  if (providedHmac.length !== calculatedHmac.length) {
+    return res.status(401).json({
+      error: "Unauthorized",
+      message: "Invalid webhook signature",
+    });
+  }
+
+  // Use crypto.timingSafeEqual for constant-time comparison to prevent timing attacks
+  if (!crypto.timingSafeEqual(providedHmac, calculatedHmac)) {
+    return res.status(401).json({
+      error: "Unauthorized",
+      message: "Invalid webhook signature",
+    });
+  }
+
+  // Attach parsed body and webhook metadata to request
+  try {
+    req.webhookData = JSON.parse(req.body.toString());
+    req.webhookTopic = topicHeader;
+    req.webhookShop = shopHeader;
+  } catch (error) {
+    return res.status(400).json({
+      error: "Bad Request",
+      message: "Invalid JSON in webhook body",
+    });
+  }
+
+  next();
+};
 
 // Serve static files only in non-Vercel environment
 // In Vercel, static files are served directly by the platform
@@ -73,7 +147,10 @@ if (!isVercel) {
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
@@ -89,18 +166,18 @@ app.get("/health", (req, res) => {
 app.get("/auth", async (req, res) => {
   try {
     const shop = req.query.shop;
-    
+
     // Validate shop parameter
     if (!shop) {
       return res.status(400).json({
         error: "Missing shop parameter",
-        message: "Please provide a shop parameter in the query string"
+        message: "Please provide a shop parameter in the query string",
       });
     }
 
     // Validate shop format (should be a .myshopify.com domain or just the shop name)
-    const shopDomain = shop.includes('.myshopify.com') 
-      ? shop 
+    const shopDomain = shop.includes(".myshopify.com")
+      ? shop
       : `${shop}.myshopify.com`;
 
     const authRoute = await shopify.auth.begin({
@@ -110,13 +187,13 @@ app.get("/auth", async (req, res) => {
       rawRequest: req,
       rawResponse: res,
     });
-    
+
     res.redirect(authRoute);
   } catch (error) {
     if (!res.headersSent) {
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to initiate OAuth",
-        message: error.message || "An error occurred during authentication"
+        message: error.message || "An error occurred during authentication",
       });
     }
   }
@@ -130,45 +207,165 @@ app.get("/auth/callback", async (req, res) => {
     });
 
     const { session } = callbackResponse;
-    
+
     if (!session) {
       return res.status(500).json({
         error: "Authentication failed",
-        message: "No session was created during authentication"
+        message: "No session was created during authentication",
       });
     }
-    
+
     // Sessions are automatically stored by the Shopify API library
     // The library handles session storage internally based on your configuration
-    
+
     // Get host and shop from query/session
     const host = req.query.host;
     const shop = session.shop;
     const apiKey = process.env.SHOPIFY_API_KEY;
-    
+
     if (!shop || !apiKey) {
       return res.status(500).json({
         error: "Invalid session data",
-        message: "Missing shop or API key information"
+        message: "Missing shop or API key information",
       });
     }
-    
+
     // Construct redirect URL for embedded app
     // For embedded apps, include the host parameter to maintain the iframe context
     let redirectUrl = `https://${shop}/admin/apps/${apiKey}`;
-    
+
     if (host) {
       redirectUrl += `?host=${encodeURIComponent(host)}`;
     }
-    
+
     res.redirect(redirectUrl);
   } catch (error) {
     if (!res.headersSent) {
-      res.status(500).json({ 
-        error: "OAuth callback failed", 
-        message: error.message || "An error occurred during the OAuth callback"
+      res.status(500).json({
+        error: "OAuth callback failed",
+        message: error.message || "An error occurred during the OAuth callback",
       });
     }
+  }
+});
+
+// Webhook Routes - Mandatory Compliance Webhooks
+// All webhooks must be registered in shopify.app.toml and verified with HMAC
+
+// App uninstalled webhook - mandatory for app lifecycle
+app.post(
+  "/webhooks/app/uninstalled",
+  verifyWebhookSignature,
+  async (req, res) => {
+    try {
+      const { shop_domain } = req.webhookData;
+
+      // Handle app uninstallation
+      // Clean up any app-specific data, sessions, or resources
+      // This is a mandatory webhook for compliance
+
+      console.log(`App uninstalled for shop: ${shop_domain}`);
+
+      // Implement cleanup logic (delete sessions, remove app data, etc.)
+      // This webhook is called when the app is uninstalled from a shop
+
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("Error handling app/uninstalled webhook:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        message: error.message,
+      });
+    }
+  }
+);
+
+// Customer data request webhook - mandatory for GDPR compliance
+app.post(
+  "/webhooks/customers/data_request",
+  verifyWebhookSignature,
+  async (req, res) => {
+    try {
+      const { shop_id, shop_domain, customer, orders_requested } =
+        req.webhookData;
+
+      // Handle GDPR data request
+      // Must provide customer data within 30 days
+      // This is a mandatory webhook for GDPR compliance
+
+      console.log(
+        `GDPR data request for customer: ${customer?.id} from shop: ${shop_domain}`
+      );
+
+      // Collect and prepare customer data
+      // Data should include all information stored about the customer
+      // Must provide customer data within 30 days of this webhook
+
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("Error handling customers/data_request webhook:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        message: error.message,
+      });
+    }
+  }
+);
+
+// Customer redact webhook - mandatory for GDPR compliance
+app.post(
+  "/webhooks/customers/redact",
+  verifyWebhookSignature,
+  async (req, res) => {
+    try {
+      const { shop_id, shop_domain, customer, orders_to_redact } =
+        req.webhookData;
+
+      // Handle GDPR customer data deletion
+      // Must delete all customer data within 10 days
+      // This is a mandatory webhook for GDPR compliance
+
+      console.log(
+        `GDPR customer redact for customer: ${customer?.id} from shop: ${shop_domain}`
+      );
+
+      // Delete all customer-related data
+      // This includes any stored customer information, images, preferences, etc.
+      // Must delete all customer data within 10 days of this webhook
+
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("Error handling customers/redact webhook:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        message: error.message,
+      });
+    }
+  }
+);
+
+// Shop redact webhook - mandatory for GDPR compliance
+app.post("/webhooks/shop/redact", verifyWebhookSignature, async (req, res) => {
+  try {
+    const { shop_id, shop_domain } = req.webhookData;
+
+    // Handle GDPR shop data deletion
+    // Must delete all shop data within 10 days
+    // This is a mandatory webhook for GDPR compliance
+
+    console.log(`GDPR shop redact for shop: ${shop_domain}`);
+
+    // Delete all shop-related data
+    // This includes any stored shop information, configurations, etc.
+    // Must delete all shop data within 10 days of this webhook
+
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error("Error handling shop/redact webhook:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      message: error.message,
+    });
   }
 });
 
@@ -182,28 +379,31 @@ app.post("/api/tryon/generate", async (req, res) => {
     }
 
     // Convert base64 to Blob for FormData
-    const personBlob = await fetch(personImage).then(r => r.blob());
-    const clothingBlob = await fetch(clothingImage).then(r => r.blob());
+    const personBlob = await fetch(personImage).then((r) => r.blob());
+    const clothingBlob = await fetch(clothingImage).then((r) => r.blob());
 
     // Create FormData for multipart/form-data request
     const formData = new FormData();
-    formData.append('personImage', personBlob, 'person.jpg');
-    formData.append('clothingImage', clothingBlob, 'clothing.jpg');
-    
+    formData.append("personImage", personBlob, "person.jpg");
+    formData.append("clothingImage", clothingBlob, "clothing.jpg");
+
     // Add storeName if provided
     if (storeName) {
-      formData.append('storeName', storeName);
+      formData.append("storeName", storeName);
     }
 
     // Forward to your existing API
-    const response = await fetch("https://try-on-server-v1.onrender.com/api/fashion-photo", {
-      method: "POST",
-      headers: {
-        'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
-        'Content-Language': 'fr',
-      },
-      body: formData,
-    });
+    const response = await fetch(
+      "https://try-on-server-v1.onrender.com/api/fashion-photo",
+      {
+        method: "POST",
+        headers: {
+          "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+          "Content-Language": "fr",
+        },
+        body: formData,
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -212,9 +412,9 @@ app.post("/api/tryon/generate", async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Failed to generate try-on image",
-      message: error.message 
+      message: error.message,
     });
   }
 });
@@ -225,7 +425,7 @@ app.get("/api/products/:productId", async (req, res) => {
     // This endpoint can be public for widget use
     // For authenticated requests, use session from res.locals.shopify.session
     const session = res.locals.shopify?.session;
-    
+
     if (session) {
       // Authenticated request - use Shopify API
       const client = new shopify.clients.Rest({ session });
@@ -236,13 +436,15 @@ app.get("/api/products/:productId", async (req, res) => {
     } else {
       // Public request - return basic product info from query
       // Widget will get product data from page context
-      res.json({ 
+      res.json({
         id: req.params.productId,
-        message: "Product data available from page context"
+        message: "Product data available from page context",
       });
     }
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch product", message: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch product", message: error.message });
   }
 });
 
@@ -265,7 +467,7 @@ app.get("/apps/apps/a/*", (req, res) => {
   // Handle app proxy requests
   // Extract path after /apps/apps/a/
   const proxyPath = req.path.replace("/apps/apps/a", "");
-  
+
   if (proxyPath === "/widget" || proxyPath.startsWith("/widget")) {
     if (isVercel) {
       res.redirect("/index.html");
@@ -303,4 +505,3 @@ if (!isVercel) {
 
 // Export app for Vercel serverless functions
 export default app;
-
