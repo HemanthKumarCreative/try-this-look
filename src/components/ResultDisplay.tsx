@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,6 +37,8 @@ export default function ResultDisplay({
   const [isBuyNowLoading, setIsBuyNowLoading] = useState(false);
   const [isAddToCartLoading, setIsAddToCartLoading] = useState(false);
   const [isDownloadLoading, setIsDownloadLoading] = useState(false);
+  const buyNowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const addToCartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get product data if available (from Shopify parent window)
   const getProductData = (): ProductData | null => {
@@ -61,6 +63,95 @@ export default function ResultDisplay({
     return null;
   };
 
+  // Listen for success/error messages from parent window
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Get product data helper
+      const getProductDataLocal = (): ProductData | null => {
+        if (typeof window === "undefined") return null;
+        try {
+          if (
+            window.parent !== window &&
+            (window.parent as any).NUSENSE_PRODUCT_DATA
+          ) {
+            return (window.parent as any).NUSENSE_PRODUCT_DATA;
+          }
+          if ((window as any).NUSENSE_PRODUCT_DATA) {
+            return (window as any).NUSENSE_PRODUCT_DATA;
+          }
+        } catch (error) {
+          console.debug("Could not access product data:", error);
+        }
+        return null;
+      };
+
+      if (event.data && event.data.type === "NUSENSE_ACTION_SUCCESS") {
+        if (event.data.action === "NUSENSE_ADD_TO_CART") {
+          // Clear timeout if it exists
+          if (addToCartTimeoutRef.current) {
+            clearTimeout(addToCartTimeoutRef.current);
+            addToCartTimeoutRef.current = null;
+          }
+          setIsAddToCartLoading(false);
+          const productData = getProductDataLocal();
+          toast.success("Article ajouté au panier", {
+            description: productData?.title
+              ? `${productData.title} a été ajouté à votre panier.`
+              : "L'article a été ajouté à votre panier.",
+          });
+        } else if (event.data.action === "NUSENSE_BUY_NOW") {
+          // Clear timeout if it exists
+          if (buyNowTimeoutRef.current) {
+            clearTimeout(buyNowTimeoutRef.current);
+            buyNowTimeoutRef.current = null;
+          }
+          setIsBuyNowLoading(false);
+          // Buy now will redirect, so we don't need to show a toast
+        }
+      } else if (event.data && event.data.type === "NUSENSE_ACTION_ERROR") {
+        if (event.data.action === "NUSENSE_ADD_TO_CART") {
+          // Clear timeout if it exists
+          if (addToCartTimeoutRef.current) {
+            clearTimeout(addToCartTimeoutRef.current);
+            addToCartTimeoutRef.current = null;
+          }
+          setIsAddToCartLoading(false);
+          toast.error("Erreur", {
+            description:
+              event.data.error ||
+              "Impossible d'ajouter l'article au panier. Veuillez réessayer.",
+          });
+        } else if (event.data.action === "NUSENSE_BUY_NOW") {
+          // Clear timeout if it exists
+          if (buyNowTimeoutRef.current) {
+            clearTimeout(buyNowTimeoutRef.current);
+            buyNowTimeoutRef.current = null;
+          }
+          setIsBuyNowLoading(false);
+          toast.error("Erreur", {
+            description:
+              event.data.error ||
+              "Impossible de procéder à l'achat. Veuillez réessayer.",
+          });
+        }
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      // Clean up any pending timeouts
+      if (buyNowTimeoutRef.current) {
+        clearTimeout(buyNowTimeoutRef.current);
+        buyNowTimeoutRef.current = null;
+      }
+      if (addToCartTimeoutRef.current) {
+        clearTimeout(addToCartTimeoutRef.current);
+        addToCartTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   const handleBuyNow = async () => {
     if (isBuyNowLoading) return;
 
@@ -79,13 +170,22 @@ export default function ResultDisplay({
 
         window.parent.postMessage(message, "*");
 
-        // Give parent window time to process (Shopify cart operations are async)
-        setTimeout(() => {
+        // Show loading message - parent will handle redirect or error
+        toast.info("Ajout au panier...", {
+          description: "Redirection vers la page de paiement en cours.",
+        });
+
+        // Set a timeout to reset loading state if no response received (10 seconds)
+        if (buyNowTimeoutRef.current) {
+          clearTimeout(buyNowTimeoutRef.current);
+        }
+        buyNowTimeoutRef.current = setTimeout(() => {
           setIsBuyNowLoading(false);
-          toast.success("Redirection en cours...", {
-            description: "Vous allez être redirigé vers la page de paiement.",
+          toast.error("Timeout", {
+            description: "La requête a pris trop de temps. Veuillez réessayer.",
           });
-        }, 500);
+          buyNowTimeoutRef.current = null;
+        }, 10000);
       } else {
         // Standalone mode - show message that this feature requires Shopify integration
         setIsBuyNowLoading(false);
@@ -121,15 +221,18 @@ export default function ResultDisplay({
 
         window.parent.postMessage(message, "*");
 
-        // Give parent window time to process (Shopify cart operations are async)
-        setTimeout(() => {
+        // Loading state will be updated when we receive success/error message from parent
+        // Set a timeout to reset loading state if no response received (10 seconds)
+        if (addToCartTimeoutRef.current) {
+          clearTimeout(addToCartTimeoutRef.current);
+        }
+        addToCartTimeoutRef.current = setTimeout(() => {
           setIsAddToCartLoading(false);
-          toast.success("Article ajouté au panier", {
-            description: productData?.title
-              ? `${productData.title} a été ajouté à votre panier.`
-              : "L'article a été ajouté à votre panier.",
+          toast.error("Timeout", {
+            description: "La requête a pris trop de temps. Veuillez réessayer.",
           });
-        }, 500);
+          addToCartTimeoutRef.current = null;
+        }, 10000);
       } else {
         // Standalone mode - show message that this feature requires Shopify integration
         setIsAddToCartLoading(false);

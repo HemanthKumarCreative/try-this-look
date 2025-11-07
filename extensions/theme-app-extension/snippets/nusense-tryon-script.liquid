@@ -399,61 +399,211 @@
       {% if product %}
       // Get product form and variant selector
       const productForm = document.querySelector('form[action*="/cart/add"]');
-      const variantSelector = document.querySelector('[name="id"]') || document.querySelector('input[name="id"]');
+      const variantSelector = document.querySelector('[name="id"]') || document.querySelector('input[name="id"]') || document.querySelector('select[name="id"]');
       
-      if (!productForm) {
-        console.warn('NUSENSE [Image Listener]: Product form not found on page');
+      // Get the selected variant ID
+      let variantId = null;
+      if (variantSelector) {
+        variantId = variantSelector.value;
+      } else if (window.Shopify && window.Shopify.product) {
+        // Fallback: get first available variant
+        const variants = window.Shopify.product.variants || [];
+        const availableVariant = variants.find(function(v) { return v.available; });
+        if (availableVariant) {
+          variantId = availableVariant.id;
+        } else if (variants.length > 0) {
+          variantId = variants[0].id;
+        }
+      }
+      
+      // If no variant ID found, try to get from form
+      if (!variantId && productForm) {
+        const formVariantId = new FormData(productForm).get('id');
+        if (formVariantId) {
+          variantId = formVariantId;
+        }
+      }
+      
+      // If still no variant ID, use the first variant from NUSENSE_PRODUCT_DATA
+      if (!variantId && window.NUSENSE_PRODUCT_DATA && window.NUSENSE_PRODUCT_DATA.variants && window.NUSENSE_PRODUCT_DATA.variants.length > 0) {
+        const availableVariant = window.NUSENSE_PRODUCT_DATA.variants.find(function(v) { return v.available !== false; });
+        if (availableVariant) {
+          variantId = availableVariant.id;
+        } else {
+          variantId = window.NUSENSE_PRODUCT_DATA.variants[0].id;
+        }
+      }
+      
+      if (!variantId) {
+        console.error('NUSENSE [Image Listener]: No variant ID found. Cannot add to cart.');
+        // Send error message back to iframe
+        if (event.source && event.source !== window) {
+          event.source.postMessage({
+            type: 'NUSENSE_ACTION_ERROR',
+            action: actionType,
+            error: 'No variant selected. Please select a product variant.'
+          }, '*');
+        }
         return;
+      }
+      
+      // Use locale-aware URL for cart API
+      const cartAddUrl = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) 
+        ? window.Shopify.routes.root + 'cart/add.js'
+        : '/cart/add.js';
+      
+      // Prepare cart data
+      const quantity = productForm ? (new FormData(productForm).get('quantity') || 1) : 1;
+      const cartData = {
+        items: [{
+          id: parseInt(variantId, 10),
+          quantity: parseInt(quantity, 10) || 1
+        }]
+      };
+      
+      // Add properties if they exist in the form
+      if (productForm) {
+        const formData = new FormData(productForm);
+        const properties = {};
+        for (const [key, value] of formData.entries()) {
+          if (key.startsWith('properties[') && key.endsWith(']')) {
+            const propKey = key.match(/properties\[(.*?)\]/)[1];
+            properties[propKey] = value;
+          }
+        }
+        if (Object.keys(properties).length > 0) {
+          cartData.items[0].properties = properties;
+        }
       }
       
       switch (actionType) {
         case 'NUSENSE_BUY_NOW':
-          // Trigger buy now (redirect to checkout)
-          console.log('NUSENSE [Image Listener]: Buy Now clicked');
-          if (productForm) {
-            // Add to cart and redirect to checkout
-            const formData = new FormData(productForm);
-            formData.append('return_to', '/checkout');
-            fetch('/cart/add.js', {
-              method: 'POST',
-              body: formData
-            }).then(function(response) {
+          // Trigger buy now (add to cart and redirect to checkout)
+          console.log('NUSENSE [Image Listener]: Buy Now clicked for variant:', variantId);
+          
+          fetch(cartAddUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(cartData)
+          })
+          .then(function(response) {
+            return response.json().then(function(data) {
               if (response.ok) {
-                window.location.href = '/checkout';
+                console.log('NUSENSE [Image Listener]: Product added to cart successfully, redirecting to checkout');
+                // Redirect to checkout
+                const checkoutUrl = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root)
+                  ? window.Shopify.routes.root + 'checkout'
+                  : '/checkout';
+                window.location.href = checkoutUrl;
               } else {
-                console.error('NUSENSE [Image Listener]: Failed to add to cart for buy now');
-                // Fallback: just redirect to cart
-                window.location.href = '/cart';
+                // Handle error response
+                const errorMessage = data.description || data.message || 'Failed to add product to cart';
+                console.error('NUSENSE [Image Listener]: Failed to add to cart:', errorMessage);
+                
+                // Send error back to iframe
+                if (event.source && event.source !== window) {
+                  event.source.postMessage({
+                    type: 'NUSENSE_ACTION_ERROR',
+                    action: actionType,
+                    error: errorMessage
+                  }, '*');
+                }
+                
+                // Fallback: redirect to cart page
+                const cartUrl = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root)
+                  ? window.Shopify.routes.root + 'cart'
+                  : '/cart';
+                window.location.href = cartUrl;
               }
-            }).catch(function(error) {
-              console.error('NUSENSE [Image Listener]: Error in buy now:', error);
-              window.location.href = '/cart';
             });
-          }
+          })
+          .catch(function(error) {
+            console.error('NUSENSE [Image Listener]: Error in buy now:', error);
+            
+            // Send error back to iframe
+            if (event.source && event.source !== window) {
+              event.source.postMessage({
+                type: 'NUSENSE_ACTION_ERROR',
+                action: actionType,
+                error: 'Network error. Please try again.'
+              }, '*');
+            }
+            
+            // Fallback: redirect to cart
+            const cartUrl = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root)
+              ? window.Shopify.routes.root + 'cart'
+              : '/cart';
+            window.location.href = cartUrl;
+          });
           break;
           
         case 'NUSENSE_ADD_TO_CART':
           // Add product to cart
-          console.log('NUSENSE [Image Listener]: Add to Cart clicked');
-          if (productForm) {
-            const formData = new FormData(productForm);
-            fetch('/cart/add.js', {
-              method: 'POST',
-              body: formData
-            }).then(function(response) {
+          console.log('NUSENSE [Image Listener]: Add to Cart clicked for variant:', variantId);
+          
+          fetch(cartAddUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(cartData)
+          })
+          .then(function(response) {
+            return response.json().then(function(data) {
               if (response.ok) {
-                console.log('NUSENSE [Image Listener]: Product added to cart');
-                // Optionally trigger cart drawer/notification
+                console.log('NUSENSE [Image Listener]: Product added to cart successfully');
+                
+                // Trigger cart drawer/notification events for theme compatibility
                 if (typeof window.dispatchEvent !== 'undefined') {
                   window.dispatchEvent(new CustomEvent('cart:updated'));
+                  window.dispatchEvent(new CustomEvent('cart:add', { detail: data }));
+                }
+                
+                // Refresh cart count if cart drawer exists
+                if (typeof window.theme !== 'undefined' && typeof window.theme.cart !== 'undefined') {
+                  if (typeof window.theme.cart.getCart === 'function') {
+                    window.theme.cart.getCart();
+                  }
+                }
+                
+                // Send success message back to iframe
+                if (event.source && event.source !== window) {
+                  event.source.postMessage({
+                    type: 'NUSENSE_ACTION_SUCCESS',
+                    action: actionType,
+                    cart: data
+                  }, '*');
                 }
               } else {
-                console.error('NUSENSE [Image Listener]: Failed to add to cart');
+                // Handle error response
+                const errorMessage = data.description || data.message || 'Failed to add product to cart';
+                console.error('NUSENSE [Image Listener]: Failed to add to cart:', errorMessage);
+                
+                // Send error back to iframe
+                if (event.source && event.source !== window) {
+                  event.source.postMessage({
+                    type: 'NUSENSE_ACTION_ERROR',
+                    action: actionType,
+                    error: errorMessage
+                  }, '*');
+                }
               }
-            }).catch(function(error) {
-              console.error('NUSENSE [Image Listener]: Error adding to cart:', error);
             });
-          }
+          })
+          .catch(function(error) {
+            console.error('NUSENSE [Image Listener]: Error adding to cart:', error);
+            
+            // Send error back to iframe
+            if (event.source && event.source !== window) {
+              event.source.postMessage({
+                type: 'NUSENSE_ACTION_ERROR',
+                action: actionType,
+                error: 'Network error. Please try again.'
+              }, '*');
+            }
+          });
           break;
           
         case 'NUSENSE_TRY_IN_STORE':
