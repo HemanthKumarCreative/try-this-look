@@ -73,66 +73,81 @@ app.use((req, res, next) => {
 });
 
 // HMAC signature verification middleware for webhooks
+// This middleware MUST return HTTP 401 for invalid signatures to comply with Shopify requirements
 const verifyWebhookSignature = (req, res, next) => {
-  const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
-  const topicHeader = req.get("X-Shopify-Topic");
-  const shopHeader = req.get("X-Shopify-Shop-Domain");
-
-  if (!hmacHeader || !topicHeader || !shopHeader) {
-    return res.status(401).json({
-      error: "Unauthorized",
-      message: "Missing required webhook headers",
-    });
-  }
-
-  if (!apiSecret) {
-    return res.status(500).json({
-      error: "Server configuration error",
-      message: "API secret not configured",
-    });
-  }
-
-  // Calculate HMAC
-  // Shopify sends HMAC as base64-encoded string in X-Shopify-Hmac-Sha256 header
-  // We need to calculate HMAC from raw body and compare with the provided base64 HMAC
-  const calculatedHmacDigest = crypto
-    .createHmac("sha256", apiSecret)
-    .update(req.body)
-    .digest("base64");
-
-  // Compare HMAC signatures using constant-time comparison
-  // Both provided and calculated HMACs are base64-encoded strings
-  const providedHmac = Buffer.from(hmacHeader, "base64");
-  const calculatedHmac = Buffer.from(calculatedHmacDigest, "base64");
-
-  if (providedHmac.length !== calculatedHmac.length) {
-    return res.status(401).json({
-      error: "Unauthorized",
-      message: "Invalid webhook signature",
-    });
-  }
-
-  // Use crypto.timingSafeEqual for constant-time comparison to prevent timing attacks
-  if (!crypto.timingSafeEqual(providedHmac, calculatedHmac)) {
-    return res.status(401).json({
-      error: "Unauthorized",
-      message: "Invalid webhook signature",
-    });
-  }
-
-  // Attach parsed body and webhook metadata to request
   try {
-    req.webhookData = JSON.parse(req.body.toString());
-    req.webhookTopic = topicHeader;
-    req.webhookShop = shopHeader;
+    const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
+    const topicHeader = req.get("X-Shopify-Topic");
+    const shopHeader = req.get("X-Shopify-Shop-Domain");
+
+    // Missing required headers - return 401
+    if (!hmacHeader || !topicHeader || !shopHeader) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Missing required webhook headers",
+      });
+    }
+
+    // Missing API secret - return 500 (server error, not auth error)
+    if (!apiSecret) {
+      return res.status(500).json({
+        error: "Server configuration error",
+        message: "API secret not configured",
+      });
+    }
+
+    // Ensure body is a Buffer for HMAC calculation
+    const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || "");
+
+    // Calculate HMAC from raw body
+    // Shopify sends HMAC as base64-encoded string in X-Shopify-Hmac-Sha256 header
+    const calculatedHmacDigest = crypto
+      .createHmac("sha256", apiSecret)
+      .update(rawBody)
+      .digest("base64");
+
+    // Compare base64 strings using timing-safe comparison
+    // Convert both base64 strings to buffers for constant-time comparison
+    const providedHmacBuffer = Buffer.from(hmacHeader, "utf8");
+    const calculatedHmacBuffer = Buffer.from(calculatedHmacDigest, "utf8");
+
+    // Length mismatch - return 401
+    if (providedHmacBuffer.length !== calculatedHmacBuffer.length) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Invalid webhook signature",
+      });
+    }
+
+    // Use crypto.timingSafeEqual for constant-time comparison to prevent timing attacks
+    if (!crypto.timingSafeEqual(providedHmacBuffer, calculatedHmacBuffer)) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Invalid webhook signature",
+      });
+    }
+
+    // HMAC is valid - parse body and attach metadata
+    try {
+      req.webhookData = JSON.parse(rawBody.toString());
+      req.webhookTopic = topicHeader;
+      req.webhookShop = shopHeader;
+    } catch (error) {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "Invalid JSON in webhook body",
+      });
+    }
+
+    next();
   } catch (error) {
-    return res.status(400).json({
-      error: "Bad Request",
-      message: "Invalid JSON in webhook body",
+    // Any unexpected error during validation - return 401 for security
+    console.error("Error in webhook signature verification:", error);
+    return res.status(401).json({
+      error: "Unauthorized",
+      message: "Webhook signature verification failed",
     });
   }
-
-  next();
 };
 
 // Serve static files only in non-Vercel environment
