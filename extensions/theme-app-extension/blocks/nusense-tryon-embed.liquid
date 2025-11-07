@@ -30,7 +30,7 @@
       buttonStyle: {{ block.settings.button_style | default: 'minimal' | json }},
       headerSelector: {{ block.settings.header_selector | default: 'header, .header, .site-header, [role="banner"]' | json }},
       insertPosition: {{ block.settings.insert_position | default: 'end' | json }},
-      insertSelector: {{ block.settings.insert_selector | default: '' | json }},
+      insertSelector: {{ block.settings.insert_selector | json }},
       debug: {{ block.settings.enable_debug | default: false }}
     };
     
@@ -205,8 +205,8 @@
       // Find header element
       let header = null;
       
-      // Try custom selector first
-      if (config.insertSelector) {
+      // Try custom selector first (if provided and not empty)
+      if (config.insertSelector && typeof config.insertSelector === 'string' && config.insertSelector.trim() !== '') {
         header = document.querySelector(config.insertSelector);
         if (header) {
           log('Found header using custom selector', config.insertSelector);
@@ -449,7 +449,6 @@
       "type": "text",
       "id": "insert_selector",
       "label": "Custom Insert Selector (optional)",
-      "default": "",
       "info": "Optional: Specific CSS selector where button should be inserted. Leave empty to use header selector."
     }
   ]
