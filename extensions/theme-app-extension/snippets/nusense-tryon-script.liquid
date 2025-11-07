@@ -16,16 +16,31 @@
   };
   
   // Product data for NUSENSE widget
+  // Extract ALL product images from product.media (modern Shopify themes) or product.images (legacy)
   {% if product %}
+  {% comment %} 
+    Priority 1: Use product.media and filter for images only (Shopify 2.0 themes)
+    Priority 2: Fallback to product.images (legacy themes)
+  {% endcomment %}
+  {% assign product_images_from_media = product.media | where: 'media_type', 'image' %}
+  
   window.NUSENSE_PRODUCT_DATA = {
     id: {{ product.id }},
     title: {{ product.title | json }},
     price: "{{ product.price | money }}",
     priceRaw: {{ product.price | money_without_currency }},
     images: [
-      {% for image in product.images limit: 10 %}
-        "{{ image | image_url: width: 800 }}"{% unless forloop.last %},{% endunless %}
-      {% endfor %}
+      {% comment %} Extract images from product.media (filtered to images only) {% endcomment %}
+      {% if product_images_from_media.size > 0 %}
+        {% for media_item in product_images_from_media limit: 20 %}
+          "{{ media_item | image_url: width: 1200 }}"{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      {% else %}
+        {% comment %} Fallback: use product.images (legacy themes) {% endcomment %}
+        {% for image in product.images limit: 20 %}
+          "{{ image | image_url: width: 1200 }}"{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      {% endif %}
     ],
     description: {{ product.description | strip_html | truncate: 200 | json }},
     variants: [
@@ -116,11 +131,39 @@
     function extractFromShopifyJSON() {
       const images = [];
       try {
-        // Method 1: Check script tags with type="application/json"
+        // Method 1: Check script tags with type="application/json" (Shopify 2.0 themes)
         const scripts = document.querySelectorAll('script[type="application/json"]');
         for (const script of scripts) {
           try {
             const data = JSON.parse(script.textContent || '{}');
+            
+            // Check for media array (Shopify 2.0 themes - preferred method)
+            if (data.product && data.product.media) {
+              const media = data.product.media;
+              if (Array.isArray(media)) {
+                media.forEach(function(item) {
+                  // Filter for images only
+                  if (item.media_type === 'image' || !item.media_type) {
+                    if (item.preview && item.preview.image && item.preview.image.src) {
+                      images.push(item.preview.image.src);
+                    } else if (item.src) {
+                      images.push(item.src);
+                    } else if (item.url) {
+                      images.push(item.url);
+                    }
+                  } else if (item.preview_image && item.preview_image.src) {
+                    // For videos/models, use preview image
+                    images.push(item.preview_image.src);
+                  }
+                });
+                if (images.length > 0) {
+                  log('Extracted images from Shopify media array', images.length);
+                  return images;
+                }
+              }
+            }
+            
+            // Check for images array (legacy themes)
             if (data.product && data.product.images) {
               const productImages = data.product.images;
               if (Array.isArray(productImages)) {
@@ -136,24 +179,7 @@
                   }
                 });
                 if (images.length > 0) {
-                  log('Extracted images from Shopify JSON', images.length);
-                  return images;
-                }
-              }
-            }
-            // Check for media array (Shopify 2.0 themes)
-            if (data.product && data.product.media) {
-              const media = data.product.media;
-              if (Array.isArray(media)) {
-                media.forEach(function(item) {
-                  if (item.preview && item.preview.image) {
-                    images.push(item.preview.image.src);
-                  } else if (item.src) {
-                    images.push(item.src);
-                  }
-                });
-                if (images.length > 0) {
-                  log('Extracted images from Shopify media array', images.length);
+                  log('Extracted images from Shopify JSON images array', images.length);
                   return images;
                 }
               }
@@ -163,9 +189,20 @@
           }
         }
         
-        // Method 2: Check window.Shopify.product (if available)
+        // Method 2: Check window.Shopify.product (legacy themes)
         if (typeof window.Shopify !== 'undefined' && window.Shopify.product) {
-          if (window.Shopify.product.images) {
+          if (window.Shopify.product.media) {
+            // Prefer media array (Shopify 2.0)
+            window.Shopify.product.media.forEach(function(item) {
+              if (item.media_type === 'image' || !item.media_type) {
+                if (item.src) images.push(item.src);
+                else if (item.url) images.push(item.url);
+                else if (item.preview_image && item.preview_image.src) images.push(item.preview_image.src);
+              }
+            });
+          }
+          if (images.length === 0 && window.Shopify.product.images) {
+            // Fallback to images array
             window.Shopify.product.images.forEach(function(img) {
               if (typeof img === 'string') {
                 images.push(img);
@@ -173,10 +210,10 @@
                 images.push(img.src);
               }
             });
-            if (images.length > 0) {
-              log('Extracted images from window.Shopify.product', images.length);
-              return images;
-            }
+          }
+          if (images.length > 0) {
+            log('Extracted images from window.Shopify.product', images.length);
+            return images;
           }
         }
       } catch (e) {
@@ -241,31 +278,40 @@
     }
     
     // Get product images with priority order
+    // This function runs on the Shopify product page (parent window) to extract images
+    // and send them to the widget iframe
     function getProductImages() {
       let images = [];
       
       // Priority 1: Use NUSENSE_PRODUCT_DATA (most reliable - from Liquid)
+      // This is populated by the Liquid template with product.media/product.images
       {% if product %}
-      if (window.NUSENSE_PRODUCT_DATA && window.NUSENSE_PRODUCT_DATA.images) {
-        images = window.NUSENSE_PRODUCT_DATA.images;
-        log('Using images from NUSENSE_PRODUCT_DATA', images.length);
-        return images;
+      if (window.NUSENSE_PRODUCT_DATA && window.NUSENSE_PRODUCT_DATA.images && Array.isArray(window.NUSENSE_PRODUCT_DATA.images)) {
+        images = window.NUSENSE_PRODUCT_DATA.images.filter(function(img) {
+          return img && typeof img === 'string' && img.trim().length > 0;
+        });
+        if (images.length > 0) {
+          log('Using images from NUSENSE_PRODUCT_DATA (Liquid template)', images.length);
+          return images;
+        }
       }
       {% endif %}
       
-      // Priority 2: Extract from Shopify product JSON
+      // Priority 2: Extract from Shopify product JSON (from theme's script tags)
       images = extractFromShopifyJSON();
       if (images.length > 0) {
+        log('Using images from Shopify JSON', images.length);
         return images;
       }
       
-      // Priority 3: Extract from DOM (fallback)
+      // Priority 3: Extract from DOM (fallback - less reliable)
       images = extractFromDOM();
       if (images.length > 0) {
+        log('Using images from DOM extraction', images.length);
         return images;
       }
       
-      log('No product images found');
+      log('No product images found on Shopify page');
       return [];
     }
     
