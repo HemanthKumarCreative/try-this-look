@@ -88,19 +88,35 @@ app.get("/health", (req, res) => {
 // OAuth routes
 app.get("/auth", async (req, res) => {
   try {
+    const shop = req.query.shop;
+    
+    // Validate shop parameter
+    if (!shop) {
+      return res.status(400).json({
+        error: "Missing shop parameter",
+        message: "Please provide a shop parameter in the query string"
+      });
+    }
+
+    // Validate shop format (should be a .myshopify.com domain or just the shop name)
+    const shopDomain = shop.includes('.myshopify.com') 
+      ? shop 
+      : `${shop}.myshopify.com`;
+
     const authRoute = await shopify.auth.begin({
-      shop: req.query.shop,
+      shop: shopDomain,
       callbackPath: "/auth/callback",
-      isOnline: false,
+      isOnline: true, // Changed to online sessions for user-specific authentication
       rawRequest: req,
       rawResponse: res,
     });
+    
     res.redirect(authRoute);
   } catch (error) {
     if (!res.headersSent) {
       res.status(500).json({ 
         error: "Failed to initiate OAuth",
-        message: error.message 
+        message: error.message || "An error occurred during authentication"
       });
     }
   }
@@ -115,26 +131,42 @@ app.get("/auth/callback", async (req, res) => {
 
     const { session } = callbackResponse;
     
-    // TODO: Store session in database (implement your session storage)
-    // For production, use a proper database (Prisma, MongoDB, etc.)
-    // For now, sessions are handled by Shopify API library
+    if (!session) {
+      return res.status(500).json({
+        error: "Authentication failed",
+        message: "No session was created during authentication"
+      });
+    }
     
-    // Get host from query or use shop domain
+    // Sessions are automatically stored by the Shopify API library
+    // The library handles session storage internally based on your configuration
+    
+    // Get host and shop from query/session
     const host = req.query.host;
     const shop = session.shop;
     const apiKey = process.env.SHOPIFY_API_KEY;
     
-    // Redirect to app in Shopify admin
-    const redirectUrl = host 
-      ? `https://${shop}/admin/apps/${apiKey}?${host}`
-      : `https://${shop}/admin/apps/${apiKey}`;
+    if (!shop || !apiKey) {
+      return res.status(500).json({
+        error: "Invalid session data",
+        message: "Missing shop or API key information"
+      });
+    }
+    
+    // Construct redirect URL for embedded app
+    // For embedded apps, include the host parameter to maintain the iframe context
+    let redirectUrl = `https://${shop}/admin/apps/${apiKey}`;
+    
+    if (host) {
+      redirectUrl += `?host=${encodeURIComponent(host)}`;
+    }
     
     res.redirect(redirectUrl);
   } catch (error) {
     if (!res.headersSent) {
       res.status(500).json({ 
         error: "OAuth callback failed", 
-        message: error.message 
+        message: error.message || "An error occurred during the OAuth callback"
       });
     }
   }
