@@ -347,7 +347,20 @@
     function getRecommendedProductsImages(mainProductImages) {
       const allImages = [];
       const seenUrls = new Set();
+      const seenNormalizedUrls = new Set(); // Track normalized URLs (without query params) for better deduplication
       const mainProductImageSet = new Set();
+      
+      // Helper to normalize URL for comparison (remove query params)
+      function normalizeUrlForComparison(url) {
+        try {
+          const urlObj = new URL(url, window.location.origin);
+          urlObj.search = ''; // Remove query params
+          urlObj.hash = ''; // Remove hash
+          return urlObj.href;
+        } catch (e) {
+          return null;
+        }
+      }
       
       // Normalize main product images for comparison
       if (mainProductImages && Array.isArray(mainProductImages)) {
@@ -357,11 +370,10 @@
             if (normalized) {
               mainProductImageSet.add(normalized);
               // Also add without query params for comparison
-              try {
-                const url = new URL(normalized);
-                url.search = '';
-                mainProductImageSet.add(url.href);
-              } catch (e) {}
+              const normalizedForComparison = normalizeUrlForComparison(normalized);
+              if (normalizedForComparison) {
+                mainProductImageSet.add(normalizedForComparison);
+              }
             }
           } catch (e) {}
         });
@@ -375,24 +387,35 @@
             return true;
           }
           // Also check without query params
-          try {
-            const urlObj = new URL(normalized || url, window.location.origin);
-            urlObj.search = '';
-            if (mainProductImageSet.has(urlObj.href)) {
-              return true;
-            }
-          } catch (e) {}
+          const normalizedForComparison = normalizeUrlForComparison(normalized || url);
+          if (normalizedForComparison && mainProductImageSet.has(normalizedForComparison)) {
+            return true;
+          }
         } catch (e) {}
         return false;
       }
       
       // Helper to add image if valid and not duplicate
       function addImage(url) {
-        if (!url || seenUrls.has(url)) return;
+        if (!url) return;
         
         try {
           const cleanUrl = ensureAbsoluteUrl(url);
-          if (!cleanUrl || seenUrls.has(cleanUrl)) return;
+          if (!cleanUrl) return;
+          
+          // Normalize URL for comparison (without query params)
+          const normalizedForComparison = normalizeUrlForComparison(cleanUrl);
+          if (!normalizedForComparison) return;
+          
+          // Check if we've already seen this normalized URL (deduplication)
+          if (seenNormalizedUrls.has(normalizedForComparison)) {
+            return; // Already added this image (duplicate)
+          }
+          
+          // Also check the full URL
+          if (seenUrls.has(cleanUrl)) {
+            return;
+          }
           
           // Skip if it's a main product image
           if (isMainProductImage(cleanUrl)) return;
@@ -417,6 +440,7 @@
             allImages.push(cleanUrl);
             seenUrls.add(cleanUrl);
             seenUrls.add(url);
+            seenNormalizedUrls.add(normalizedForComparison);
           }
         } catch (e) {
           // Skip invalid URLs

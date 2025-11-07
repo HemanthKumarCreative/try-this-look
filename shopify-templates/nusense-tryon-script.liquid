@@ -162,7 +162,20 @@
       function extractRecommendedProductsImages(mainProductImages) {
         const allImages = [];
         const seenUrls = new Set();
+        const seenNormalizedUrls = new Set(); // Track normalized URLs (without query params) for better deduplication
         const mainProductImageSet = new Set();
+
+        // Helper to normalize URL for comparison (remove query params)
+        function normalizeUrlForComparison(url) {
+          try {
+            const urlObj = new URL(url, window.location.origin);
+            urlObj.search = ''; // Remove query params
+            urlObj.hash = ''; // Remove hash
+            return urlObj.href;
+          } catch (e) {
+            return null;
+          }
+        }
 
         // Normalize main product images for comparison
         if (mainProductImages && Array.isArray(mainProductImages)) {
@@ -171,8 +184,10 @@
               const urlObj = new URL(img, window.location.origin);
               mainProductImageSet.add(urlObj.href);
               // Also add without query params for comparison
-              urlObj.search = '';
-              mainProductImageSet.add(urlObj.href);
+              const normalizedForComparison = normalizeUrlForComparison(urlObj.href);
+              if (normalizedForComparison) {
+                mainProductImageSet.add(normalizedForComparison);
+              }
             } catch (e) {}
           });
         }
@@ -185,8 +200,8 @@
               return true;
             }
             // Also check without query params
-            urlObj.search = '';
-            if (mainProductImageSet.has(urlObj.href)) {
+            const normalizedForComparison = normalizeUrlForComparison(urlObj.href);
+            if (normalizedForComparison && mainProductImageSet.has(normalizedForComparison)) {
               return true;
             }
           } catch (e) {}
@@ -195,13 +210,25 @@
 
         // Helper to add image if valid and not duplicate
         function addImage(url) {
-          if (!url || seenUrls.has(url)) return;
+          if (!url) return;
           
           try {
             const urlObj = new URL(url, window.location.origin);
             const absUrl = urlObj.href;
             
-            if (seenUrls.has(absUrl)) return;
+            // Normalize URL for comparison (without query params)
+            const normalizedForComparison = normalizeUrlForComparison(absUrl);
+            if (!normalizedForComparison) return;
+            
+            // Check if we've already seen this normalized URL (deduplication)
+            if (seenNormalizedUrls.has(normalizedForComparison)) {
+              return; // Already added this image (duplicate)
+            }
+            
+            // Also check the full URL
+            if (seenUrls.has(absUrl)) {
+              return;
+            }
             
             // Skip if it's a main product image
             if (isMainProductImage(absUrl)) return;
@@ -226,6 +253,7 @@
               allImages.push(absUrl);
               seenUrls.add(absUrl);
               seenUrls.add(url);
+              seenNormalizedUrls.add(normalizedForComparison);
             }
           } catch (e) {
             // Skip invalid URLs
