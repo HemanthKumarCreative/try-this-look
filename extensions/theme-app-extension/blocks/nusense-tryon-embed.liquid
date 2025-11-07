@@ -1,61 +1,60 @@
 {% comment %}
-  NUSENSE TryON App Embed Block
-  This app embed block will appear in "Theme Settings > App embeds"
-  It initializes the widget functionality and image extraction listener
-  Can inject a try-on button into the header next to the cart icon
+  Bloc d'intégration d'application NUSENSE TryON
+  Ce bloc d'intégration apparaîtra dans "Paramètres du thème > Intégrations d'applications"
+  Il initialise la fonctionnalité du widget et l'écouteur d'extraction d'images
+  Peut injecter un bouton d'essayage dans l'en-tête à côté de l'icône du panier
 {% endcomment %}
 
-{% comment %} Include the snippet that sets up image extraction and communication {% endcomment %}
+{% comment %} Inclure le snippet qui configure l'extraction d'images et la communication {% endcomment %}
 {% render 'nusense-tryon-script' %}
 
 {% comment %}
-  Header Button Injection Script
-  This script injects a try-on button into the header next to the cart icon
-  Works on all pages, not just product pages
+  Script d'injection du bouton dans l'en-tête
+  Ce script injecte un bouton d'essayage dans l'en-tête à côté de l'icône du panier
+  Fonctionne sur toutes les pages, pas seulement les pages produit
 {% endcomment %}
 {% if block.settings.show_header_button %}
 <script>
   (function() {
     'use strict';
     
-    // Configuration from block settings
+    // Configuration à partir des paramètres du bloc
     const config = {
       widgetUrl: {{ block.settings.widget_url | default: shop.metafields.nusense.widget_url | default: 'https://try-this-look.vercel.app' | json }},
-      buttonText: {{ block.settings.button_text | default: 'Try On' | json }},
+      buttonText: {{ block.settings.button_text | default: 'Essayer' | json }},
       buttonIcon: {{ block.settings.button_icon | default: '✨' | json }},
       buttonStyle: {{ block.settings.button_style | default: 'minimal' | json }},
-      positionStrategy: {{ block.settings.position_strategy | default: 'logo' | json }},
-      positionRelative: {{ block.settings.position_relative | default: 'after' | json }},
-      logoSelector: {{ block.settings.logo_selector | json }},
-      cartIconSelector: {{ block.settings.cart_icon_selector | default: 'a[href*="/cart"], .cart-icon, .cart-link, [data-cart-icon], .header__icon--cart, .site-header__cart, #cart-icon, .icon-cart, button[aria-label*="cart" i], a[aria-label*="cart" i], .header__cart, .cart, [data-cart]' | json }},
-      customSelector: {{ block.settings.custom_selector | json }},
+      positionLeft: {{ block.settings.position_left | default: '' | json }},
+      positionRight: {{ block.settings.position_right | default: '' | json }},
+      positionTop: {{ block.settings.position_top | default: '' | json }},
+      positionBottom: {{ block.settings.position_bottom | default: '' | json }},
       debug: {{ block.settings.enable_debug | default: false }}
     };
     
-    // Product data (available on product pages)
+    // Données produit (disponibles sur les pages produit)
     const productId = {% if product %}{{ product.id | json }}{% else %}null{% endif %};
     const isProductPage = productId !== null;
     
     function log(message, data) {
       if (config.debug) {
-        console.log('NUSENSE [Header Button]:', message, data || '');
+        console.log('NUSENSE [Bouton En-tête]:', message, data || '');
       }
     }
     
     function createButton() {
-      // Create button element
+      // Créer l'élément bouton
       const button = document.createElement('button');
       button.type = 'button';
       button.id = 'nusense-header-tryon-btn';
       button.className = 'nusense-tryon-header-button';
       button.setAttribute('aria-label', config.buttonText);
       
-      // Set button content - icon only for header (compact)
+      // Définir le contenu du bouton - icône uniquement pour l'en-tête (compact)
       button.innerHTML = `
         <span class="nusense-button-icon">${config.buttonIcon}</span>
       `;
       
-      // Apply button style classes
+      // Appliquer les classes de style du bouton
       const styleClasses = {
         'primary': 'nusense-btn-primary',
         'secondary': 'nusense-btn-secondary',
@@ -64,20 +63,52 @@
       };
       button.classList.add(styleClasses[config.buttonStyle] || styleClasses['minimal']);
       
-      // Add click handler
+      // Appliquer le positionnement absolu
+      button.style.position = 'absolute';
+      button.style.zIndex = '9999';
+      
+      // Appliquer les valeurs de positionnement en pixels
+      if (config.positionLeft && config.positionLeft.trim() !== '') {
+        const leftValue = config.positionLeft.trim();
+        button.style.left = leftValue.includes('px') ? leftValue : leftValue + 'px';
+      }
+      
+      if (config.positionRight && config.positionRight.trim() !== '') {
+        const rightValue = config.positionRight.trim();
+        button.style.right = rightValue.includes('px') ? rightValue : rightValue + 'px';
+      }
+      
+      if (config.positionTop && config.positionTop.trim() !== '') {
+        const topValue = config.positionTop.trim();
+        button.style.top = topValue.includes('px') ? topValue : topValue + 'px';
+      }
+      
+      if (config.positionBottom && config.positionBottom.trim() !== '') {
+        const bottomValue = config.positionBottom.trim();
+        button.style.bottom = bottomValue.includes('px') ? bottomValue : bottomValue + 'px';
+      }
+      
+      log('Positionnement absolu appliqué', {
+        left: config.positionLeft,
+        right: config.positionRight,
+        top: config.positionTop,
+        bottom: config.positionBottom
+      });
+      
+      // Ajouter le gestionnaire de clic
       button.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
         
-        // Handle click based on page type
+        // Gérer le clic selon le type de page
         if (isProductPage && productId) {
-          // Product page: open widget with product
+          // Page produit : ouvrir le widget avec le produit
           const widgetUrl = config.widgetUrl + '/widget?product_id=' + productId;
-          log('Opening widget modal on product page', { productId, widgetUrl });
+          log('Ouverture de la modale du widget sur la page produit', { productId, widgetUrl });
           openWidgetModal(widgetUrl);
         } else {
-          // Non-product page: show message or redirect to first product
-          log('Button clicked on non-product page');
+          // Page non-produit : afficher un message ou rediriger vers le premier produit
+          log('Bouton cliqué sur une page non-produit');
           handleNonProductPageClick();
         }
       });
@@ -86,7 +117,7 @@
     }
     
     function openWidgetModal(widgetUrl) {
-      // Create modal overlay
+      // Créer l'overlay de la modale
       const overlay = document.createElement('div');
       overlay.id = 'nusense-widget-overlay';
       overlay.className = 'nusense-widget-overlay';
@@ -104,7 +135,7 @@
         backdrop-filter: blur(4px);
       `;
       
-      // Create container for iframe
+      // Créer le conteneur pour l'iframe
       const container = document.createElement('div');
       container.className = 'nusense-widget-container';
       container.style.cssText = `
@@ -118,7 +149,7 @@
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       `;
       
-      // Close button
+      // Bouton de fermeture
       const closeBtn = document.createElement('button');
       closeBtn.type = 'button';
       closeBtn.className = 'nusense-widget-close';
@@ -150,7 +181,7 @@
         this.style.transform = 'scale(1)';
       });
       
-      // Close function
+      // Fonction de fermeture
       const closeWidget = function() {
         if (overlay && overlay.parentNode) {
           document.body.removeChild(overlay);
@@ -165,7 +196,7 @@
         }
       });
       
-      // Create iframe
+      // Créer l'iframe
       const iframe = document.createElement('iframe');
       iframe.src = widgetUrl;
       iframe.style.cssText = `
@@ -177,16 +208,16 @@
       iframe.allow = 'camera; microphone';
       iframe.setAttribute('allowfullscreen', 'true');
       
-      // Assemble modal
+      // Assembler la modale
       container.appendChild(closeBtn);
       container.appendChild(iframe);
       overlay.appendChild(container);
       document.body.appendChild(overlay);
       
-      // Prevent body scroll
+      // Empêcher le défilement du corps
       document.body.style.overflow = 'hidden';
       
-      // Close on escape key
+      // Fermer avec la touche Échap
       const closeHandler = function(e) {
         if (e.key === 'Escape') {
           closeWidget();
@@ -195,7 +226,7 @@
       };
       document.addEventListener('keydown', closeHandler);
       
-      // Listen for close messages from iframe
+      // Écouter les messages de fermeture de l'iframe
       const messageHandler = function(e) {
         if (e.data && e.data.type === 'NUSENSE_CLOSE_WIDGET') {
           closeWidget();
@@ -206,11 +237,11 @@
     }
     
     function handleNonProductPageClick() {
-      // On non-product pages, show a message or redirect to products
-      // Option 1: Show alert (simple)
-      alert('Please visit a product page to use the Try-On feature.');
+      // Sur les pages non-produit, afficher un message ou rediriger vers les produits
+      // Option 1 : Afficher une alerte (simple)
+      alert('Veuillez visiter une page produit pour utiliser la fonctionnalité d\'essayage virtuel.');
       
-      // Option 2: Redirect to collections/products page (uncomment if preferred)
+      // Option 2 : Rediriger vers la page collections/produits (décommenter si préféré)
       // const collectionsUrl = '/collections/all';
       // if (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) {
       //   window.location.href = window.Shopify.routes.root + collectionsUrl;
@@ -219,179 +250,55 @@
       // }
     }
     
-    function findLogo() {
-      // Try custom selector first if provided
-      if (config.logoSelector && typeof config.logoSelector === 'string' && config.logoSelector.trim() !== '') {
-        const logo = document.querySelector(config.logoSelector);
-        if (logo) {
-          log('Found logo using custom selector', config.logoSelector);
-          return logo;
-        }
-      }
-      
-      // Try to find logo using common selectors
-      const logoSelectors = [
-        '.logo',
-        '.site-logo',
-        '.header__logo',
-        '.site-header__logo',
-        '.header-logo',
-        'a[href="/"]',
-        'a[href*="/"] img',
-        '.logo img',
-        '[data-logo]',
-        'h1 a',
-        '.brand',
-        '.site-brand'
-      ];
-      
-      for (let i = 0; i < logoSelectors.length; i++) {
-        const logo = document.querySelector(logoSelectors[i]);
-        if (logo) {
-          log('Found logo using selector', logoSelectors[i]);
-          return logo;
-        }
-      }
-      
-      log('Logo not found using selectors');
-      return null;
-    }
-    
-    function findCartIcon() {
-      // Try to find cart icon using common selectors
-      const selectors = config.cartIconSelector.split(',').map(s => s.trim());
-      
-      for (let i = 0; i < selectors.length; i++) {
-        const cartIcon = document.querySelector(selectors[i]);
-        if (cartIcon) {
-          log('Found cart icon using selector', selectors[i]);
-          return cartIcon;
-        }
-      }
-      
-      log('Cart icon not found using selectors');
-      return null;
-    }
-    
-    function findCustomElement() {
-      if (!config.customSelector || typeof config.customSelector !== 'string' || config.customSelector.trim() === '') {
-        return null;
-      }
-      
-      const element = document.querySelector(config.customSelector);
-      if (element) {
-        log('Found custom element using selector', config.customSelector);
-        return element;
-      }
-      
-      log('Custom element not found using selector', config.customSelector);
-      return null;
-    }
-    
-    function findTargetElement() {
-      // Find target element based on position strategy
-      switch (config.positionStrategy) {
-        case 'logo':
-          return findLogo();
-        case 'cart':
-          return findCartIcon();
-        case 'custom':
-          return findCustomElement();
-        default:
-          return findLogo(); // Default to logo
-      }
-    }
-    
     function injectButton() {
-      // Check if button already exists
+      // Vérifier si le bouton existe déjà
       if (document.getElementById('nusense-header-tryon-btn')) {
-        log('Button already exists, skipping injection');
+        log('Le bouton existe déjà, injection ignorée');
         return;
       }
       
-      // Find target element based on position strategy
-      const targetElement = findTargetElement();
-      
-      if (!targetElement) {
-        log('Target element not found, cannot inject button');
-        return;
-      }
-      
-      // Create button
+      // Créer le bouton
       const button = createButton();
       
-      // Find the header container
-      let header = targetElement.closest('header');
+      // Trouver le conteneur de l'en-tête
+      let header = document.querySelector('header');
       if (!header) {
-        // Try common header selectors
+        // Essayer des sélecteurs d'en-tête communs
         const headerSelectors = [
-          'header',
           '.header',
           '.site-header',
           '[role="banner"]'
         ];
         for (let i = 0; i < headerSelectors.length; i++) {
           const found = document.querySelector(headerSelectors[i]);
-          if (found && found.contains(targetElement)) {
+          if (found) {
             header = found;
-            log('Found header using selector', headerSelectors[i]);
+            log('En-tête trouvé avec le sélecteur', headerSelectors[i]);
             break;
           }
         }
       }
       
       if (!header) {
-        log('Header not found, using target element parent');
-        header = targetElement.parentElement;
+        log('En-tête non trouvé, utilisation du body');
+        header = document.body;
       }
       
-      if (!header) {
-        log('Could not find suitable container');
-        return;
-      }
-      
-      // Find the container that holds the target element (usually a div or nav)
-      let targetContainer = targetElement.parentElement;
-      
-      // If target is in a link, get the link's parent
-      if (targetElement.tagName === 'IMG' && targetElement.parentElement && targetElement.parentElement.tagName === 'A') {
-        targetContainer = targetElement.parentElement.parentElement;
-        log('Target element is in a link, using link parent as container');
-      }
-      
-      // If target container is the header itself, insert directly in header
-      if (targetContainer === header || !targetContainer) {
-        // Insert button relative to target element in header
-        if (config.positionRelative === 'before') {
-          header.insertBefore(button, targetElement);
-          log('Button inserted before target element in header');
-        } else {
-          if (targetElement.nextSibling) {
-            header.insertBefore(button, targetElement.nextSibling);
-            log('Button inserted after target element in header');
-          } else {
-            header.appendChild(button);
-            log('Button appended to header after target element');
-          }
-        }
-      } else {
-        // Insert button relative to target element in its container
-        if (config.positionRelative === 'before') {
-          targetContainer.insertBefore(button, targetElement);
-          log('Button inserted before target element in container');
-        } else {
-          if (targetElement.nextSibling) {
-            targetContainer.insertBefore(button, targetElement.nextSibling);
-            log('Button inserted after target element in container');
-          } else {
-            targetContainer.appendChild(button);
-            log('Button appended to container after target element');
-          }
+      // S'assurer que le header a position: relative pour le positionnement absolu
+      if (header) {
+        const headerStyle = window.getComputedStyle(header);
+        if (headerStyle.position === 'static') {
+          header.style.position = 'relative';
+          log('Position relative appliquée à l\'en-tête pour le positionnement absolu');
         }
       }
+      
+      // Ajouter le bouton à l'en-tête
+      header.appendChild(button);
+      log('Bouton ajouté à l\'en-tête avec positionnement absolu');
     }
     
-    // Wait for DOM to be ready
+    // Attendre que le DOM soit prêt
     function tryInject() {
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
@@ -402,7 +309,7 @@
       }
     }
     
-    // Try multiple times to handle dynamic loading
+    // Essayer plusieurs fois pour gérer le chargement dynamique
     tryInject();
     setTimeout(tryInject, 500);
     setTimeout(tryInject, 1000);
@@ -491,57 +398,57 @@
 
 {% schema %}
 {
-  "name": "NUSENSE Try-On Widget",
+  "name": "Widget NUSENSE Try-On",
   "target": "body",
   "settings": [
     {
       "type": "text",
       "id": "widget_url",
-      "label": "Widget URL",
+      "label": "URL du Widget",
       "default": "https://try-this-look.vercel.app",
-      "info": "The URL where your widget is hosted"
+      "info": "L'URL où votre widget est hébergé"
     },
     {
       "type": "checkbox",
       "id": "enable_debug",
-      "label": "Enable Debug Mode",
+      "label": "Activer le Mode Débogage",
       "default": false,
-      "info": "Enable console logging for troubleshooting"
+      "info": "Activer la journalisation de la console pour le dépannage"
     },
     {
       "type": "header",
-      "content": "Header Button Settings"
+      "content": "Paramètres du Bouton d'En-tête"
     },
     {
       "type": "checkbox",
       "id": "show_header_button",
-      "label": "Show Try-On Button in Header",
+      "label": "Afficher le Bouton d'Essayage dans l'En-tête",
       "default": true,
-      "info": "Automatically inject a try-on button next to the cart icon in the header on all pages"
+      "info": "Injecter automatiquement un bouton d'essayage à côté de l'icône du panier dans l'en-tête sur toutes les pages"
     },
     {
       "type": "text",
       "id": "button_icon",
-      "label": "Button Icon (emoji)",
+      "label": "Icône du Bouton (emoji)",
       "default": "✨",
-      "info": "Emoji or icon to display on the button (icon only for compact header display)"
+      "info": "Emoji ou icône à afficher sur le bouton (icône uniquement pour un affichage compact dans l'en-tête)"
     },
     {
       "type": "select",
       "id": "button_style",
-      "label": "Button Style",
+      "label": "Style du Bouton",
       "options": [
         {
           "value": "primary",
-          "label": "Primary (Black background)"
+          "label": "Principal (Fond noir)"
         },
         {
           "value": "secondary",
-          "label": "Secondary (Gray background)"
+          "label": "Secondaire (Fond gris)"
         },
         {
           "value": "outline",
-          "label": "Outline (Border only)"
+          "label": "Contour (Bordure uniquement)"
         },
         {
           "value": "minimal",
@@ -549,68 +456,35 @@
         }
       ],
       "default": "minimal",
-      "info": "Visual style of the button"
+      "info": "Style visuel du bouton"
     },
     {
       "type": "header",
-      "content": "Positioning Settings"
-    },
-    {
-      "type": "select",
-      "id": "position_strategy",
-      "label": "Position Relative To",
-      "options": [
-        {
-          "value": "logo",
-          "label": "Logo (default)"
-        },
-        {
-          "value": "cart",
-          "label": "Cart Icon"
-        },
-        {
-          "value": "custom",
-          "label": "Custom Element"
-        }
-      ],
-      "default": "logo",
-      "info": "Choose which element to position the button relative to"
-    },
-    {
-      "type": "select",
-      "id": "position_relative",
-      "label": "Button Position",
-      "options": [
-        {
-          "value": "before",
-          "label": "Before (to the left)"
-        },
-        {
-          "value": "after",
-          "label": "After (to the right)"
-        }
-      ],
-      "default": "after",
-      "info": "Position the button before or after the target element"
+      "content": "Paramètres de Positionnement"
     },
     {
       "type": "text",
-      "id": "logo_selector",
-      "label": "Logo Selector (CSS) - Optional",
-      "info": "Optional: Custom CSS selector to find the logo. If not specified, common selectors will be used."
+      "id": "position_left",
+      "label": "Position Gauche (px)",
+      "info": "Distance depuis la gauche en pixels (ex: 20px ou 20). Laissez vide pour ne pas définir."
     },
     {
       "type": "text",
-      "id": "cart_icon_selector",
-      "label": "Cart Icon Selector (CSS) - Optional",
-      "default": "a[href*=\"/cart\"], .cart-icon, .cart-link, [data-cart-icon], .header__icon--cart, .site-header__cart, #cart-icon, .icon-cart, button[aria-label*=\"cart\" i], a[aria-label*=\"cart\" i], .header__cart, .cart, [data-cart]",
-      "info": "Optional: Custom CSS selector to find the cart icon. If not specified, common selectors will be used."
+      "id": "position_right",
+      "label": "Position Droite (px)",
+      "info": "Distance depuis la droite en pixels (ex: 20px ou 20). Laissez vide pour ne pas définir."
     },
     {
       "type": "text",
-      "id": "custom_selector",
-      "label": "Custom Element Selector (CSS)",
-      "info": "Required if 'Custom Element' is selected. CSS selector to find the target element."
+      "id": "position_top",
+      "label": "Position Haut (px)",
+      "info": "Distance depuis le haut en pixels (ex: 20px ou 20). Laissez vide pour ne pas définir."
+    },
+    {
+      "type": "text",
+      "id": "position_bottom",
+      "label": "Position Bas (px)",
+      "info": "Distance depuis le bas en pixels (ex: 20px ou 20). Laissez vide pour ne pas définir."
     }
   ]
 }
