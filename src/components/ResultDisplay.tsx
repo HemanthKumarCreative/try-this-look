@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Download,
   Loader2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -279,9 +280,10 @@ export default function ResultDisplay({
 
         {/* Split layout: 50% image, 50% action buttons */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 md:gap-8">
-          {/* Left side: Generated image or skeleton */}
+          {/* Left side: Generated image, loading skeleton, or placeholder */}
           <div className="relative aspect-[3/4] rounded-lg border border-border/50 bg-gradient-to-br from-muted/20 to-muted/5 overflow-hidden flex items-center justify-center shadow-sm hover:shadow-md transition-shadow duration-300">
-            {isGenerating || !generatedImage ? (
+            {isGenerating ? (
+              // Loading state - skeleton with shimmer and loading indicator
               <div className="w-full h-full relative overflow-hidden">
                 {/* Skeleton placeholder with shimmer effect */}
                 <Skeleton className="w-full h-full rounded-lg bg-gradient-to-br from-muted/40 via-muted/60 to-muted/40" />
@@ -306,13 +308,24 @@ export default function ResultDisplay({
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : generatedImage ? (
+              // Generated image available - show it
               <img
                 src={generatedImage}
                 alt="Résultat de l'essayage virtuel"
                 className="h-full w-auto object-contain"
                 loading="lazy"
               />
+            ) : (
+              // No image and not loading - show static placeholder
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3 sm:gap-4 text-muted-foreground">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-muted/50 flex items-center justify-center">
+                  <ImageIcon className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground/60" />
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground/80 text-center px-4">
+                  Aucun résultat généré
+                </p>
+              </div>
             )}
           </div>
 
