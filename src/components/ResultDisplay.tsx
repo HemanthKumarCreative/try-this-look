@@ -73,7 +73,7 @@ export default function ResultDisplay({
           </div>
 
           {/* Right side: Action buttons - 4x1 grid on mobile, 2x2 grid on tablets/desktop, aligned to top */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 auto-rows-min">
             {/* Buy Now - Red border */}
             <Button
               onClick={handleBuyNow}
