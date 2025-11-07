@@ -94,36 +94,40 @@ export default function ClothingSelection({
               <h3 className="text-sm sm:text-base font-semibold text-foreground">
                 Produits Recommandés
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-                {validRecommendedImages.slice(0, 9).map((image, index) => (
-                  <Card
-                    key={`recommended-${index}`}
-                    className={`overflow-hidden cursor-pointer transition-all transform hover:scale-105 relative ${
-                      selectedImage === image
-                        ? "ring-4 ring-primary shadow-lg scale-105"
-                        : "hover:ring-2 hover:ring-primary/50"
-                    }`}
-                    onClick={() => onSelect(image)}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Sélectionner le produit recommandé ${index + 1}`}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") onSelect(image);
-                    }}
-                  >
-                    <div className="relative bg-muted/30 flex items-center justify-center overflow-hidden">
-                      <img
-                        src={image}
-                        alt={`Produit recommandé ${index + 1}`}
-                        className="w-full h-auto object-contain"
-                        loading="lazy"
-                        onError={() => {
-                          setValidRecommendedImages((prev) => prev.filter((u) => u !== image));
+              <div className="relative">
+                <div className="overflow-x-auto overflow-y-hidden scrollbar-hide smooth-scroll pb-2 -mx-1 px-1 snap-x snap-mandatory">
+                  <div className="flex gap-2 sm:gap-3 md:gap-4 min-w-max">
+                    {validRecommendedImages.map((image, index) => (
+                      <Card
+                        key={`recommended-${index}`}
+                        className={`flex-shrink-0 w-24 sm:w-28 md:w-32 lg:w-36 overflow-hidden cursor-pointer transition-all transform hover:scale-105 relative snap-start ${
+                          selectedImage === image
+                            ? "ring-4 ring-primary shadow-lg scale-105"
+                            : "hover:ring-2 hover:ring-primary/50"
+                        }`}
+                        onClick={() => onSelect(image)}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Sélectionner le produit recommandé ${index + 1}`}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") onSelect(image);
                         }}
-                      />
-                    </div>
-                  </Card>
-                ))}
+                      >
+                        <div className="relative bg-muted/30 flex items-center justify-center overflow-hidden aspect-[3/4]">
+                          <img
+                            src={image}
+                            alt={`Produit recommandé ${index + 1}`}
+                            className="w-full h-full object-contain"
+                            loading="lazy"
+                            onError={() => {
+                              setValidRecommendedImages((prev) => prev.filter((u) => u !== image));
+                            }}
+                          />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}
