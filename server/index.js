@@ -143,7 +143,7 @@ app.get("/auth/callback", async (req, res) => {
 // API Routes
 app.post("/api/tryon/generate", async (req, res) => {
   try {
-    const { personImage, clothingImage } = req.body;
+    const { personImage, clothingImage, storeName } = req.body;
 
     if (!personImage || !clothingImage) {
       return res.status(400).json({ error: "Missing required images" });
@@ -157,6 +157,11 @@ app.post("/api/tryon/generate", async (req, res) => {
     const formData = new FormData();
     formData.append('personImage', personBlob, 'person.jpg');
     formData.append('clothingImage', clothingBlob, 'clothing.jpg');
+    
+    // Add storeName if provided
+    if (storeName) {
+      formData.append('storeName', storeName);
+    }
 
     // Forward to your existing API
     const response = await fetch("https://try-on-server-v1.onrender.com/api/fashion-photo", {

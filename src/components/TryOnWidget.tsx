@@ -46,7 +46,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
 
   // Expose store info globally for access
   useEffect(() => {
-    if (storeInfo && typeof window !== 'undefined') {
+    if (storeInfo && typeof window !== "undefined") {
       (window as any).NUSENSE_STORE_INFO = storeInfo;
     }
   }, [storeInfo]);
@@ -76,7 +76,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
 
     // Detect store origin when component mounts
     const detectedStore = detectStoreOrigin();
-    if (detectedStore && detectedStore.method !== 'unknown') {
+    if (detectedStore && detectedStore.method !== "unknown") {
       setStoreInfo(detectedStore);
     }
 
@@ -84,7 +84,11 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     // Do NOT extract images from the widget's own page (/widget page)
     if (isInIframe) {
       // Request store info from parent if not already detected
-      if (!detectedStore || detectedStore.method === 'unknown' || detectedStore.method === 'postmessage') {
+      if (
+        !detectedStore ||
+        detectedStore.method === "unknown" ||
+        detectedStore.method === "postmessage"
+      ) {
         requestStoreInfoFromParent((storeInfo) => {
           setStoreInfo(storeInfo);
         }).catch(() => {
@@ -179,10 +183,14 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     const handleMessage = (event: MessageEvent) => {
       // Extract store origin from postMessage events
       const storeOrigin = getStoreOriginFromPostMessage(event);
-      if (storeOrigin && storeOrigin.method === 'postmessage') {
+      if (storeOrigin && storeOrigin.method === "postmessage") {
         setStoreInfo((prev) => {
           // Only update if we don't have store info or if new info is more specific
-          if (!prev || prev.method === 'unknown' || prev.method === 'postmessage') {
+          if (
+            !prev ||
+            prev.method === "unknown" ||
+            prev.method === "postmessage"
+          ) {
             return storeOrigin;
           }
           return prev;
@@ -214,7 +222,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           fullUrl: event.data.fullUrl || null,
           shopDomain: event.data.shopDomain || null,
           origin: event.data.origin || event.origin || null,
-          method: 'parent-request'
+          method: "parent-request",
         };
         setStoreInfo(storeInfo);
         // Store info will be logged by the useEffect above
@@ -270,9 +278,13 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       const clothingResponse = await fetch(selectedClothing);
       const clothingBlob = await clothingResponse.blob();
 
+      // Get store name from storeInfo
+      const storeName = storeInfo?.shopDomain || storeInfo?.domain || null;
+
       const result: TryOnResponse = await generateTryOn(
         personBlob,
-        clothingBlob
+        clothingBlob,
+        storeName
       );
 
       clearInterval(progressInterval);

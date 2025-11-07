@@ -4,12 +4,18 @@ const API_ENDPOINT = 'https://try-on-server-v1.onrender.com/api/fashion-photo';
 
 export async function generateTryOn(
   personImage: File | Blob,
-  clothingImage: Blob
+  clothingImage: Blob,
+  storeName?: string | null
 ): Promise<TryOnResponse> {
   try {
     const formData = new FormData();
     formData.append('personImage', personImage);
     formData.append('clothingImage', clothingImage, 'clothing-item.jpg');
+    
+    // Add storeName if provided
+    if (storeName) {
+      formData.append('storeName', storeName);
+    }
 
     const response = await fetch(API_ENDPOINT, {
       method: 'POST',
