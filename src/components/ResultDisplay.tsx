@@ -74,52 +74,61 @@ export default function ResultDisplay({
         </div>
 
         {/* Split layout: 50% image, 50% action buttons */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 md:gap-8">
           {/* Left side: Generated image */}
-          <div className="relative aspect-[3/4] rounded-lg border border-border bg-card overflow-hidden flex items-center justify-center shadow-md">
+          <div className="relative aspect-[3/4] rounded-lg border border-border/50 bg-gradient-to-br from-muted/20 to-muted/5 overflow-hidden flex items-center justify-center shadow-sm hover:shadow-md transition-shadow duration-300">
             <img
               src={generatedImage}
               alt="Résultat de l'essayage virtuel"
               className="h-full w-auto object-contain"
+              loading="lazy"
             />
           </div>
 
           {/* Right side: Action buttons */}
-          <div className="flex flex-col justify-center gap-3 sm:gap-4">
+          <div className="flex flex-col justify-center gap-3 sm:gap-3.5 md:gap-4">
             {/* Buy Now - Red border */}
             <Button
               onClick={handleBuyNow}
-              className="w-full h-12 sm:h-14 md:h-16 text-sm sm:text-base md:text-lg font-semibold border-2 border-red-500 bg-white hover:bg-red-50 text-red-600 hover:text-red-700 transition-all duration-200 shadow-sm hover:shadow-md"
+              variant="outline"
+              className="group relative w-full min-h-[48px] sm:min-h-[52px] md:min-h-[56px] h-auto py-3 sm:py-3.5 md:py-4 px-4 sm:px-5 md:px-6 text-sm sm:text-base font-semibold border-2 border-red-500/80 bg-white hover:bg-red-50 hover:border-red-600 text-red-600 hover:text-red-700 active:bg-red-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-red-500/10 focus-visible:ring-2 focus-visible:ring-red-500/50 focus-visible:ring-offset-2"
+              aria-label="Acheter Maintenant"
             >
-              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-              Acheter Maintenant
+              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110" />
+              <span className="leading-tight">Acheter Maintenant</span>
             </Button>
 
             {/* Add to Cart - Green border */}
             <Button
               onClick={handleAddToCart}
-              className="w-full h-12 sm:h-14 md:h-16 text-sm sm:text-base md:text-lg font-semibold border-2 border-green-500 bg-white hover:bg-green-50 text-green-600 hover:text-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
+              variant="outline"
+              className="group relative w-full min-h-[48px] sm:min-h-[52px] md:min-h-[56px] h-auto py-3 sm:py-3.5 md:py-4 px-4 sm:px-5 md:px-6 text-sm sm:text-base font-semibold border-2 border-green-500/80 bg-white hover:bg-green-50 hover:border-green-600 text-green-600 hover:text-green-700 active:bg-green-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-green-500/10 focus-visible:ring-2 focus-visible:ring-green-500/50 focus-visible:ring-offset-2"
+              aria-label="Ajouter au Panier"
             >
-              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-              Ajouter au Panier
+              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110" />
+              <span className="leading-tight">Ajouter au Panier</span>
             </Button>
 
             {/* Try in Store - Orange border */}
             <Button
               onClick={handleTryInStore}
-              className="w-full h-12 sm:h-14 md:h-16 text-sm sm:text-base md:text-lg font-semibold border-2 border-orange-500 bg-white hover:bg-orange-50 text-orange-600 hover:text-orange-700 transition-all duration-200 shadow-sm hover:shadow-md"
+              variant="outline"
+              className="group relative w-full min-h-[48px] sm:min-h-[52px] md:min-h-[56px] h-auto py-3 sm:py-3.5 md:py-4 px-4 sm:px-5 md:px-6 text-sm sm:text-base font-semibold border-2 border-orange-500/80 bg-white hover:bg-orange-50 hover:border-orange-600 text-orange-600 hover:text-orange-700 active:bg-orange-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-orange-500/10 focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:ring-offset-2"
+              aria-label="essayer en magasin"
             >
-              <Building className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-              essayer en magasin
+              <Building className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110" />
+              <span className="leading-tight">essayer en magasin</span>
             </Button>
 
             {/* Download - Blue border */}
             <Button
               onClick={handleDownload}
-              className="w-full h-12 sm:h-14 md:h-16 text-sm sm:text-base md:text-lg font-semibold border-2 border-blue-500 bg-white hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+              variant="outline"
+              className="group relative w-full min-h-[48px] sm:min-h-[52px] md:min-h-[56px] h-auto py-3 sm:py-3.5 md:py-4 px-4 sm:px-5 md:px-6 text-sm sm:text-base font-semibold border-2 border-blue-500/80 bg-white hover:bg-blue-50 hover:border-blue-600 text-blue-600 hover:text-blue-700 active:bg-blue-100 active:scale-[0.98] transition-all duration-200 ease-out shadow-sm hover:shadow-md hover:shadow-blue-500/10 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2"
+              aria-label="Télécharger"
             >
-              <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-              Télécharger
+              <Download className="w-4 h-4 sm:w-5 sm:h-5 md:w-5 md:h-5 transition-transform duration-200 group-hover:scale-110" />
+              <span className="leading-tight">Télécharger</span>
             </Button>
           </div>
         </div>
