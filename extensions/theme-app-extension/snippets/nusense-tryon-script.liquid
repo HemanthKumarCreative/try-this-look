@@ -33,12 +33,22 @@
       {% comment %} Extract images from product.media (filtered to images only) {% endcomment %}
       {% if product_images_from_media.size > 0 %}
         {% for media_item in product_images_from_media limit: 20 %}
-          "{{ media_item | image_url: width: 1200 }}"{% unless forloop.last %},{% endunless %}
+          {% comment %} Ensure absolute URL by prepending https: if needed {% endcomment %}
+          {% assign image_url_full = media_item | image_url: width: 1200 %}
+          {% unless image_url_full contains '://' %}
+            {% assign image_url_full = 'https:' | append: image_url_full %}
+          {% endunless %}
+          "{{ image_url_full }}"{% unless forloop.last %},{% endunless %}
         {% endfor %}
       {% else %}
         {% comment %} Fallback: use product.images (legacy themes) {% endcomment %}
         {% for image in product.images limit: 20 %}
-          "{{ image | image_url: width: 1200 }}"{% unless forloop.last %},{% endunless %}
+          {% comment %} Ensure absolute URL by prepending https: if needed {% endcomment %}
+          {% assign image_url_full = image | image_url: width: 1200 %}
+          {% unless image_url_full contains '://' %}
+            {% assign image_url_full = 'https:' | append: image_url_full %}
+          {% endunless %}
+          "{{ image_url_full }}"{% unless forloop.last %},{% endunless %}
         {% endfor %}
       {% endif %}
     ],
@@ -107,12 +117,21 @@
       widgetUrl: '{{ widget_url | default: "https://try-this-look.vercel.app" }}'
     };
     
-    // Logging helper
+    // Logging helper - always log critical messages, detailed logs only if debug enabled
     function log(message, data) {
-      if (CONFIG.debug) {
+      // Always log critical messages
+      const criticalMessages = ['Image transmission listener initialized', 'Received image request from iframe', 'Sent images to iframe', 'Using images from NUSENSE_PRODUCT_DATA', 'No product images found on Shopify page', 'Error'];
+      const isCritical = criticalMessages.some(function(crit) {
+        return message.indexOf(crit) !== -1;
+      });
+      
+      if (CONFIG.debug || isCritical) {
         console.log('NUSENSE [Image Listener]:', message, data || '');
       }
     }
+    
+    // Always log initialization (critical)
+    console.log('NUSENSE [Image Listener]: Initializing image extraction listener on Shopify product page');
     
     // Validate origin (optional security measure)
     function isValidOrigin(origin) {
@@ -124,6 +143,25 @@
         return origin === widgetUrlObj.origin;
       } catch (e) {
         return false;
+      }
+    }
+    
+    // Helper function to ensure absolute URL
+    function ensureAbsoluteUrl(url) {
+      if (!url || typeof url !== 'string') return null;
+      // If already absolute, return as is
+      if (url.match(/^https?:\/\//)) {
+        return url;
+      }
+      // If protocol-relative (//example.com), add https:
+      if (url.match(/^\/\//)) {
+        return 'https:' + url;
+      }
+      // If relative, make absolute based on current origin
+      try {
+        return new URL(url, window.location.origin).href;
+      } catch (e) {
+        return url; // Return as-is if URL constructor fails
       }
     }
     
@@ -144,16 +182,22 @@
                 media.forEach(function(item) {
                   // Filter for images only
                   if (item.media_type === 'image' || !item.media_type) {
+                    let imgUrl = null;
                     if (item.preview && item.preview.image && item.preview.image.src) {
-                      images.push(item.preview.image.src);
+                      imgUrl = item.preview.image.src;
                     } else if (item.src) {
-                      images.push(item.src);
+                      imgUrl = item.src;
                     } else if (item.url) {
-                      images.push(item.url);
+                      imgUrl = item.url;
+                    }
+                    if (imgUrl) {
+                      imgUrl = ensureAbsoluteUrl(imgUrl);
+                      if (imgUrl && images.indexOf(imgUrl) === -1) images.push(imgUrl);
                     }
                   } else if (item.preview_image && item.preview_image.src) {
                     // For videos/models, use preview image
-                    images.push(item.preview_image.src);
+                    const imgUrl = ensureAbsoluteUrl(item.preview_image.src);
+                    if (imgUrl && images.indexOf(imgUrl) === -1) images.push(imgUrl);
                   }
                 });
                 if (images.length > 0) {
@@ -168,14 +212,19 @@
               const productImages = data.product.images;
               if (Array.isArray(productImages)) {
                 productImages.forEach(function(img) {
+                  let imgUrl = null;
                   if (typeof img === 'string') {
-                    images.push(img);
+                    imgUrl = img;
                   } else if (img.src) {
-                    images.push(img.src);
+                    imgUrl = img.src;
                   } else if (img.url) {
-                    images.push(img.url);
+                    imgUrl = img.url;
                   } else if (img.originalSrc) {
-                    images.push(img.originalSrc);
+                    imgUrl = img.originalSrc;
+                  }
+                  if (imgUrl) {
+                    imgUrl = ensureAbsoluteUrl(imgUrl);
+                    if (imgUrl && images.indexOf(imgUrl) === -1) images.push(imgUrl);
                   }
                 });
                 if (images.length > 0) {
@@ -195,19 +244,29 @@
             // Prefer media array (Shopify 2.0)
             window.Shopify.product.media.forEach(function(item) {
               if (item.media_type === 'image' || !item.media_type) {
-                if (item.src) images.push(item.src);
-                else if (item.url) images.push(item.url);
-                else if (item.preview_image && item.preview_image.src) images.push(item.preview_image.src);
+                let imgUrl = null;
+                if (item.src) imgUrl = item.src;
+                else if (item.url) imgUrl = item.url;
+                else if (item.preview_image && item.preview_image.src) imgUrl = item.preview_image.src;
+                if (imgUrl) {
+                  imgUrl = ensureAbsoluteUrl(imgUrl);
+                  if (imgUrl && images.indexOf(imgUrl) === -1) images.push(imgUrl);
+                }
               }
             });
           }
           if (images.length === 0 && window.Shopify.product.images) {
             // Fallback to images array
             window.Shopify.product.images.forEach(function(img) {
+              let imgUrl = null;
               if (typeof img === 'string') {
-                images.push(img);
+                imgUrl = img;
               } else if (img.src) {
-                images.push(img.src);
+                imgUrl = img.src;
+              }
+              if (imgUrl) {
+                imgUrl = ensureAbsoluteUrl(imgUrl);
+                if (imgUrl && images.indexOf(imgUrl) === -1) images.push(imgUrl);
               }
             });
           }
@@ -258,8 +317,13 @@
                 if (src && !seenUrls.has(src)) {
                   // Basic validation: must be a valid image URL
                   if (src.match(/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i)) {
-                    images.push(src);
-                    seenUrls.add(src);
+                    // Ensure absolute URL
+                    const absUrl = ensureAbsoluteUrl(src);
+                    if (absUrl) {
+                      images.push(absUrl);
+                      seenUrls.add(absUrl);
+                      seenUrls.add(src); // Also mark original as seen
+                    }
                   }
                 }
               });
@@ -283,6 +347,13 @@
     function getProductImages() {
       let images = [];
       
+      // Debug: Always log what we're checking
+      console.log('NUSENSE [Image Listener]: getProductImages called');
+      console.log('NUSENSE [Image Listener]: window.NUSENSE_PRODUCT_DATA exists?', !!window.NUSENSE_PRODUCT_DATA);
+      if (window.NUSENSE_PRODUCT_DATA) {
+        console.log('NUSENSE [Image Listener]: NUSENSE_PRODUCT_DATA.images', window.NUSENSE_PRODUCT_DATA.images);
+      }
+      
       // Priority 1: Use NUSENSE_PRODUCT_DATA (most reliable - from Liquid)
       // This is populated by the Liquid template with product.media/product.images
       {% if product %}
@@ -291,42 +362,55 @@
           return img && typeof img === 'string' && img.trim().length > 0;
         });
         if (images.length > 0) {
-          log('Using images from NUSENSE_PRODUCT_DATA (Liquid template)', images.length);
+          console.log('NUSENSE [Image Listener]: ✅ Using images from NUSENSE_PRODUCT_DATA (Liquid template)', images.length, images);
           return images;
+        } else {
+          console.log('NUSENSE [Image Listener]: ⚠️ NUSENSE_PRODUCT_DATA.images is empty or invalid');
         }
+      } else {
+        console.log('NUSENSE [Image Listener]: ⚠️ NUSENSE_PRODUCT_DATA not found or invalid');
       }
+      {% else %}
+      console.log('NUSENSE [Image Listener]: ⚠️ Not on a product page (product object not available)');
       {% endif %}
       
       // Priority 2: Extract from Shopify product JSON (from theme's script tags)
       images = extractFromShopifyJSON();
       if (images.length > 0) {
-        log('Using images from Shopify JSON', images.length);
+        console.log('NUSENSE [Image Listener]: ✅ Using images from Shopify JSON', images.length);
         return images;
       }
       
       // Priority 3: Extract from DOM (fallback - less reliable)
       images = extractFromDOM();
       if (images.length > 0) {
-        log('Using images from DOM extraction', images.length);
+        console.log('NUSENSE [Image Listener]: ✅ Using images from DOM extraction', images.length);
         return images;
       }
       
-      log('No product images found on Shopify page');
+      console.log('NUSENSE [Image Listener]: ❌ No product images found on Shopify page');
       return [];
     }
     
     // Handle incoming messages from iframe
     function handleMessage(event) {
+      // Always log all messages for debugging (filter out non-NUSENSE messages)
+      if (event.data && event.data.type) {
+        console.log('NUSENSE [Image Listener]: Received message:', event.data.type, 'from', event.origin);
+      }
+      
       // Validate message type
       if (!event.data || event.data.type !== 'NUSENSE_REQUEST_IMAGES') {
         return;
       }
       
+      console.log('NUSENSE [Image Listener]: ✅ Processing NUSENSE_REQUEST_IMAGES from', event.origin);
+      
       // Optional: Validate origin (security)
       // Uncomment and configure for production
       /*
       if (!isValidOrigin(event.origin)) {
-        log('Invalid origin', event.origin);
+        console.log('NUSENSE [Image Listener]: ❌ Invalid origin', event.origin);
         return;
       }
       */
@@ -336,7 +420,9 @@
       // Get product images
       const images = getProductImages();
       
-      // Send images back to iframe
+      console.log('NUSENSE [Image Listener]: Extracted', images.length, 'images, preparing to send to iframe');
+      
+      // Send images back to iframe - ALWAYS send a response, even if empty
       if (event.source && event.source !== window) {
         try {
           event.source.postMessage({
@@ -344,29 +430,68 @@
             images: images
           }, '*'); // Use '*' for development, restrict in production
           
+          console.log('NUSENSE [Image Listener]: ✅ Successfully sent', images.length, 'images to iframe');
+          console.log('NUSENSE [Image Listener]: Images sent:', images);
+          
           log('Sent images to iframe', {
             count: images.length,
             origin: event.origin
           });
         } catch (e) {
+          console.error('NUSENSE [Image Listener]: ❌ Error sending images to iframe', e);
           log('Error sending images to iframe', e);
         }
       } else {
+        console.error('NUSENSE [Image Listener]: ❌ Invalid event source for image request');
         log('Invalid event source for image request');
       }
     }
     
     // Initialize message listener
     window.addEventListener('message', handleMessage);
+    
+    // Always log initialization (critical)
+    console.log('NUSENSE [Image Listener]: ✅ Message listener attached to window');
+    console.log('NUSENSE [Image Listener]: Listening for NUSENSE_REQUEST_IMAGES messages');
+    
+    // Log NUSENSE_PRODUCT_DATA status immediately
+    {% if product %}
+    console.log('NUSENSE [Image Listener]: Product page detected');
+    console.log('NUSENSE [Image Listener]: NUSENSE_PRODUCT_DATA available:', window.NUSENSE_PRODUCT_DATA ? 'YES' : 'NO');
+    if (window.NUSENSE_PRODUCT_DATA) {
+      console.log('NUSENSE [Image Listener]: NUSENSE_PRODUCT_DATA.images count:', window.NUSENSE_PRODUCT_DATA.images ? window.NUSENSE_PRODUCT_DATA.images.length : 'undefined');
+      if (window.NUSENSE_PRODUCT_DATA.images && window.NUSENSE_PRODUCT_DATA.images.length > 0) {
+        console.log('NUSENSE [Image Listener]: Sample images:', window.NUSENSE_PRODUCT_DATA.images.slice(0, 3));
+      }
+    } else {
+      console.log('NUSENSE [Image Listener]: ⚠️ NUSENSE_PRODUCT_DATA not yet available - will check again');
+      // Check again after a short delay in case it loads asynchronously
+      setTimeout(function() {
+        if (window.NUSENSE_PRODUCT_DATA) {
+          console.log('NUSENSE [Image Listener]: ✅ NUSENSE_PRODUCT_DATA now available (delayed check)');
+          if (window.NUSENSE_PRODUCT_DATA.images) {
+            console.log('NUSENSE [Image Listener]: NUSENSE_PRODUCT_DATA.images count:', window.NUSENSE_PRODUCT_DATA.images.length);
+          }
+        } else {
+          console.log('NUSENSE [Image Listener]: ⚠️ NUSENSE_PRODUCT_DATA still not available after delay');
+        }
+      }, 500);
+    }
+    {% else %}
+    console.log('NUSENSE [Image Listener]: ⚠️ Not on a product page');
+    {% endif %}
+    
     log('Image transmission listener initialized');
     
     // Also listen for widget script load completion
     // This ensures the listener is ready before widget requests images
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function() {
+        console.log('NUSENSE [Image Listener]: DOM ready - listener active');
         log('DOM ready - listener active');
       });
     } else {
+      console.log('NUSENSE [Image Listener]: DOM already ready - listener active');
       log('DOM already ready - listener active');
     }
   })();

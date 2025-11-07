@@ -1,7 +1,11 @@
 {% comment %}
   NUSENSE TryON Button Block
   This block can be added to product pages via the theme editor
+  It includes the image extraction listener script automatically
 {% endcomment %}
+
+{% comment %} Include the snippet that sets up image extraction and communication {% endcomment %}
+{% render 'nusense-tryon-script' %}
 
 {% schema %}
 {
