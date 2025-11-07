@@ -392,6 +392,86 @@
       return [];
     }
     
+    // Handle widget action buttons (buy now, add to cart, etc.)
+    function handleWidgetAction(actionType, event) {
+      console.log('NUSENSE [Image Listener]: Processing action:', actionType);
+      
+      {% if product %}
+      // Get product form and variant selector
+      const productForm = document.querySelector('form[action*="/cart/add"]');
+      const variantSelector = document.querySelector('[name="id"]') || document.querySelector('input[name="id"]');
+      
+      if (!productForm) {
+        console.warn('NUSENSE [Image Listener]: Product form not found on page');
+        return;
+      }
+      
+      switch (actionType) {
+        case 'NUSENSE_BUY_NOW':
+          // Trigger buy now (redirect to checkout)
+          console.log('NUSENSE [Image Listener]: Buy Now clicked');
+          if (productForm) {
+            // Add to cart and redirect to checkout
+            const formData = new FormData(productForm);
+            formData.append('return_to', '/checkout');
+            fetch('/cart/add.js', {
+              method: 'POST',
+              body: formData
+            }).then(function(response) {
+              if (response.ok) {
+                window.location.href = '/checkout';
+              } else {
+                console.error('NUSENSE [Image Listener]: Failed to add to cart for buy now');
+                // Fallback: just redirect to cart
+                window.location.href = '/cart';
+              }
+            }).catch(function(error) {
+              console.error('NUSENSE [Image Listener]: Error in buy now:', error);
+              window.location.href = '/cart';
+            });
+          }
+          break;
+          
+        case 'NUSENSE_ADD_TO_CART':
+          // Add product to cart
+          console.log('NUSENSE [Image Listener]: Add to Cart clicked');
+          if (productForm) {
+            const formData = new FormData(productForm);
+            fetch('/cart/add.js', {
+              method: 'POST',
+              body: formData
+            }).then(function(response) {
+              if (response.ok) {
+                console.log('NUSENSE [Image Listener]: Product added to cart');
+                // Optionally trigger cart drawer/notification
+                if (typeof window.dispatchEvent !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('cart:updated'));
+                }
+              } else {
+                console.error('NUSENSE [Image Listener]: Failed to add to cart');
+              }
+            }).catch(function(error) {
+              console.error('NUSENSE [Image Listener]: Error adding to cart:', error);
+            });
+          }
+          break;
+          
+        case 'NUSENSE_TRY_IN_STORE':
+          // Try in store - could redirect to store locator or show message
+          console.log('NUSENSE [Image Listener]: Try in Store clicked');
+          // This would need to be customized based on the store's setup
+          // For now, just log it - merchant can customize this action
+          alert('Fonctionnalité "essayer en magasin" - À configurer selon votre magasin');
+          break;
+          
+        default:
+          console.log('NUSENSE [Image Listener]: Unknown action type:', actionType);
+      }
+      {% else %}
+      console.warn('NUSENSE [Image Listener]: Not on a product page - cannot handle action');
+      {% endif %}
+    }
+    
     // Handle incoming messages from iframe
     function handleMessage(event) {
       // Always log all messages for debugging (filter out non-NUSENSE messages)
@@ -399,11 +479,25 @@
         console.log('NUSENSE [Image Listener]: Received message:', event.data.type, 'from', event.origin);
       }
       
-      // Validate message type
-      if (!event.data || event.data.type !== 'NUSENSE_REQUEST_IMAGES') {
+      // Handle image requests
+      if (event.data && event.data.type === 'NUSENSE_REQUEST_IMAGES') {
+        handleImageRequest(event);
         return;
       }
       
+      // Handle action button clicks from widget
+      if (event.data && event.data.type && (
+        event.data.type === 'NUSENSE_BUY_NOW' ||
+        event.data.type === 'NUSENSE_ADD_TO_CART' ||
+        event.data.type === 'NUSENSE_TRY_IN_STORE'
+      )) {
+        handleWidgetAction(event.data.type, event);
+        return;
+      }
+    }
+    
+    // Handle image request from iframe
+    function handleImageRequest(event) {
       console.log('NUSENSE [Image Listener]: ✅ Processing NUSENSE_REQUEST_IMAGES from', event.origin);
       
       // Optional: Validate origin (security)
