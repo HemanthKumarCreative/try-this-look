@@ -7,6 +7,10 @@ import ResultDisplay from "./ResultDisplay";
 import {
   extractShopifyProductInfo,
   extractProductImages,
+  detectStoreOrigin,
+  requestStoreInfoFromParent,
+  getStoreOriginFromPostMessage,
+  type StoreInfo,
 } from "@/utils/shopifyIntegration";
 import { storage } from "@/utils/storage";
 import { generateTryOn, dataURLToBlob } from "@/services/tryonApi";
@@ -35,6 +39,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     "Téléchargez votre photo puis choisissez un article à essayer"
   );
   const [statusVariant, setStatusVariant] = useState<"info" | "error">("info");
+  const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
   const INFLIGHT_KEY = "nusense_tryon_inflight";
   // Track if we've already loaded images from URL/NUSENSE_PRODUCT_DATA to prevent parent images from overriding
   const imagesLoadedRef = useRef<boolean>(false);
@@ -47,6 +52,23 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       availableImages
     );
   }, [availableImages]);
+
+  // Debug: Log when storeInfo changes
+  useEffect(() => {
+    if (storeInfo) {
+      console.log(
+        "NUSENSE: Store info detected:",
+        storeInfo.shopDomain || storeInfo.domain,
+        "(method:",
+        storeInfo.method,
+        ")"
+      );
+      // Expose store info globally for debugging/access
+      if (typeof window !== 'undefined') {
+        (window as any).NUSENSE_STORE_INFO = storeInfo;
+      }
+    }
+  }, [storeInfo]);
 
   useEffect(() => {
     // Load saved session on mount
@@ -71,12 +93,29 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     const isInIframe = window.parent !== window;
     let imagesFound = false;
 
+    // Detect store origin when component mounts
+    const detectedStore = detectStoreOrigin();
+    if (detectedStore && detectedStore.method !== 'unknown') {
+      setStoreInfo(detectedStore);
+      console.log('NUSENSE: Store detected on mount:', detectedStore);
+    }
+
     // If we're in an iframe, ALWAYS prioritize images from the parent window (Shopify product page)
     // Do NOT extract images from the widget's own page (/widget page)
     if (isInIframe) {
       console.log(
         "NUSENSE: Widget is in iframe mode - requesting images from Shopify product page (parent window)"
       );
+
+      // Request store info from parent if not already detected
+      if (!detectedStore || detectedStore.method === 'unknown' || detectedStore.method === 'postmessage') {
+        requestStoreInfoFromParent((storeInfo) => {
+          setStoreInfo(storeInfo);
+          console.log('NUSENSE: Store info received from parent:', storeInfo);
+        }).catch((error) => {
+          console.warn('NUSENSE: Failed to get store info from parent:', error);
+        });
+      }
 
       const requestImages = () => {
         try {
@@ -183,6 +222,18 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   // and sends them to this widget iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      // Extract store origin from postMessage events
+      const storeOrigin = getStoreOriginFromPostMessage(event);
+      if (storeOrigin && storeOrigin.method === 'postmessage') {
+        setStoreInfo((prev) => {
+          // Only update if we don't have store info or if new info is more specific
+          if (!prev || prev.method === 'unknown' || prev.method === 'postmessage') {
+            return storeOrigin;
+          }
+          return prev;
+        });
+      }
+
       // Only process messages from parent window
       if (event.data && event.data.type === "NUSENSE_PRODUCT_IMAGES") {
         const parentImages = event.data.images || [];
@@ -220,6 +271,19 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
           );
           setRecommendedImages(parentRecommendedImages);
         }
+      }
+
+      // Handle store info response from parent
+      if (event.data && event.data.type === "NUSENSE_STORE_INFO") {
+        const storeInfo: StoreInfo = {
+          domain: event.data.domain || null,
+          fullUrl: event.data.fullUrl || null,
+          shopDomain: event.data.shopDomain || null,
+          origin: event.data.origin || event.origin || null,
+          method: 'parent-request'
+        };
+        setStoreInfo(storeInfo);
+        console.log('NUSENSE: Store info received via postMessage:', storeInfo);
       }
     };
 

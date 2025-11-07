@@ -537,6 +537,267 @@ export function initializeImageExtractionListener(): void {
  * - Shopify-specific gallery/carousel elements
  * - JSON-LD structured data
  */
+
+/**
+ * Store information extracted from iframe context
+ */
+export interface StoreInfo {
+  domain: string | null;
+  fullUrl: string | null;
+  shopDomain: string | null; // Shopify store domain (e.g., "mystore.myshopify.com")
+  origin: string | null; // Full origin (e.g., "https://mystore.myshopify.com")
+  method: 'referrer' | 'url-param' | 'postmessage' | 'parent-request' | 'unknown';
+}
+
+/**
+ * Detect Shopify store information from iframe context
+ * Uses multiple methods to determine which store the iframe was opened from
+ * 
+ * Methods (in order of reliability per Shopify documentation):
+ * 1. URL parameter 'shop' (automatically added by Shopify app proxy - most reliable)
+ * 2. URL parameter 'shop_domain' or 'shopDomain' (manually passed)
+ * 3. document.referrer (parent page URL)
+ * 4. postMessage event origin (when receiving messages from parent)
+ * 5. Request from parent window (via postMessage)
+ * 
+ * Reference: https://shopify.dev/docs/apps/build/online-store/app-proxies/authenticate-app-proxies
+ * 
+ * @returns StoreInfo object with store details and detection method
+ */
+export function detectStoreOrigin(): StoreInfo {
+  const result: StoreInfo = {
+    domain: null,
+    fullUrl: null,
+    shopDomain: null,
+    origin: null,
+    method: 'unknown'
+  };
+
+  // Method 1: Check URL parameters
+  // Priority order (per Shopify docs):
+  // 1. 'shop' parameter (automatically added by Shopify app proxy)
+  // 2. 'shop_domain' or 'shopDomain' (manually passed)
+  const urlParams = new URLSearchParams(window.location.search);
+  const shopDomainParam = urlParams.get('shop') || urlParams.get('shop_domain') || urlParams.get('shopDomain');
+  
+  if (shopDomainParam) {
+    try {
+      const domain = shopDomainParam.trim();
+      // Shopify app proxy always provides shop in format: "{shop}.myshopify.com"
+      // Extract shop domain from various formats
+      let shopDomain = domain;
+      let origin = domain;
+      
+      if (domain.includes('http://') || domain.includes('https://')) {
+        const url = new URL(domain);
+        origin = url.origin;
+        shopDomain = url.hostname;
+      } else if (!domain.includes('.')) {
+        // If just store name, assume myshopify.com
+        shopDomain = `${domain}.myshopify.com`;
+        origin = `https://${shopDomain}`;
+      } else {
+        // Shopify format: "mystore.myshopify.com"
+        origin = `https://${domain}`;
+        shopDomain = domain;
+      }
+      
+      result.domain = shopDomain;
+      result.shopDomain = shopDomain;
+      result.origin = origin;
+      result.fullUrl = origin;
+      // If it's the 'shop' parameter, it's from app proxy (most reliable)
+      result.method = urlParams.get('shop') ? 'url-param' : 'url-param';
+      
+      console.log('NUSENSE: Store detected from URL parameter (Shopify app proxy):', shopDomain);
+      return result;
+    } catch (error) {
+      console.warn('NUSENSE: Error parsing shop domain from URL parameter:', error);
+    }
+  }
+
+  // Method 2: Extract from document.referrer (parent page URL)
+  const referrer = document.referrer;
+  if (referrer) {
+    try {
+      const referrerUrl = new URL(referrer);
+      const hostname = referrerUrl.hostname;
+      
+      // Check if it's a Shopify store
+      if (hostname.includes('.myshopify.com') || 
+          hostname.includes('myshopify.io') ||
+          hostname.match(/^[a-z0-9-]+\.myshopify\.com$/)) {
+        result.domain = hostname;
+        result.shopDomain = hostname;
+        result.origin = referrerUrl.origin;
+        result.fullUrl = referrer;
+        result.method = 'referrer';
+        
+        console.log('NUSENSE: Store detected from referrer:', hostname);
+        return result;
+      }
+      
+      // For custom domains, extract the main domain
+      // Shopify stores on custom domains might have the shop in subdomain or path
+      result.domain = hostname;
+      result.fullUrl = referrer;
+      result.origin = referrerUrl.origin;
+      result.method = 'referrer';
+      
+      console.log('NUSENSE: Store detected from referrer (custom domain):', hostname);
+      return result;
+    } catch (error) {
+      console.warn('NUSENSE: Error parsing referrer:', error);
+    }
+  }
+
+  // If we're in an iframe but don't have referrer or URL param,
+  // we can request it from parent (Method 4 will handle this)
+  const isInIframe = typeof window !== 'undefined' && window.parent !== window;
+  if (isInIframe) {
+    console.log('NUSENSE: In iframe mode - store info can be obtained from postMessage events');
+    // Store info will be available when receiving messages from parent
+    result.method = 'postmessage';
+  }
+
+  return result;
+}
+
+/**
+ * Extract Shopify store domain from a URL string
+ * Handles various formats: full URLs, myshopify.com domains, custom domains
+ */
+export function extractShopDomainFromUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    
+    // Check for myshopify.com domain
+    if (hostname.includes('.myshopify.com')) {
+      return hostname;
+    }
+    
+    // For custom domains, return the hostname
+    // Note: This won't give you the myshopify.com domain, just the custom domain
+    return hostname;
+  } catch {
+    // If URL parsing fails, try to extract domain from string
+    const myshopifyMatch = url.match(/([a-z0-9-]+\.myshopify\.com)/i);
+    if (myshopifyMatch) {
+      return myshopifyMatch[1];
+    }
+    return null;
+  }
+}
+
+/**
+ * Request store information from parent window via postMessage
+ * This should be called when the iframe needs store info from the parent
+ * 
+ * @param callback Optional callback to handle the store info response
+ * @returns Promise that resolves with store info or null
+ */
+export function requestStoreInfoFromParent(
+  callback?: (storeInfo: StoreInfo) => void
+): Promise<StoreInfo | null> {
+  return new Promise((resolve) => {
+    const isInIframe = typeof window !== 'undefined' && window.parent !== window;
+    
+    if (!isInIframe) {
+      console.warn('NUSENSE: Not in iframe, cannot request store info from parent');
+      resolve(null);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      window.removeEventListener('message', messageHandler);
+      console.warn('NUSENSE: Timeout waiting for store info from parent');
+      resolve(null);
+    }, 5000);
+
+    const messageHandler = (event: MessageEvent) => {
+      // Security: Validate origin if possible
+      // Note: Using '*' in postMessage is less secure, but necessary for cross-origin
+      
+      if (event.data?.type === 'NUSENSE_STORE_INFO') {
+        clearTimeout(timeout);
+        window.removeEventListener('message', messageHandler);
+        
+        const storeInfo: StoreInfo = {
+          domain: event.data.domain || null,
+          fullUrl: event.data.fullUrl || null,
+          shopDomain: event.data.shopDomain || null,
+          origin: event.data.origin || event.origin || null,
+          method: 'parent-request'
+        };
+        
+        console.log('NUSENSE: Received store info from parent:', storeInfo);
+        
+        if (callback) {
+          callback(storeInfo);
+        }
+        
+        resolve(storeInfo);
+      }
+    };
+
+    window.addEventListener('message', messageHandler);
+    
+    // Request store info from parent
+    try {
+      window.parent.postMessage({ type: 'NUSENSE_REQUEST_STORE_INFO' }, '*');
+      console.log('NUSENSE: Requested store info from parent window');
+    } catch (error) {
+      clearTimeout(timeout);
+      window.removeEventListener('message', messageHandler);
+      console.error('NUSENSE: Error requesting store info from parent:', error);
+      resolve(null);
+    }
+  });
+}
+
+/**
+ * Track store origin from postMessage events
+ * Call this in a message event listener to capture store info from parent messages
+ */
+export function getStoreOriginFromPostMessage(event: MessageEvent): StoreInfo | null {
+  // Extract origin from the postMessage event
+  if (event.origin) {
+    try {
+      const url = new URL(event.origin);
+      const hostname = url.hostname;
+      
+      const storeInfo: StoreInfo = {
+        domain: hostname,
+        shopDomain: hostname.includes('.myshopify.com') ? hostname : null,
+        origin: event.origin,
+        fullUrl: event.origin,
+        method: 'postmessage'
+      };
+      
+      console.log('NUSENSE: Store origin detected from postMessage:', storeInfo);
+      return storeInfo;
+    } catch (error) {
+      console.warn('NUSENSE: Error parsing origin from postMessage:', error);
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Get the current store info from the window object (if available)
+ * This is set by the TryOnWidget component when store info is detected
+ * 
+ * @returns StoreInfo or null if not available
+ */
+export function getCurrentStoreInfo(): StoreInfo | null {
+  if (typeof window !== 'undefined' && (window as any).NUSENSE_STORE_INFO) {
+    return (window as any).NUSENSE_STORE_INFO;
+  }
+  return null;
+}
+
 export function extractProductImages(): string[] {
   const images: string[] = [];
   const seenUrls = new Set<string>();

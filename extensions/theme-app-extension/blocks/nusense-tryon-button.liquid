@@ -248,13 +248,13 @@
     });
     
     const productId = button.dataset.productId;
-    const shopDomain = button.dataset.shopDomain;
+    const shopDomain = button.dataset.shopDomain || '{{ shop.permanent_domain }}';
     
     button.addEventListener('click', function() {
       // Open widget in modal or iframe
       // App proxy URL format: /apps/apps/a/{path}
       // Or use direct app URL if app proxy not needed
-      const widgetUrl = '{{ shop.metafields.nusense.widget_url | default: "https://try-this-look.vercel.app" }}/widget?product_id=' + productId;
+      const widgetUrl = '{{ shop.metafields.nusense.widget_url | default: "https://try-this-look.vercel.app" }}/widget?product_id=' + productId + '&shop_domain=' + encodeURIComponent(shopDomain);
       
       // Create modal overlay
       const overlay = document.createElement('div');
@@ -319,10 +319,22 @@
       };
       document.addEventListener('keydown', closeHandler);
       
-      // Listen for close messages from iframe
+      // Listen for messages from iframe
       window.addEventListener('message', function(e) {
         if (e.data && e.data.type === 'NUSENSE_CLOSE_WIDGET') {
           closeWidget();
+        }
+        
+        // Handle store info request from iframe
+        if (e.data && e.data.type === 'NUSENSE_REQUEST_STORE_INFO') {
+          const storeInfo = {
+            type: 'NUSENSE_STORE_INFO',
+            domain: window.location.hostname,
+            shopDomain: shopDomain || '{{ shop.permanent_domain }}',
+            origin: window.location.origin,
+            fullUrl: window.location.href
+          };
+          iframe.contentWindow.postMessage(storeInfo, '*');
         }
       });
     });

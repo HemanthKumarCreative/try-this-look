@@ -876,6 +876,19 @@
         console.log('NUSENSE [Image Listener]: Received message:', event.data.type, 'from', event.origin);
       }
       
+      // Handle store info requests
+      if (event.data && event.data.type === 'NUSENSE_REQUEST_STORE_INFO') {
+        const storeInfo = {
+          type: 'NUSENSE_STORE_INFO',
+          domain: window.location.hostname,
+          shopDomain: '{{ shop.permanent_domain }}',
+          origin: window.location.origin,
+          fullUrl: window.location.href
+        };
+        event.source.postMessage(storeInfo, '*');
+        return;
+      }
+      
       // Handle image requests
       if (event.data && event.data.type === 'NUSENSE_REQUEST_IMAGES') {
         handleImageRequest(event);
