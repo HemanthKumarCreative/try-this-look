@@ -1,0 +1,50 @@
+{% comment %}
+  NUSENSE TryON App Embed Block
+  This app embed block will appear in "Theme Settings > App embeds"
+  It initializes the widget functionality and image extraction listener
+  Use this for automatic widget initialization on product pages
+{% endcomment %}
+
+{% comment %} Include the snippet that sets up image extraction and communication {% endcomment %}
+{% render 'nusense-tryon-script' %}
+
+{% schema %}
+{
+  "name": "NUSENSE Try-On Widget",
+  "target": "body",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "widget_url",
+      "label": "Widget URL",
+      "default": "https://try-this-look.vercel.app",
+      "info": "The URL where your widget is hosted"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_debug",
+      "label": "Enable Debug Mode",
+      "default": false,
+      "info": "Enable console logging for troubleshooting"
+    },
+    {
+      "type": "checkbox",
+      "id": "auto_show_button",
+      "label": "Auto-show Try-On Button",
+      "default": false,
+      "info": "Automatically show a try-on button on product pages (requires theme support)"
+    },
+    {
+      "type": "text",
+      "id": "button_selector",
+      "label": "Button Selector (CSS)",
+      "default": "#nusense-tryon-btn",
+      "info": "CSS selector for the try-on button (if auto-show is enabled)"
+    }
+  ]
+}
+{% endschema %}
+
