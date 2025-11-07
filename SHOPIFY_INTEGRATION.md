@@ -1,6 +1,24 @@
 # NUSENSE TryON - Shopify Integration Guide
 
-Complete guide to integrate NUSENSE TryON virtual try-on widget into your Shopify store using flexible snippet-based integration.
+Complete guide to integrate NUSENSE TryON virtual try-on widget into your Shopify store.
+
+## ✨ Automatic Image Transmission
+
+**NEW**: Product images now transmit automatically to the widget! If you're using the Theme App Extension (recommended), you don't need to configure anything manually. The app automatically handles image extraction and transmission.
+
+**What's Automatic:**
+- ✅ Product image detection
+- ✅ Image extraction from Shopify product data
+- ✅ Secure transmission to widget iframe
+- ✅ Works with all Shopify themes
+
+**If you're using the Theme App Extension**, you can skip the manual script setup steps below. The automatic image transmission is already enabled.
+
+---
+
+## Manual Integration (Legacy Method)
+
+If you're not using the Theme App Extension, follow the steps below for manual integration.
 
 ## 🚀 Quick Setup (5 Steps)
 
@@ -339,6 +357,22 @@ You can override button styles by adding custom CSS:
 1. ✅ You're on a product page (not collection or home page)
 2. ✅ Script snippet is included (it extracts product data)
 3. ✅ Browser console for any data errors
+4. ✅ If using Theme App Extension: Images should transmit automatically - check browser console with debug mode enabled
+
+### Images Not Transmitting to Widget
+
+**If using Theme App Extension (Automatic):**
+1. ✅ Enable debug mode: Set `debug_mode: true` in shop metafields
+2. ✅ Check browser console for "NUSENSE [Image Listener]" messages
+3. ✅ Verify the script is loaded: Look for "Image transmission listener initialized" in console
+4. ✅ Check if widget sends request: Look for "NUSENSE_REQUEST_IMAGES" message
+5. ✅ Verify images are sent: Look for "Sent images to iframe" message
+
+**If using Manual Integration:**
+1. ✅ Ensure the message listener script is included in your theme
+2. ✅ Check browser console for any JavaScript errors
+3. ✅ Verify product images exist on the page
+4. ✅ Test with debug mode enabled
 
 ### Styling Issues
 

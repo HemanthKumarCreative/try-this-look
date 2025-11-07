@@ -95,38 +95,33 @@ All colors are defined in `src/index.css` and can be customized.
 
 ## 🔌 Shopify Integration
 
-### Option 1: Embedded Widget (Recommended for Development)
+### Automatic Image Transmission ✨ NEW
 
-1. **Add Try-On Button** in your product template (`sections/main-product.liquid`):
+**Product images now transmit automatically to the widget!** No manual configuration required.
 
-```liquid
-<button 
-  id="nusense-tryon-btn" 
-  class="btn btn-primary"
-  style="
-    background: linear-gradient(135deg, #ce0003, #ff1a1d);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-  "
->
-  ✨ Try Now
-</button>
-```
+- ✅ **Zero Setup** - Works automatically after app installation/update
+- ✅ **Theme-Agnostic** - Works with all Shopify themes (2.0+ and legacy)
+- ✅ **Reliable** - Multiple fallback mechanisms ensure image transmission
+- ✅ **Secure** - Built-in security and error handling
 
-2. **Host the Application** and embed it as an iframe or use Shopify's App Embed feature
+### Option 1: Theme App Extension (Recommended)
 
-### Option 2: Full Shopify App
+The app includes a Theme App Extension that automatically:
+1. **Injects the widget script** on product pages
+2. **Extracts product images** automatically
+3. **Transmits images to the widget** via secure postMessage API
+4. **Works out-of-the-box** - No code editing required
 
-Convert this to a full Shopify app using:
-- Shopify CLI
-- App Bridge
-- Theme App Extensions
+**Setup Steps:**
+1. Install the NUSENSE TryON app from Shopify App Store
+2. Add the "NUSENSE Try-On Button" block to your product page template
+3. That's it! Images will transmit automatically
 
-See `INSTALLATION.md` for detailed instructions.
+### Option 2: Manual Integration (Legacy)
+
+For manual integration without the app, see `SHOPIFY_INTEGRATION.md` for detailed instructions.
+
+**Note**: Manual integration is no longer required. The Theme App Extension handles everything automatically.
 
 ## 🔄 API Integration
 

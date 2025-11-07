@@ -70,3 +70,259 @@
   })();
 </script>
 
+{% comment %}
+  Automatic Image Transmission Listener
+  This script automatically handles image requests from the widget iframe
+  No merchant configuration required - works automatically
+{% endcomment %}
+<script>
+  (function() {
+    'use strict';
+    
+    // Only initialize once
+    if (window.NUSENSE_IMAGE_LISTENER_INITIALIZED) {
+      return;
+    }
+    window.NUSENSE_IMAGE_LISTENER_INITIALIZED = true;
+    
+    // Configuration
+    const CONFIG = {
+      debug: {{ debug_mode | default: false }},
+      allowedOrigins: ['*'], // In production, restrict to widget domain
+      widgetUrl: '{{ widget_url | default: "https://try-this-look.vercel.app" }}'
+    };
+    
+    // Logging helper
+    function log(message, data) {
+      if (CONFIG.debug) {
+        console.log('NUSENSE [Image Listener]:', message, data || '');
+      }
+    }
+    
+    // Validate origin (optional security measure)
+    function isValidOrigin(origin) {
+      if (CONFIG.allowedOrigins.includes('*')) {
+        return true; // Allow all in development
+      }
+      try {
+        const widgetUrlObj = new URL(CONFIG.widgetUrl);
+        return origin === widgetUrlObj.origin;
+      } catch (e) {
+        return false;
+      }
+    }
+    
+    // Extract images from Shopify product JSON in script tags
+    function extractFromShopifyJSON() {
+      const images = [];
+      try {
+        // Method 1: Check script tags with type="application/json"
+        const scripts = document.querySelectorAll('script[type="application/json"]');
+        for (const script of scripts) {
+          try {
+            const data = JSON.parse(script.textContent || '{}');
+            if (data.product && data.product.images) {
+              const productImages = data.product.images;
+              if (Array.isArray(productImages)) {
+                productImages.forEach(function(img) {
+                  if (typeof img === 'string') {
+                    images.push(img);
+                  } else if (img.src) {
+                    images.push(img.src);
+                  } else if (img.url) {
+                    images.push(img.url);
+                  } else if (img.originalSrc) {
+                    images.push(img.originalSrc);
+                  }
+                });
+                if (images.length > 0) {
+                  log('Extracted images from Shopify JSON', images.length);
+                  return images;
+                }
+              }
+            }
+            // Check for media array (Shopify 2.0 themes)
+            if (data.product && data.product.media) {
+              const media = data.product.media;
+              if (Array.isArray(media)) {
+                media.forEach(function(item) {
+                  if (item.preview && item.preview.image) {
+                    images.push(item.preview.image.src);
+                  } else if (item.src) {
+                    images.push(item.src);
+                  }
+                });
+                if (images.length > 0) {
+                  log('Extracted images from Shopify media array', images.length);
+                  return images;
+                }
+              }
+            }
+          } catch (e) {
+            // Continue to next script
+          }
+        }
+        
+        // Method 2: Check window.Shopify.product (if available)
+        if (typeof window.Shopify !== 'undefined' && window.Shopify.product) {
+          if (window.Shopify.product.images) {
+            window.Shopify.product.images.forEach(function(img) {
+              if (typeof img === 'string') {
+                images.push(img);
+              } else if (img.src) {
+                images.push(img.src);
+              }
+            });
+            if (images.length > 0) {
+              log('Extracted images from window.Shopify.product', images.length);
+              return images;
+            }
+          }
+        }
+      } catch (e) {
+        log('Error extracting from Shopify JSON', e);
+      }
+      return images;
+    }
+    
+    // Extract images from DOM (fallback method)
+    function extractFromDOM() {
+      const images = [];
+      const seenUrls = new Set();
+      
+      try {
+        // Priority selectors for product images
+        const selectors = [
+          '.product__media img',
+          '.product-image img',
+          '.product-gallery img',
+          '.product-photos img',
+          '.product__media-wrapper img',
+          '.product-single__media img',
+          '[data-product-image] img',
+          '[data-product-single-media-group] img',
+          '.product-images img',
+          '.product-media img'
+        ];
+        
+        selectors.forEach(function(selector) {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(function(img) {
+            if (img instanceof HTMLImageElement) {
+              const sources = [
+                img.src,
+                img.dataset.src,
+                img.dataset.lazySrc,
+                img.dataset.originalSrc,
+                img.currentSrc
+              ].filter(Boolean);
+              
+              sources.forEach(function(src) {
+                if (src && !seenUrls.has(src)) {
+                  // Basic validation: must be a valid image URL
+                  if (src.match(/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i)) {
+                    images.push(src);
+                    seenUrls.add(src);
+                  }
+                }
+              });
+            }
+          });
+        });
+        
+        if (images.length > 0) {
+          log('Extracted images from DOM', images.length);
+        }
+      } catch (e) {
+        log('Error extracting from DOM', e);
+      }
+      
+      return images;
+    }
+    
+    // Get product images with priority order
+    function getProductImages() {
+      let images = [];
+      
+      // Priority 1: Use NUSENSE_PRODUCT_DATA (most reliable - from Liquid)
+      {% if product %}
+      if (window.NUSENSE_PRODUCT_DATA && window.NUSENSE_PRODUCT_DATA.images) {
+        images = window.NUSENSE_PRODUCT_DATA.images;
+        log('Using images from NUSENSE_PRODUCT_DATA', images.length);
+        return images;
+      }
+      {% endif %}
+      
+      // Priority 2: Extract from Shopify product JSON
+      images = extractFromShopifyJSON();
+      if (images.length > 0) {
+        return images;
+      }
+      
+      // Priority 3: Extract from DOM (fallback)
+      images = extractFromDOM();
+      if (images.length > 0) {
+        return images;
+      }
+      
+      log('No product images found');
+      return [];
+    }
+    
+    // Handle incoming messages from iframe
+    function handleMessage(event) {
+      // Validate message type
+      if (!event.data || event.data.type !== 'NUSENSE_REQUEST_IMAGES') {
+        return;
+      }
+      
+      // Optional: Validate origin (security)
+      // Uncomment and configure for production
+      /*
+      if (!isValidOrigin(event.origin)) {
+        log('Invalid origin', event.origin);
+        return;
+      }
+      */
+      
+      log('Received image request from iframe', event.origin);
+      
+      // Get product images
+      const images = getProductImages();
+      
+      // Send images back to iframe
+      if (event.source && event.source !== window) {
+        try {
+          event.source.postMessage({
+            type: 'NUSENSE_PRODUCT_IMAGES',
+            images: images
+          }, '*'); // Use '*' for development, restrict in production
+          
+          log('Sent images to iframe', {
+            count: images.length,
+            origin: event.origin
+          });
+        } catch (e) {
+          log('Error sending images to iframe', e);
+        }
+      } else {
+        log('Invalid event source for image request');
+      }
+    }
+    
+    // Initialize message listener
+    window.addEventListener('message', handleMessage);
+    log('Image transmission listener initialized');
+    
+    // Also listen for widget script load completion
+    // This ensures the listener is ready before widget requests images
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        log('DOM ready - listener active');
+      });
+    } else {
+      log('DOM already ready - listener active');
+    }
+  })();
+</script>
+
