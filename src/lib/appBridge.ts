@@ -98,8 +98,59 @@ const resolveHostParam = (): string | null => {
   return restoreHost();
 };
 
-const persistShop = (shop: string | null) => {
-  persistSessionValue(SHOP_STORAGE_KEY, shop);
+const toUrl = (candidate: string): URL | null => {
+  try {
+    return new URL(candidate);
+  } catch {
+    try {
+      return new URL(`https://${candidate}`);
+    } catch {
+      return null;
+    }
+  }
+};
+
+const normalizeShopDomain = (value: string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = toUrl(trimmed);
+  if (!parsed) {
+    return null;
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  const pathname = parsed.pathname.toLowerCase();
+
+  if (hostname.endsWith(".myshopify.com")) {
+    return hostname;
+  }
+
+  const adminPathMatch = pathname.match(/\/store\/([^/?#]+)/i);
+  if (adminPathMatch?.[1]) {
+    return `${adminPathMatch[1].toLowerCase()}.myshopify.com`;
+  }
+
+  const adminSubdomainMatch = hostname.match(
+    /^([a-z0-9-]+)\.admin\.shopify\.com$/
+  );
+  if (adminSubdomainMatch?.[1]) {
+    return `${adminSubdomainMatch[1].toLowerCase()}.myshopify.com`;
+  }
+
+  return hostname || null;
+};
+
+const persistShop = (shop: string | null): string | null => {
+  const normalized = normalizeShopDomain(shop);
+  persistSessionValue(SHOP_STORAGE_KEY, normalized);
+  return normalized;
 };
 
 const restoreShop = (): string | null => restoreSessionValue(SHOP_STORAGE_KEY);
@@ -118,10 +169,10 @@ const extractShopFromHash = (): string | null => {
   const shop = params.get("shop");
 
   if (shop) {
-    persistShop(shop);
+    return persistShop(shop);
   }
 
-  return shop;
+  return null;
 };
 
 const resolveShopParam = (): string | null => {
@@ -133,8 +184,7 @@ const resolveShopParam = (): string | null => {
   const shop = params.get("shop");
 
   if (shop) {
-    persistShop(shop);
-    return shop;
+    return persistShop(shop);
   }
 
   const hashShop = extractShopFromHash();
@@ -166,41 +216,31 @@ const deriveShopFromHost = (host: string | null): string | null => {
     return null;
   }
 
-  const normalizedUrl = decodedHost.startsWith("http")
-    ? decodedHost
-    : `https://${decodedHost}`;
+  return normalizeShopDomain(decodedHost);
+};
 
-  let parsed: URL | null = null;
-  try {
-    parsed = new URL(normalizedUrl);
-  } catch {
-    try {
-      parsed = new URL(`https://${decodedHost}`);
-    } catch {
-      return null;
-    }
+const resolveShopFromGlobals = (): string | null => {
+  if (typeof window === "undefined") {
+    return null;
   }
 
-  const hostname = parsed.hostname.toLowerCase();
-  const pathname = parsed.pathname.toLowerCase();
+  const globalCandidate =
+    normalizeShopDomain(
+      (window as Record<string, any>)?.shopify?.config?.shop ??
+        (window as Record<string, any>)?.shopify?.config?.shopDomain ??
+        (window as Record<string, any>)?.shopify?.config?.shopUrl
+    ) ??
+    normalizeShopDomain(
+      (window as Record<string, any>)?.Shopify?.shop ??
+        (window as Record<string, any>)?.Shopify?.shopDomain ??
+        (window as Record<string, any>)?.Shopify?.shopOrigin
+    ) ??
+    normalizeShopDomain(
+      (window as Record<string, any>)?.__SHOPIFY_DEV_APP_BRIDGE__?.shopDomain ??
+        (window as Record<string, any>)?.__SHOPIFY_DEV_STORE__?.shopDomain
+    );
 
-  if (hostname.endsWith(".myshopify.com")) {
-    return hostname;
-  }
-
-  const adminPathMatch = pathname.match(/\/store\/([^/?#]+)/i);
-  if (adminPathMatch?.[1]) {
-    return `${adminPathMatch[1].toLowerCase()}.myshopify.com`;
-  }
-
-  const adminSubdomainMatch = hostname.match(
-    /^([a-z0-9-]+)\.admin\.shopify\.com$/
-  );
-  if (adminSubdomainMatch?.[1]) {
-    return `${adminSubdomainMatch[1].toLowerCase()}.myshopify.com`;
-  }
-
-  return null;
+  return globalCandidate ?? null;
 };
 
 const resolveApiKey = (): string | null => {
@@ -232,10 +272,16 @@ export const initializeAppBridge = (): any | null => {
   let shop = resolveShopParam();
 
   if (!shop) {
+    const globalShop = resolveShopFromGlobals();
+    if (globalShop) {
+      shop = persistShop(globalShop);
+    }
+  }
+
+  if (!shop) {
     const derivedShop = deriveShopFromHost(host);
     if (derivedShop) {
-      persistShop(derivedShop);
-      shop = derivedShop;
+      shop = persistShop(derivedShop);
     } else {
       console.warn("[AppBridge] Unable to derive shop from host.", {
         host,
@@ -266,6 +312,9 @@ export const initializeAppBridge = (): any | null => {
     cachedHost === host &&
     cachedShop === normalizedShop
   ) {
+    if (normalizedShop) {
+      persistShop(normalizedShop);
+    }
     return cachedAppBridge;
   }
 
@@ -329,7 +378,10 @@ export const isEmbeddedApp = (): boolean => {
 
   const apiKey = resolveApiKey();
   const host = resolveHostParam();
-  const shop = resolveShopParam() ?? deriveShopFromHost(host);
+  const shop =
+    resolveShopParam() ??
+    resolveShopFromGlobals() ??
+    deriveShopFromHost(host);
 
   if (shop) {
     persistShop(shop);
