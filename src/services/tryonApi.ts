@@ -1,6 +1,7 @@
-import { TryOnResponse } from '@/types/tryon';
+import { TryOnResponse } from "@/types/tryon";
 
-const API_ENDPOINT = 'https://try-on-server-v1.onrender.com/api/fashion-photo';
+const API_ENDPOINT = "https://try-on-server-v1.onrender.com/api/fashion-photo";
+const HEALTH_ENDPOINT = "https://try-on-server-v1.onrender.com/api/health";
 
 export async function generateTryOn(
   personImage: File | Blob,
@@ -9,19 +10,18 @@ export async function generateTryOn(
 ): Promise<TryOnResponse> {
   try {
     const formData = new FormData();
-    formData.append('personImage', personImage);
-    formData.append('clothingImage', clothingImage, 'clothing-item.jpg');
-    
-    // Add storeName if provided
+    formData.append("personImage", personImage);
+    formData.append("clothingImage", clothingImage, "clothing-item.jpg");
+
     if (storeName) {
-      formData.append('storeName', storeName);
+      formData.append("storeName", storeName);
     }
 
     const response = await fetch(API_ENDPOINT, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
-        'Content-Language': 'fr',
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+        "Content-Language": "fr",
       },
       body: formData,
     });
@@ -34,24 +34,44 @@ export async function generateTryOn(
     return data;
   } catch (error) {
     return {
-      status: 'error',
+      status: "error",
       error_message: {
-        code: 'NETWORK_ERROR',
-        message: 'Une erreur de connexion s\'est produite.',
+        code: "NETWORK_ERROR",
+        message: "Une erreur de connexion s'est produite.",
       },
     };
   }
 }
+
+export const getHealthStatus = async (): Promise<void> => {
+  try {
+    const response = await fetch(HEALTH_ENDPOINT, {
+      headers: {
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+      },
+    });
+
+    if (!response.ok) {
+      console.warn(
+        `[tryonApi] Health check failed with status ${response.status}`
+      );
+      return;
+    }
+
+    await response.json();
+  } catch (error) {
+    console.warn("[tryonApi] Health check request failed", error);
+  }
+};
 
 export async function fetchImageWithCorsHandling(
   url: string,
   signal?: AbortSignal
 ): Promise<Blob> {
   const strategies = [
-    // Strategy 1: Direct fetch with cors mode
     async () => {
       const response = await fetch(url, {
-        mode: 'cors',
+        mode: "cors",
         signal,
       });
       if (!response.ok) {
@@ -59,15 +79,13 @@ export async function fetchImageWithCorsHandling(
       }
       return response.blob();
     },
-
-    // Strategy 2: Direct fetch with no-cors mode (fallback)
     async () => {
       const response = await fetch(url, {
-        mode: 'no-cors',
+        mode: "no-cors",
         signal,
       });
-      if (response.type === 'opaque') {
-        throw new Error('Réponse no-cors reçue');
+      if (response.type === "opaque") {
+        throw new Error("Réponse no-cors reçue");
       }
       return response.blob();
     },
@@ -81,7 +99,7 @@ export async function fetchImageWithCorsHandling(
     }
   }
 
-  throw new Error('Toutes les stratégies CORS ont échoué');
+  throw new Error("Toutes les stratégies CORS ont échoué");
 }
 
 export function blobToDataURL(blob: Blob): Promise<string> {

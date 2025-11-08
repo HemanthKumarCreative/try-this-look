@@ -13,7 +13,7 @@ import {
   type StoreInfo,
 } from "@/utils/shopifyIntegration";
 import { storage } from "@/utils/storage";
-import { generateTryOn, dataURLToBlob } from "@/services/tryonApi";
+import { generateTryOn, dataURLToBlob, getHealthStatus } from "@/services/tryonApi";
 import { TryOnResponse } from "@/types/tryon";
 import { Sparkles, X, RotateCcw, XCircle } from "lucide-react";
 import StatusBar from "./StatusBar";
@@ -83,6 +83,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     // If we're in an iframe, ALWAYS prioritize images from the parent window (Shopify product page)
     // Do NOT extract images from the widget's own page (/widget page)
     if (isInIframe) {
+      void getHealthStatus();
       // Request store info from parent if not already detected
       if (
         !detectedStore ||
