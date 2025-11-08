@@ -6,12 +6,14 @@ import Index from "./pages/Index";
 import ProductDemo from "./pages/ProductDemo";
 import Widget from "./pages/Widget";
 import NotFound from "./pages/NotFound";
+import AppBridgeInitializer from "@/components/AppBridgeInitializer";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <AppBridgeInitializer />
       <Sonner />
       <BrowserRouter>
         <Routes>
