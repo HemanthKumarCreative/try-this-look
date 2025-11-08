@@ -97,7 +97,9 @@ const verifyWebhookSignature = (req, res, next) => {
     }
 
     // Ensure body is a Buffer for HMAC calculation
-    const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || "");
+    const rawBody = Buffer.isBuffer(req.body)
+      ? req.body
+      : Buffer.from(req.body || "");
 
     // Calculate HMAC from raw body
     // Shopify sends HMAC as base64-encoded string in X-Shopify-Hmac-Sha256 header
@@ -279,8 +281,6 @@ app.post(
       // Clean up any app-specific data, sessions, or resources
       // This is a mandatory webhook for compliance
 
-      console.log(`App uninstalled for shop: ${shop_domain}`);
-
       // Implement cleanup logic (delete sessions, remove app data, etc.)
       // This webhook is called when the app is uninstalled from a shop
 
@@ -307,10 +307,6 @@ app.post(
       // Handle GDPR data request
       // Must provide customer data within 30 days
       // This is a mandatory webhook for GDPR compliance
-
-      console.log(
-        `GDPR data request for customer: ${customer?.id} from shop: ${shop_domain}`
-      );
 
       // Collect and prepare customer data
       // Data should include all information stored about the customer
@@ -340,10 +336,6 @@ app.post(
       // Must delete all customer data within 10 days
       // This is a mandatory webhook for GDPR compliance
 
-      console.log(
-        `GDPR customer redact for customer: ${customer?.id} from shop: ${shop_domain}`
-      );
-
       // Delete all customer-related data
       // This includes any stored customer information, images, preferences, etc.
       // Must delete all customer data within 10 days of this webhook
@@ -367,8 +359,6 @@ app.post("/webhooks/shop/redact", verifyWebhookSignature, async (req, res) => {
     // Handle GDPR shop data deletion
     // Must delete all shop data within 10 days
     // This is a mandatory webhook for GDPR compliance
-
-    console.log(`GDPR shop redact for shop: ${shop_domain}`);
 
     // Delete all shop-related data
     // This includes any stored shop information, configurations, etc.
