@@ -1,5 +1,18 @@
 const HOST_STORAGE_KEY = "shopify_app_host";
 
+const coerceString = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  return trimmedValue;
+};
+
 const resolveMetaApiKey = (): string | null => {
   if (typeof document === "undefined") {
     return null;
@@ -79,7 +92,8 @@ const resolveHostParam = (): string | null => {
 };
 
 const resolveApiKey = (): string | null => {
-  const envKey = import.meta?.env?.SHOPIFY_API_KEY;
+  const envKey = coerceString(import.meta?.env?.VITE_SHOPIFY_API_KEY);
+
   if (envKey) {
     return envKey;
   }
@@ -104,6 +118,11 @@ export const initializeAppBridge = (): any | null => {
   const host = resolveHostParam();
 
   if (!apiKey || !host) {
+    if (import.meta?.env?.MODE === "development") {
+      console.warn(
+        "[AppBridge] Missing apiKey or host. Ensure the app is loaded from Shopify admin and VITE_SHOPIFY_API_KEY is configured."
+      );
+    }
     return null;
   }
 

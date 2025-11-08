@@ -22,14 +22,15 @@ if (process.env.VERCEL !== "1" && !process.env.VERCEL_ENV) {
   }
 }
 
-const PORT = parseInt(process.env.PORT || "3000", 10);
-const isDev = process.env.NODE_ENV !== "production";
+const portInput = process.env.VITE_PORT || process.env.PORT || "3000";
+const PORT = Number.parseInt(portInput, 10);
+const isDev = (process.env.VITE_NODE_ENV || process.env.NODE_ENV) !== "production";
 
 // Initialize Shopify API
 // Validate required environment variables
-const apiKey = process.env.SHOPIFY_API_KEY;
-const apiSecret = process.env.SHOPIFY_API_SECRET;
-const appUrl = process.env.SHOPIFY_APP_URL;
+const apiKey = process.env.VITE_SHOPIFY_API_KEY;
+const apiSecret = process.env.VITE_SHOPIFY_API_SECRET;
+const appUrl = process.env.VITE_SHOPIFY_APP_URL;
 
 if (!apiKey || !apiSecret) {
   // Missing required environment variables
@@ -53,7 +54,10 @@ if (appUrl) {
 const shopify = shopifyApi({
   apiKey: apiKey || "",
   apiSecretKey: apiSecret || "",
-  scopes: ["write_products", "read_products", "write_themes", "read_themes"],
+  scopes: (process.env.VITE_SCOPES || "")
+    .split(",")
+    .map((scope) => scope.trim())
+    .filter(Boolean),
   hostName: hostName,
   apiVersion: LATEST_API_VERSION,
   isEmbeddedApp: true,
@@ -288,7 +292,7 @@ app.get("/auth/callback", async (req, res) => {
     // Get host and shop from query/session
     const host = req.query.host;
     const shop = session.shop;
-    const apiKey = process.env.SHOPIFY_API_KEY;
+    const apiKey = process.env.VITE_SHOPIFY_API_KEY;
 
     if (!shop || !apiKey) {
       return res.status(500).json({
