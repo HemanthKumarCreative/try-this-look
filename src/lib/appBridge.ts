@@ -145,6 +145,54 @@ const resolveShopParam = (): string | null => {
   return restoreShop();
 };
 
+const decodeBase64 = (value: string): string | null => {
+  try {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const padded =
+      normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+    return typeof window === "undefined" ? null : window.atob(padded);
+  } catch {
+    return null;
+  }
+};
+
+const deriveShopFromHost = (host: string | null): string | null => {
+  if (!host) {
+    return null;
+  }
+
+  const decodedHost = decodeBase64(host);
+  if (!decodedHost) {
+    return null;
+  }
+
+  const trimmedHost = decodedHost.trim();
+
+  if (!trimmedHost) {
+    return null;
+  }
+
+  const storeSegment = trimmedHost
+    .split("/store/")
+    .pop()
+    ?.split(/[/?#]/)[0]
+    ?.trim();
+
+  if (storeSegment) {
+    return `${storeSegment}.myshopify.com`;
+  }
+
+  const myShopifyMatch = trimmedHost.match(
+    /([a-z0-9-]+\.myshopify\.com)/i
+  );
+
+  if (myShopifyMatch?.[1]) {
+    return myShopifyMatch[1].toLowerCase();
+  }
+
+  return null;
+};
+
 const resolveApiKey = (): string | null => {
   const envKey = coerceString(import.meta?.env?.VITE_SHOPIFY_API_KEY);
 
@@ -171,7 +219,15 @@ export const initializeAppBridge = (): any | null => {
 
   const apiKey = resolveApiKey();
   const host = resolveHostParam();
-  const shop = resolveShopParam();
+  let shop = resolveShopParam();
+
+  if (!shop) {
+    const derivedShop = deriveShopFromHost(host);
+    if (derivedShop) {
+      persistShop(derivedShop);
+      shop = derivedShop;
+    }
+  }
 
   if (!apiKey || !host) {
     if (import.meta?.env?.MODE === "development") {
@@ -256,13 +312,18 @@ export const isEmbeddedApp = (): boolean => {
     return false;
   }
 
+  const apiKey = resolveApiKey();
+  const host = resolveHostParam();
+  const shop = resolveShopParam() ?? deriveShopFromHost(host);
+
+  if (shop) {
+    persistShop(shop);
+  }
+
   const inIframe = window.parent !== window;
   if (!inIframe) {
     return false;
   }
-
-  const apiKey = resolveApiKey();
-  const host = resolveHostParam();
 
   return Boolean(apiKey && host);
 };
