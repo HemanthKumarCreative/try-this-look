@@ -226,6 +226,10 @@ export const initializeAppBridge = (): any | null => {
     if (derivedShop) {
       persistShop(derivedShop);
       shop = derivedShop;
+    } else if (import.meta?.env?.MODE === "development") {
+      console.warn("[AppBridge] Unable to derive shop from host.", {
+        host,
+      });
     }
   }
 
