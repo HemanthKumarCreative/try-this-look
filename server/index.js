@@ -24,7 +24,8 @@ if (process.env.VERCEL !== "1" && !process.env.VERCEL_ENV) {
 
 const portInput = process.env.VITE_PORT || process.env.PORT || "3000";
 const PORT = Number.parseInt(portInput, 10);
-const isDev = (process.env.VITE_NODE_ENV || process.env.NODE_ENV) !== "production";
+const isDev =
+  (process.env.VITE_NODE_ENV || process.env.NODE_ENV) !== "production";
 
 // Initialize Shopify API
 // Validate required environment variables
@@ -208,6 +209,15 @@ app.use((req, res, next) => {
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
+  next();
+});
+
+app.use((req, res, next) => {
+  res.removeHeader("X-Frame-Options");
+  res.setHeader(
+    "Content-Security-Policy",
+    "frame-ancestors https://admin.shopify.com https://*.myshopify.com https://*.shopify.com;"
+  );
   next();
 });
 
