@@ -161,33 +161,43 @@ const deriveShopFromHost = (host: string | null): string | null => {
     return null;
   }
 
-  const decodedHost = decodeBase64(host);
+  const decodedHost = decodeBase64(host)?.trim();
   if (!decodedHost) {
     return null;
   }
 
-  const trimmedHost = decodedHost.trim();
+  const normalizedUrl = decodedHost.startsWith("http")
+    ? decodedHost
+    : `https://${decodedHost}`;
 
-  if (!trimmedHost) {
-    return null;
+  let parsed: URL | null = null;
+  try {
+    parsed = new URL(normalizedUrl);
+  } catch {
+    try {
+      parsed = new URL(`https://${decodedHost}`);
+    } catch {
+      return null;
+    }
   }
 
-  const storeSegment = trimmedHost
-    .split("/store/")
-    .pop()
-    ?.split(/[/?#]/)[0]
-    ?.trim();
+  const hostname = parsed.hostname.toLowerCase();
+  const pathname = parsed.pathname.toLowerCase();
 
-  if (storeSegment) {
-    return `${storeSegment}.myshopify.com`;
+  if (hostname.endsWith(".myshopify.com")) {
+    return hostname;
   }
 
-  const myShopifyMatch = trimmedHost.match(
-    /([a-z0-9-]+\.myshopify\.com)/i
+  const adminPathMatch = pathname.match(/\/store\/([^/?#]+)/i);
+  if (adminPathMatch?.[1]) {
+    return `${adminPathMatch[1].toLowerCase()}.myshopify.com`;
+  }
+
+  const adminSubdomainMatch = hostname.match(
+    /^([a-z0-9-]+)\.admin\.shopify\.com$/
   );
-
-  if (myShopifyMatch?.[1]) {
-    return myShopifyMatch[1].toLowerCase();
+  if (adminSubdomainMatch?.[1]) {
+    return `${adminSubdomainMatch[1].toLowerCase()}.myshopify.com`;
   }
 
   return null;
@@ -226,9 +236,10 @@ export const initializeAppBridge = (): any | null => {
     if (derivedShop) {
       persistShop(derivedShop);
       shop = derivedShop;
-    } else if (import.meta?.env?.MODE === "development") {
+    } else {
       console.warn("[AppBridge] Unable to derive shop from host.", {
         host,
+        decodedHost: host ? decodeBase64(host) : null,
       });
     }
   }
