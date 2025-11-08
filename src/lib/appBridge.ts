@@ -1,4 +1,5 @@
 const HOST_STORAGE_KEY = "shopify_app_host";
+const SHOP_STORAGE_KEY = "shopify_app_shop";
 
 const coerceString = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -29,26 +30,32 @@ const resolveMetaApiKey = (): string | null => {
   return null;
 };
 
-const persistHost = (host: string | null) => {
+const persistSessionValue = (key: string, value: string | null) => {
   try {
-    if (!host) {
-      sessionStorage.removeItem(HOST_STORAGE_KEY);
+    if (!value) {
+      sessionStorage.removeItem(key);
       return;
     }
 
-    sessionStorage.setItem(HOST_STORAGE_KEY, host);
+    sessionStorage.setItem(key, value);
   } catch {
     // Storage is unavailable (Safari private mode or similar)
   }
 };
 
-const restoreHost = (): string | null => {
+const restoreSessionValue = (key: string): string | null => {
   try {
-    return sessionStorage.getItem(HOST_STORAGE_KEY);
+    return sessionStorage.getItem(key);
   } catch {
     return null;
   }
 };
+
+const persistHost = (host: string | null) => {
+  persistSessionValue(HOST_STORAGE_KEY, host);
+};
+
+const restoreHost = (): string | null => restoreSessionValue(HOST_STORAGE_KEY);
 
 const extractHostFromHash = (): string | null => {
   if (typeof window === "undefined") {
@@ -91,6 +98,53 @@ const resolveHostParam = (): string | null => {
   return restoreHost();
 };
 
+const persistShop = (shop: string | null) => {
+  persistSessionValue(SHOP_STORAGE_KEY, shop);
+};
+
+const restoreShop = (): string | null => restoreSessionValue(SHOP_STORAGE_KEY);
+
+const extractShopFromHash = (): string | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  if (!window.location.hash) {
+    return null;
+  }
+
+  const hashQuery = window.location.hash.replace(/^#/, "");
+  const params = new URLSearchParams(hashQuery);
+  const shop = params.get("shop");
+
+  if (shop) {
+    persistShop(shop);
+  }
+
+  return shop;
+};
+
+const resolveShopParam = (): string | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const shop = params.get("shop");
+
+  if (shop) {
+    persistShop(shop);
+    return shop;
+  }
+
+  const hashShop = extractShopFromHash();
+  if (hashShop) {
+    return hashShop;
+  }
+
+  return restoreShop();
+};
+
 const resolveApiKey = (): string | null => {
   const envKey = coerceString(import.meta?.env?.VITE_SHOPIFY_API_KEY);
 
@@ -103,6 +157,7 @@ const resolveApiKey = (): string | null => {
 
 let cachedAppBridge: any | null = null;
 let cachedHost: string | null = null;
+let cachedShop: string | null = null;
 
 export const initializeAppBridge = (): any | null => {
   if (typeof window === "undefined") {
@@ -116,6 +171,7 @@ export const initializeAppBridge = (): any | null => {
 
   const apiKey = resolveApiKey();
   const host = resolveHostParam();
+  const shop = resolveShopParam();
 
   if (!apiKey || !host) {
     if (import.meta?.env?.MODE === "development") {
@@ -126,17 +182,36 @@ export const initializeAppBridge = (): any | null => {
     return null;
   }
 
-  if (cachedAppBridge && cachedHost === host) {
+  if (!shop && import.meta?.env?.MODE === "development") {
+    console.warn(
+      "[AppBridge] Missing shop parameter. Attempting initialization without shop. Verify the app is launched from Shopify admin."
+    );
+  }
+
+  const normalizedShop = shop ?? null;
+
+  if (
+    cachedAppBridge &&
+    cachedHost === host &&
+    cachedShop === normalizedShop
+  ) {
     return cachedAppBridge;
   }
 
-  const app = appBridgeGlobal.createApp({
+  const config: Record<string, string> = {
     apiKey,
     host,
-  });
+  };
+
+  if (normalizedShop) {
+    config.shop = normalizedShop;
+  }
+
+  const app = appBridgeGlobal.createApp(config);
 
   cachedAppBridge = app;
   cachedHost = host;
+  cachedShop = normalizedShop;
 
   return app;
 };
