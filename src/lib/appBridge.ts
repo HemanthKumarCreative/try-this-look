@@ -224,6 +224,13 @@ const resolveShopFromGlobals = (): string | null => {
     return null;
   }
 
+  const metaShop =
+    typeof document !== "undefined"
+      ? document
+          .querySelector('meta[name="shopify-shop-domain"]')
+          ?.getAttribute("content")
+      : null;
+
   const globalCandidate =
     normalizeShopDomain(
       (window as Record<string, any>)?.shopify?.config?.shop ??
@@ -237,7 +244,9 @@ const resolveShopFromGlobals = (): string | null => {
     ) ??
     normalizeShopDomain(
       (window as Record<string, any>)?.__SHOPIFY_DEV_APP_BRIDGE__?.shopDomain ??
-        (window as Record<string, any>)?.__SHOPIFY_DEV_STORE__?.shopDomain
+        (window as Record<string, any>)?.__SHOPIFY_DEV_STORE__?.shopDomain ??
+        metaShop ??
+        null
     );
 
   return globalCandidate ?? null;
@@ -327,7 +336,19 @@ export const initializeAppBridge = (): any | null => {
     config.shop = normalizedShop;
   }
 
-  const app = appBridgeGlobal.createApp(config);
+  let app: any;
+  try {
+    app = appBridgeGlobal.createApp(config);
+  } catch (error) {
+    console.error("[AppBridge] createApp failed", {
+      hasApiKey: Boolean(apiKey),
+      host,
+      decodedHost: host ? decodeBase64(host) : null,
+      shop: normalizedShop,
+      error,
+    });
+    throw error;
+  }
 
   cachedAppBridge = app;
   cachedHost = host;
