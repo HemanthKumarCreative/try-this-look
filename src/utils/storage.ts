@@ -1,73 +1,160 @@
-import { TryOnSession, CartItem, ProductInfo } from '@/types/tryon';
+import { TryOnSession, CartItem, ProductInfo } from "@/types/tryon";
 
 const STORAGE_KEYS = {
-  UPLOADED_IMAGE: 'nusense_tryon_uploaded_image',
-  GENERATED_IMAGE: 'nusense_tryon_generated_image',
-  SELECTED_CLOTHING_URL: 'nusense_tryon_selected_clothing_url',
-  LAST_SESSION_DATA: 'nusense_tryon_last_session',
-  CART_ITEMS: 'nusense_tryon_cart_items',
-  PRODUCT_INFO: 'nusense_tryon_product_info',
+  UPLOADED_IMAGE: "nusense_tryon_uploaded_image",
+  GENERATED_IMAGE: "nusense_tryon_generated_image",
+  SELECTED_CLOTHING_URL: "nusense_tryon_selected_clothing_url",
+  LAST_SESSION_DATA: "nusense_tryon_last_session",
+  CART_ITEMS: "nusense_tryon_cart_items",
+  PRODUCT_INFO: "nusense_tryon_product_info",
 } as const;
+
+const inMemoryFallback = new Map<string, string>();
+
+function isQuotaExceeded(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const err = error as DOMException & { code?: number };
+  return (
+    err.name === "QuotaExceededError" ||
+    err.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    err.code === 22 ||
+    err.code === 1014
+  );
+}
+
+function safeSetItem(key: string, value: string) {
+  if (typeof window === "undefined") {
+    inMemoryFallback.set(key, value);
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(key, value);
+    inMemoryFallback.set(key, value);
+    return;
+  } catch (error) {
+    if (isQuotaExceeded(error)) {
+      // Remove the heaviest entries we store before retrying.
+      const heavyKeys = [
+        STORAGE_KEYS.GENERATED_IMAGE,
+        STORAGE_KEYS.UPLOADED_IMAGE,
+        STORAGE_KEYS.LAST_SESSION_DATA,
+        STORAGE_KEYS.CART_ITEMS,
+      ].filter((heavyKey) => heavyKey !== key);
+
+      heavyKeys.forEach((heavyKey) => {
+        try {
+          window.localStorage.removeItem(heavyKey);
+        } catch {
+          // Ignore removal failures – we'll still fall back to memory storage.
+        }
+      });
+
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {
+        // Persist to memory fallback so the app can continue working even without localStorage.
+      }
+    }
+
+    // Always update fallback so callers can still read the latest value.
+    inMemoryFallback.set(key, value);
+  }
+}
+
+function safeGetItem(key: string) {
+  if (typeof window === "undefined") {
+    return inMemoryFallback.get(key) ?? null;
+  }
+
+  try {
+    const value = window.localStorage.getItem(key);
+    if (value !== null) {
+      // Keep fallback in sync with the persisted value.
+      inMemoryFallback.set(key, value);
+      return value;
+    } else {
+      // Ensure fallback mirrors the absence of the key.
+      inMemoryFallback.delete(key);
+      return null;
+    }
+  } catch {
+    // Ignore read errors and fall back to memory.
+  }
+
+  return inMemoryFallback.get(key) ?? null;
+}
+
+function safeRemoveItem(key: string) {
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // Ignore removal failures – fallback covers us.
+    }
+  }
+  inMemoryFallback.delete(key);
+}
 
 export const storage = {
   // Session management
   saveSession(session: TryOnSession): void {
-    localStorage.setItem(STORAGE_KEYS.LAST_SESSION_DATA, JSON.stringify(session));
+    safeSetItem(STORAGE_KEYS.LAST_SESSION_DATA, JSON.stringify(session));
   },
 
   getSession(): TryOnSession | null {
-    const data = localStorage.getItem(STORAGE_KEYS.LAST_SESSION_DATA);
+    const data = safeGetItem(STORAGE_KEYS.LAST_SESSION_DATA);
     return data ? JSON.parse(data) : null;
   },
 
   clearSession(): void {
-    localStorage.removeItem(STORAGE_KEYS.LAST_SESSION_DATA);
-    localStorage.removeItem(STORAGE_KEYS.UPLOADED_IMAGE);
-    localStorage.removeItem(STORAGE_KEYS.GENERATED_IMAGE);
-    localStorage.removeItem(STORAGE_KEYS.SELECTED_CLOTHING_URL);
+    safeRemoveItem(STORAGE_KEYS.LAST_SESSION_DATA);
+    safeRemoveItem(STORAGE_KEYS.UPLOADED_IMAGE);
+    safeRemoveItem(STORAGE_KEYS.GENERATED_IMAGE);
+    safeRemoveItem(STORAGE_KEYS.SELECTED_CLOTHING_URL);
   },
 
   // Image storage
   saveUploadedImage(dataURL: string): void {
-    localStorage.setItem(STORAGE_KEYS.UPLOADED_IMAGE, dataURL);
+    safeSetItem(STORAGE_KEYS.UPLOADED_IMAGE, dataURL);
   },
 
   clearUploadedImage(): void {
-    localStorage.removeItem(STORAGE_KEYS.UPLOADED_IMAGE);
+    safeRemoveItem(STORAGE_KEYS.UPLOADED_IMAGE);
   },
 
   getUploadedImage(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.UPLOADED_IMAGE);
+    return safeGetItem(STORAGE_KEYS.UPLOADED_IMAGE);
   },
 
   saveGeneratedImage(dataURL: string): void {
-    localStorage.setItem(STORAGE_KEYS.GENERATED_IMAGE, dataURL);
+    safeSetItem(STORAGE_KEYS.GENERATED_IMAGE, dataURL);
   },
 
   getGeneratedImage(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.GENERATED_IMAGE);
+    return safeGetItem(STORAGE_KEYS.GENERATED_IMAGE);
   },
 
   saveClothingUrl(url: string): void {
-    localStorage.setItem(STORAGE_KEYS.SELECTED_CLOTHING_URL, url);
+    safeSetItem(STORAGE_KEYS.SELECTED_CLOTHING_URL, url);
   },
 
   clearClothingUrl(): void {
-    localStorage.removeItem(STORAGE_KEYS.SELECTED_CLOTHING_URL);
+    safeRemoveItem(STORAGE_KEYS.SELECTED_CLOTHING_URL);
   },
 
   getClothingUrl(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.SELECTED_CLOTHING_URL);
+    return safeGetItem(STORAGE_KEYS.SELECTED_CLOTHING_URL);
   },
 
   // Cart management
   getCartItems(): CartItem[] {
-    const data = localStorage.getItem(STORAGE_KEYS.CART_ITEMS);
+    const data = safeGetItem(STORAGE_KEYS.CART_ITEMS);
     return data ? JSON.parse(data) : [];
   },
 
   saveCartItems(items: CartItem[]): void {
-    localStorage.setItem(STORAGE_KEYS.CART_ITEMS, JSON.stringify(items));
+    safeSetItem(STORAGE_KEYS.CART_ITEMS, JSON.stringify(items));
   },
 
   addToCart(product: ProductInfo): void {
@@ -102,16 +189,16 @@ export const storage = {
   },
 
   clearCart(): void {
-    localStorage.removeItem(STORAGE_KEYS.CART_ITEMS);
+    safeRemoveItem(STORAGE_KEYS.CART_ITEMS);
   },
 
   // Product info
   saveProductInfo(product: ProductInfo): void {
-    localStorage.setItem(STORAGE_KEYS.PRODUCT_INFO, JSON.stringify(product));
+    safeSetItem(STORAGE_KEYS.PRODUCT_INFO, JSON.stringify(product));
   },
 
   getProductInfo(): ProductInfo | null {
-    const data = localStorage.getItem(STORAGE_KEYS.PRODUCT_INFO);
+    const data = safeGetItem(STORAGE_KEYS.PRODUCT_INFO);
     return data ? JSON.parse(data) : null;
   },
 };
