@@ -61,12 +61,11 @@ const shopify = shopifyApi({
     .filter(Boolean),
   hostName: hostName,
   apiVersion: LATEST_API_VERSION,
-  isEmbeddedApp: true,
+  isEmbeddedApp: false,
   restResources,
 });
 
 const app = express();
-const adminRouter = express.Router();
 
 // Middleware
 // For webhooks, we need raw body for HMAC verification
@@ -158,38 +157,6 @@ const verifyWebhookSignature = (req, res, next) => {
   }
 };
 
-const authenticateEmbeddedRequest = async (req, res, next) => {
-  try {
-    const authorizationHeader = req.get("Authorization");
-    if (!authorizationHeader || !authorizationHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        error: "Unauthorized",
-        message: "Missing session token",
-      });
-    }
-
-    const sessionToken = authorizationHeader.replace("Bearer", "").trim();
-    if (!sessionToken) {
-      return res.status(401).json({
-        error: "Unauthorized",
-        message: "Invalid session token",
-      });
-    }
-
-    const decodedSession = await shopify.session.decodeSessionToken(
-      sessionToken
-    );
-    req.shopifySession = decodedSession;
-
-    next();
-  } catch (error) {
-    return res.status(401).json({
-      error: "Unauthorized",
-      message: "Session token validation failed",
-    });
-  }
-};
-
 // Serve static files only in non-Vercel environment
 // In Vercel, static files are served directly by the platform
 // Check for Vercel environment
@@ -225,23 +192,6 @@ app.use((req, res, next) => {
 app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
-
-adminRouter.use(authenticateEmbeddedRequest);
-
-adminRouter.get("/session", (req, res) => {
-  const sessionPayload = req.shopifySession;
-
-  return res.json({
-    shop: sessionPayload?.dest || null,
-    userId: sessionPayload?.sub || null,
-    sessionId: sessionPayload?.sid || null,
-    expiresAt: sessionPayload?.exp
-      ? new Date(sessionPayload.exp * 1000).toISOString()
-      : null,
-  });
-});
-
-app.use("/api/admin", adminRouter);
 
 // OAuth routes
 app.get("/auth", async (req, res) => {
@@ -311,8 +261,7 @@ app.get("/auth/callback", async (req, res) => {
       });
     }
 
-    // Construct redirect URL for embedded app
-    // For embedded apps, include the host parameter to maintain the iframe context
+    // Construct redirect URL after OAuth
     let redirectUrl = `https://${shop}/admin/apps/${apiKey}`;
 
     if (host) {
