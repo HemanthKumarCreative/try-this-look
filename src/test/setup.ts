@@ -22,18 +22,3 @@ Object.defineProperty(window, 'location', {
   configurable: true,
 });
 
-// Mock App Bridge global
-Object.defineProperty(window, 'shopify', {
-  value: {
-    toast: {
-      show: vi.fn(),
-    },
-    resourcePicker: vi.fn(),
-    navigation: {
-      visit: vi.fn(),
-    },
-  },
-  writable: true,
-  configurable: true,
-});
-

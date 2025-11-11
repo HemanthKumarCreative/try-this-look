@@ -11,13 +11,6 @@ const queryClient = new QueryClient();
 
 /**
  * Main App Component
- *
- * App Bridge 4.x Setup:
- * - App Bridge is initialized via the script tag in index.html
- * - No Provider component needed - App Bridge works globally
- * - Use `useAppBridge()` hook to access the `shopify` global variable
- * - Route synchronization is automatic - no manual setup needed
- * - Authenticated API calls use: fetch('shopify:admin/api/...')
  */
 const App = () => {
   console.log("App component rendered");
