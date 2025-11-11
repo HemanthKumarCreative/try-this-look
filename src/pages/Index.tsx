@@ -32,21 +32,36 @@ const Index = () => {
 
     const validateSession = async () => {
       try {
+        console.log('[Session Validation] Starting session validation process...');
+        console.log('[Session Validation] Current path:', location.pathname);
+        console.log('[Session Validation] Current URL:', window.location.href);
+        console.log('[Session Validation] Timestamp:', new Date().toISOString());
+        
         // Check if App Bridge is available
         if (!isAppBridgeAvailable()) {
-          console.log('App Bridge not available - skipping session validation');
+          console.log('[Session Validation] App Bridge not available - skipping session validation');
           return;
         }
+        console.log('[Session Validation] App Bridge is available');
 
         // Get session token
+        console.log('[Session Validation] Requesting session token...');
+        const tokenStartTime = Date.now();
         const token = await getSessionToken();
+        const tokenDuration = Date.now() - tokenStartTime;
         
         if (!token) {
-          console.warn('Failed to get session token');
+          console.warn('[Session Validation] Failed to get session token');
           return;
         }
+        
+        console.log('[Session Validation] Session token received');
+        console.log('[Session Validation] Token retrieval duration:', tokenDuration + 'ms');
+        console.log('[Session Validation] Token length:', token.length);
 
         // Make API call with session token
+        console.log('[Session Validation] Sending session token to server for validation...');
+        const apiStartTime = Date.now();
         const response = await fetch('/api/validate-session', {
           method: 'POST',
           headers: {
@@ -59,16 +74,28 @@ const Index = () => {
           }),
         });
 
+        const apiDuration = Date.now() - apiStartTime;
+        console.log('[Session Validation] API call completed');
+        console.log('[Session Validation] API call duration:', apiDuration + 'ms');
+        console.log('[Session Validation] Response status:', response.status, response.statusText);
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error('Session validation failed:', errorData);
+          console.error('[Session Validation] Session validation failed:', errorData);
           return;
         }
 
         const data = await response.json();
-        console.log('Session validated successfully:', data);
+        console.log('[Session Validation] Session validated successfully');
+        console.log('[Session Validation] Validation response:', data);
+        console.log('[Session Validation] Session information:', JSON.stringify(data.session, null, 2));
+        console.log('[Session Validation] Total process duration:', (Date.now() - tokenStartTime) + 'ms');
       } catch (error) {
-        console.error('Error during session validation:', error);
+        console.error('[Session Validation] Error during session validation:', error);
+        if (error instanceof Error) {
+          console.error('[Session Validation] Error message:', error.message);
+          console.error('[Session Validation] Error stack:', error.stack);
+        }
       }
     };
 
