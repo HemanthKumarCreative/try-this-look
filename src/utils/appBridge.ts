@@ -27,22 +27,68 @@ declare global {
 
 /**
  * Wait for App Bridge to be loaded
+ * Uses event listener on script load for immediate detection
  */
-const waitForAppBridge = (maxAttempts = 50, delay = 100): Promise<boolean> => {
+const waitForAppBridge = (): Promise<boolean> => {
   return new Promise((resolve) => {
-    let attempts = 0;
-    const checkBridge = () => {
-      // Check for App Bridge CDN structure
-      if (window['app-bridge']?.default) {
-        resolve(true);
-      } else if (attempts < maxAttempts) {
-        attempts++;
-        setTimeout(checkBridge, delay);
-      } else {
-        resolve(false);
-      }
+    // Check if App Bridge is already loaded
+    if (window['app-bridge']?.default) {
+      console.log('[App Bridge] App Bridge already loaded');
+      resolve(true);
+      return;
+    }
+
+    // Find the App Bridge script tag
+    const scriptTag = document.querySelector('script[src*="app-bridge.js"]') as HTMLScriptElement;
+    
+    if (!scriptTag) {
+      console.warn('[App Bridge] App Bridge script tag not found');
+      resolve(false);
+      return;
+    }
+
+    // Helper function to check and resolve
+    const checkAndResolve = () => {
+      setTimeout(() => {
+        if (window['app-bridge']?.default) {
+          console.log('[App Bridge] App Bridge loaded successfully');
+          resolve(true);
+        } else {
+          console.warn('[App Bridge] Script loaded but App Bridge not available');
+          resolve(false);
+        }
+      }, 100);
     };
-    checkBridge();
+
+    // Check if script is already loaded
+    // Use type assertion to access properties that may exist at runtime
+    const scriptElement = scriptTag as HTMLScriptElement & { complete?: boolean; readyState?: string };
+    const isComplete = scriptElement.complete || (scriptElement.readyState && scriptElement.readyState === 'complete');
+    
+    if (isComplete) {
+      console.log('[App Bridge] Script already complete, checking for App Bridge...');
+      checkAndResolve();
+      return;
+    }
+
+    // Wait for script to load
+    console.log('[App Bridge] Waiting for App Bridge script to load...');
+    
+    const loadHandler = () => {
+      scriptTag.removeEventListener('load', loadHandler);
+      scriptTag.removeEventListener('error', errorHandler);
+      checkAndResolve();
+    };
+
+    const errorHandler = () => {
+      scriptTag.removeEventListener('load', loadHandler);
+      scriptTag.removeEventListener('error', errorHandler);
+      console.error('[App Bridge] Failed to load App Bridge script');
+      resolve(false);
+    };
+
+    scriptTag.addEventListener('load', loadHandler);
+    scriptTag.addEventListener('error', errorHandler);
   });
 };
 
@@ -128,12 +174,17 @@ export const getSessionToken = async (): Promise<string | null> => {
     
     const duration = Date.now() - startTime;
     
-    console.log('[App Bridge] Session token generated successfully');
+    console.log('[App Bridge] ========================================');
+    console.log('[App Bridge] ✅ Session token generated successfully!');
+    console.log('[App Bridge] ========================================');
     console.log('[App Bridge] Generation method: window["app-bridge"].actions.SessionToken.getSessionToken');
     console.log('[App Bridge] Token generation duration:', duration + 'ms');
     console.log('[App Bridge] Token length:', token.length);
-    console.log('[App Bridge] Token preview:', token.substring(0, 20) + '...');
+    console.log('[App Bridge] Token (full):', token);
+    console.log('[App Bridge] Token preview (first 50 chars):', token.substring(0, 50) + '...');
+    console.log('[App Bridge] Token preview (last 50 chars):', '...' + token.substring(token.length - 50));
     console.log('[App Bridge] Token timestamp:', new Date().toISOString());
+    console.log('[App Bridge] ========================================');
     
     return token;
   } catch (error) {
@@ -148,7 +199,23 @@ export const getSessionToken = async (): Promise<string | null> => {
 
 /**
  * Check if App Bridge is available
+ * Also checks for the script tag to ensure it's loaded
  */
 export const isAppBridgeAvailable = (): boolean => {
-  return !!window['app-bridge']?.default;
+  // Check if script tag exists
+  const scriptTag = document.querySelector('script[src*="app-bridge.js"]');
+  const scriptLoaded = !!scriptTag;
+  
+  // Check if App Bridge global is available
+  const appBridgeGlobal = !!window['app-bridge'];
+  const appBridgeDefault = !!window['app-bridge']?.default;
+  
+  console.log('[App Bridge] Availability check:', {
+    scriptTagExists: scriptLoaded,
+    appBridgeGlobal: appBridgeGlobal,
+    appBridgeDefault: appBridgeDefault,
+    windowAppBridge: window['app-bridge'] ? Object.keys(window['app-bridge']) : 'not found',
+  });
+  
+  return appBridgeDefault;
 };
