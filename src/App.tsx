@@ -11,7 +11,7 @@ const queryClient = new QueryClient();
 
 /**
  * Main App Component
- * 
+ *
  * App Bridge 4.x Setup:
  * - App Bridge is initialized via the script tag in index.html
  * - No Provider component needed - App Bridge works globally
@@ -20,6 +20,7 @@ const queryClient = new QueryClient();
  * - Authenticated API calls use: fetch('shopify:admin/api/...')
  */
 const App = () => {
+  console.log("App component rendered");
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
