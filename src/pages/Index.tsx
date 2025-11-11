@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { getSessionToken, isAppBridgeAvailable } from "@/utils/appBridge";
 import {
   Card,
   CardContent,
@@ -19,6 +21,65 @@ import {
 
 const Index = () => {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
+  const location = useLocation();
+
+  // Session token authentication - only for root path
+  useEffect(() => {
+    // Only run on the root path
+    if (location.pathname !== '/') {
+      return;
+    }
+
+    const validateSession = async () => {
+      try {
+        // Check if App Bridge is available
+        if (!isAppBridgeAvailable()) {
+          console.log('App Bridge not available - skipping session validation');
+          return;
+        }
+
+        // Get session token
+        const token = await getSessionToken();
+        
+        if (!token) {
+          console.warn('Failed to get session token');
+          return;
+        }
+
+        // Make API call with session token
+        const response = await fetch('/api/validate-session', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            timestamp: new Date().toISOString(),
+            path: location.pathname,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Session validation failed:', errorData);
+          return;
+        }
+
+        const data = await response.json();
+        console.log('Session validated successfully:', data);
+      } catch (error) {
+        console.error('Error during session validation:', error);
+      }
+    };
+
+    // Wait for App Bridge to be fully loaded
+    // App Bridge CDN script needs time to initialize
+    const timer = setTimeout(() => {
+      validateSession();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">

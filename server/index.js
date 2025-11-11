@@ -449,6 +449,74 @@ app.post("/api/tryon/generate", async (req, res) => {
   }
 });
 
+// Session token validation endpoint for App Bridge authentication
+// This endpoint validates session tokens and logs session information
+app.post("/api/validate-session", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Missing or invalid authorization header",
+      });
+    }
+
+    const sessionToken = authHeader.replace("Bearer ", "");
+
+    if (!sessionToken) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Session token is required",
+      });
+    }
+
+    if (!apiSecret) {
+      return res.status(500).json({
+        error: "Server configuration error",
+        message: "API secret not configured",
+      });
+    }
+
+    // Validate and decode the session token using Shopify API library
+    let decodedToken;
+    try {
+      decodedToken = await shopify.session.decodeSessionToken(sessionToken);
+    } catch (error) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Invalid session token",
+        details: error.message,
+      });
+    }
+
+    // Log session information for review checks
+    const sessionInfo = {
+      shop: decodedToken.dest || decodedToken.iss || "unknown",
+      sub: decodedToken.sub || "unknown",
+      exp: decodedToken.exp || null,
+      iat: decodedToken.iat || null,
+      sid: decodedToken.sid || "unknown",
+      timestamp: new Date().toISOString(),
+    };
+
+    console.log("Session token validated successfully:", sessionInfo);
+
+    // Return success response with session information
+    res.status(200).json({
+      success: true,
+      message: "Session token validated successfully",
+      session: sessionInfo,
+    });
+  } catch (error) {
+    console.error("Error validating session token:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      message: error.message || "Failed to validate session token",
+    });
+  }
+});
+
 // Product data endpoint (public - for widget use)
 app.get("/api/products/:productId", async (req, res) => {
   try {
