@@ -2,14 +2,26 @@
  * App Bridge utilities for session token authentication
  * Uses App Bridge loaded from Shopify CDN
  * 
- * Handles different App Bridge CDN API structures
+ * Based on Shopify official documentation:
+ * https://shopify.dev/docs/apps/build/authentication-authorization/session-tokens/set-up-session-tokens
+ * 
+ * For App Bridge 2.0 with CDN, the structure is:
+ * - window['app-bridge'].default.createApp()
+ * - window['app-bridge'].actions.SessionToken.getSessionToken(app)
  */
 
 declare global {
   interface Window {
-    'app-bridge'?: any;
-    AppBridge?: any;
-    shopify?: any;
+    'app-bridge'?: {
+      default: {
+        createApp: (config: { apiKey: string; host: string }) => any;
+      };
+      actions?: {
+        SessionToken?: {
+          getSessionToken: (app: any) => Promise<string>;
+        };
+      };
+    };
   }
 }
 
@@ -20,13 +32,8 @@ const waitForAppBridge = (maxAttempts = 50, delay = 100): Promise<boolean> => {
   return new Promise((resolve) => {
     let attempts = 0;
     const checkBridge = () => {
-      // Check for different possible App Bridge global structures
-      if (
-        window['app-bridge'] ||
-        window.AppBridge ||
-        window.shopify ||
-        (window as any).Shopify?.AppBridge
-      ) {
+      // Check for App Bridge CDN structure
+      if (window['app-bridge']?.default) {
         resolve(true);
       } else if (attempts < maxAttempts) {
         attempts++;
@@ -79,106 +86,50 @@ export const getSessionToken = async (): Promise<string | null> => {
     }
     console.log('[App Bridge] Host parameter retrieved:', host);
 
-    // Try different App Bridge API structures
-    let app: any = null;
-    let getSessionTokenFn: ((app: any) => Promise<string>) | null = null;
-    let methodUsed = '';
-
-    // Method 1: window['app-bridge'] with actions.SessionToken
-    if (window['app-bridge']) {
-      try {
-        console.log('[App Bridge] Attempting Method 1: window["app-bridge"]');
-        const appBridge = window['app-bridge'];
-        const createApp = appBridge.default?.createApp || appBridge.createApp;
-        
-        if (createApp) {
-          app = createApp({
-            apiKey: apiKey,
-            host: host,
-          });
-          console.log('[App Bridge] App instance created via window["app-bridge"]');
-
-          // Try to get getSessionToken from actions
-          if (appBridge.actions?.SessionToken?.getSessionToken) {
-            getSessionTokenFn = appBridge.actions.SessionToken.getSessionToken;
-            methodUsed = 'window["app-bridge"].actions.SessionToken.getSessionToken';
-            console.log('[App Bridge] Using actions.SessionToken.getSessionToken');
-          } else if (appBridge.default?.utils?.getSessionToken) {
-            getSessionTokenFn = appBridge.default.utils.getSessionToken;
-            methodUsed = 'window["app-bridge"].default.utils.getSessionToken';
-            console.log('[App Bridge] Using default.utils.getSessionToken');
-          } else if (appBridge.utils?.getSessionToken) {
-            getSessionTokenFn = appBridge.utils.getSessionToken;
-            methodUsed = 'window["app-bridge"].utils.getSessionToken';
-            console.log('[App Bridge] Using utils.getSessionToken');
-          }
-        }
-      } catch (error) {
-        console.warn('[App Bridge] Error with window["app-bridge"]:', error);
-      }
-    }
-
-    // Method 2: window.AppBridge
-    if (!app && window.AppBridge) {
-      try {
-        console.log('[App Bridge] Attempting Method 2: window.AppBridge');
-        if (window.AppBridge.createApp) {
-          app = window.AppBridge.createApp({
-            apiKey: apiKey,
-            host: host,
-          });
-          console.log('[App Bridge] App instance created via window.AppBridge');
-
-          if (window.AppBridge.utils?.getSessionToken) {
-            getSessionTokenFn = window.AppBridge.utils.getSessionToken;
-            methodUsed = 'window.AppBridge.utils.getSessionToken';
-            console.log('[App Bridge] Using AppBridge.utils.getSessionToken');
-          } else if (window.AppBridge.getSessionToken) {
-            getSessionTokenFn = window.AppBridge.getSessionToken;
-            methodUsed = 'window.AppBridge.getSessionToken';
-            console.log('[App Bridge] Using AppBridge.getSessionToken');
-          }
-        }
-      } catch (error) {
-        console.warn('[App Bridge] Error with window.AppBridge:', error);
-      }
-    }
-
-    // Method 3: window.shopify (App Bridge 4.x)
-    if (!app && window.shopify) {
-      try {
-        console.log('[App Bridge] Attempting Method 3: window.shopify (App Bridge 4.x)');
-        if (window.shopify.getSessionToken) {
-          console.log('[App Bridge] Getting session token directly from shopify global');
-          const token = await window.shopify.getSessionToken();
-          console.log('[App Bridge] Session token generated successfully via window.shopify');
-          console.log('[App Bridge] Token length:', token.length);
-          console.log('[App Bridge] Token preview:', token.substring(0, 20) + '...');
-          return token;
-        }
-      } catch (error) {
-        console.warn('[App Bridge] Error with window.shopify:', error);
-      }
-    }
-
-    if (!app) {
-      console.warn('[App Bridge] Could not initialize App Bridge - no compatible API found');
+    // Access App Bridge from CDN
+    const AppBridge = window['app-bridge'];
+    if (!AppBridge || !AppBridge.default) {
+      console.warn('[App Bridge] App Bridge default export not found');
       return null;
     }
 
-    if (!getSessionTokenFn) {
-      console.warn('[App Bridge] getSessionToken function not found in App Bridge');
+    // Create App Bridge instance using the correct CDN API
+    const createApp = AppBridge.default.createApp;
+    if (!createApp) {
+      console.warn('[App Bridge] createApp function not found');
       return null;
     }
 
-    // Get session token
-    console.log('[App Bridge] Calling getSessionToken function using method:', methodUsed);
+    console.log('[App Bridge] Creating App Bridge instance...');
+    const app = createApp({
+      apiKey: apiKey,
+      host: host,
+    });
+    console.log('[App Bridge] App Bridge instance created successfully');
+
+    // Get SessionToken action from App Bridge
+    if (!AppBridge.actions || !AppBridge.actions.SessionToken) {
+      console.warn('[App Bridge] SessionToken action not found in App Bridge');
+      console.warn('[App Bridge] Available actions:', AppBridge.actions ? Object.keys(AppBridge.actions) : 'none');
+      return null;
+    }
+
+    const SessionToken = AppBridge.actions.SessionToken;
+    if (!SessionToken.getSessionToken) {
+      console.warn('[App Bridge] getSessionToken function not found in SessionToken');
+      return null;
+    }
+
+    console.log('[App Bridge] Getting session token using SessionToken.getSessionToken...');
     const startTime = Date.now();
-    const token = await getSessionTokenFn(app);
+    
+    // Get session token using the correct App Bridge 2.0 API
+    const token = await SessionToken.getSessionToken(app);
+    
     const duration = Date.now() - startTime;
     
     console.log('[App Bridge] Session token generated successfully');
-    console.log('[App Bridge] Generation method:', methodUsed);
+    console.log('[App Bridge] Generation method: window["app-bridge"].actions.SessionToken.getSessionToken');
     console.log('[App Bridge] Token generation duration:', duration + 'ms');
     console.log('[App Bridge] Token length:', token.length);
     console.log('[App Bridge] Token preview:', token.substring(0, 20) + '...');
@@ -186,7 +137,11 @@ export const getSessionToken = async (): Promise<string | null> => {
     
     return token;
   } catch (error) {
-    console.error('Error getting session token:', error);
+    console.error('[App Bridge] Error getting session token:', error);
+    if (error instanceof Error) {
+      console.error('[App Bridge] Error message:', error.message);
+      console.error('[App Bridge] Error stack:', error.stack);
+    }
     return null;
   }
 };
@@ -195,10 +150,5 @@ export const getSessionToken = async (): Promise<string | null> => {
  * Check if App Bridge is available
  */
 export const isAppBridgeAvailable = (): boolean => {
-  return !!(
-    window['app-bridge'] ||
-    window.AppBridge ||
-    window.shopify ||
-    (window as any).Shopify?.AppBridge
-  );
+  return !!window['app-bridge']?.default;
 };
