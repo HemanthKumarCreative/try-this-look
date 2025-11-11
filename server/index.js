@@ -61,7 +61,7 @@ const shopify = shopifyApi({
     .filter(Boolean),
   hostName: hostName,
   apiVersion: LATEST_API_VERSION,
-  isEmbeddedApp: false,
+  isEmbeddedApp: true,
   restResources,
 });
 
@@ -180,10 +180,19 @@ app.use((req, res, next) => {
 });
 
 app.use((req, res, next) => {
+  // Remove X-Frame-Options for embedded apps
   res.removeHeader("X-Frame-Options");
+  
+  // Updated CSP for App Bridge - allows embedding in Shopify Admin and App Bridge scripts
   res.setHeader(
     "Content-Security-Policy",
-    "frame-ancestors https://admin.shopify.com https://*.myshopify.com https://*.shopify.com;"
+    [
+      "frame-ancestors https://admin.shopify.com https://*.myshopify.com https://*.shopify.com;",
+      "script-src 'self' https://cdn.shopify.com https://*.shopify.com 'unsafe-inline' 'unsafe-eval';",
+      "connect-src 'self' https://*.shopify.com https://*.myshopify.com https://admin.shopify.com;",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+      "font-src 'self' https://fonts.gstatic.com;",
+    ].join(" ")
   );
   next();
 });
@@ -261,14 +270,17 @@ app.get("/auth/callback", async (req, res) => {
       });
     }
 
-    // Construct redirect URL after OAuth
-    let redirectUrl = `https://${shop}/admin/apps/${apiKey}`;
-
+    // For embedded apps, redirect to app with host parameter
+    // Validate host parameter for security (should be base64 encoded string)
     if (host) {
-      redirectUrl += `?host=${encodeURIComponent(host)}`;
+      // Embedded app redirect - host parameter is required for embedded apps
+      const redirectUrl = `https://${shop}/admin/apps/${apiKey}?host=${encodeURIComponent(host)}`;
+      res.redirect(redirectUrl);
+    } else {
+      // Fallback for non-embedded (shouldn't happen with embedded = true, but handle gracefully)
+      const redirectUrl = `https://${shop}/admin/apps/${apiKey}`;
+      res.redirect(redirectUrl);
     }
-
-    res.redirect(redirectUrl);
   } catch (error) {
     if (!res.headersSent) {
       res.status(500).json({

@@ -52,6 +52,12 @@
     />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="/assets/NUSENSE_LOGO.svg" />
+
+    <!-- Shopify App Bridge Configuration -->
+    <!-- API key injected at build time via Vite env replacement -->
+    <!-- Vite replaces %VITE_SHOPIFY_API_KEY% with the actual value during build -->
+    <meta name="shopify-api-key" content="%VITE_SHOPIFY_API_KEY%" />
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
   </head>
 
   <body>
