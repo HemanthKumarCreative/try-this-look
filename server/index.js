@@ -8,6 +8,7 @@ import { dirname } from "path";
 import dotenv from "dotenv";
 import crypto from "crypto";
 import * as logger from "./utils/logger.js";
+import * as billing from "./utils/billing.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -655,6 +656,124 @@ app.post("/webhooks/shop/redact", verifyWebhookSignature, async (req, res) => {
     res.status(200).json({ 
       received: true,
       error: "Webhook processed but encountered an error",
+    });
+  }
+});
+
+// Billing API Routes
+// Get current subscription status
+app.get("/api/billing/subscription", async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    if (!shop) {
+      return res.status(400).json({
+        error: "Missing shop parameter",
+      });
+    }
+
+    // Normalize shop domain
+    const shopDomain = shop.includes(".myshopify.com")
+      ? shop
+      : `${shop}.myshopify.com`;
+
+    // Get session for the shop
+    const sessionId = shopify.session.getOfflineId(shopDomain);
+    const session = await shopify.session.getSessionById(sessionId);
+
+    if (!session) {
+      return res.status(401).json({
+        error: "Session not found",
+        message: "Please install the app first",
+      });
+    }
+
+    const subscriptionStatus = await billing.checkSubscription(
+      shopify,
+      session
+    );
+
+    logger.info("[BILLING] Subscription status checked", {
+      shop,
+      hasActiveSubscription: subscriptionStatus.hasActiveSubscription,
+      planHandle: subscriptionStatus.plan?.handle,
+    });
+
+    res.json(subscriptionStatus);
+  } catch (error) {
+    logger.error("[BILLING] Failed to check subscription", error, req);
+    res.status(500).json({
+      error: "Failed to check subscription",
+      message: error.message,
+    });
+  }
+});
+
+// Create subscription
+app.post("/api/billing/subscribe", async (req, res) => {
+  try {
+    const { shop, planHandle, returnUrl, trialDays } = req.body;
+
+    if (!shop || !planHandle) {
+      return res.status(400).json({
+        error: "Missing required parameters",
+        message: "shop and planHandle are required",
+      });
+    }
+
+    // Normalize shop domain
+    const shopDomain = shop.includes(".myshopify.com")
+      ? shop
+      : `${shop}.myshopify.com`;
+
+    // Get session for the shop
+    const sessionId = shopify.session.getOfflineId(shopDomain);
+    const session = await shopify.session.getSessionById(sessionId);
+
+    if (!session) {
+      return res.status(401).json({
+        error: "Session not found",
+        message: "Please install the app first",
+      });
+    }
+
+    // Default return URL if not provided
+    const defaultReturnUrl = `${process.env.VITE_SHOPIFY_APP_URL || appUrl}/auth/callback?shop=${shopDomain}`;
+    const finalReturnUrl = returnUrl || defaultReturnUrl;
+
+    const result = await billing.createSubscription(
+      shopify,
+      session,
+      planHandle,
+      finalReturnUrl,
+      trialDays || 0
+    );
+
+    logger.info("[BILLING] Subscription creation initiated", {
+      shop: shopDomain,
+      planHandle,
+      isFree: result.isFree,
+    });
+
+    res.json(result);
+  } catch (error) {
+    logger.error("[BILLING] Failed to create subscription", error, req);
+    res.status(500).json({
+      error: "Failed to create subscription",
+      message: error.message,
+    });
+  }
+});
+
+// Get available plans
+app.get("/api/billing/plans", (req, res) => {
+  try {
+    const plans = billing.getAvailablePlans();
+    res.json({ plans });
+  } catch (error) {
+    logger.error("[BILLING] Failed to get plans", error, req);
+    res.status(500).json({
+      error: "Failed to get plans",
+      message: error.message,
     });
   }
 });
