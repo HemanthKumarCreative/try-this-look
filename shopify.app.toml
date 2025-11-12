@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "f8de7972ae23d3484581d87137829385"
+client_id = "e3597bdbef35404641f8734b49e50a3a"
 name = "nusense-tryon"
 application_url = "https://try-this-look.vercel.app"
 embedded = true
