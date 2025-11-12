@@ -428,21 +428,45 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
     <div
       className="w-full h-full overflow-y-auto"
       style={{ backgroundColor: "#fef3f3", minHeight: "100vh" }}
+      role="main"
+      aria-label="Application d'essayage virtuel"
     >
+      {/* ARIA Live Region for Status Updates */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        role="status"
+      >
+        {statusMessage}
+      </div>
+
+      {/* ARIA Live Region for Errors */}
+      {error && (
+        <div
+          aria-live="assertive"
+          aria-atomic="true"
+          className="sr-only"
+          role="alert"
+        >
+          Erreur: {error}
+        </div>
+      )}
+
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 border-b border-border shadow-sm">
+      <header className="sticky top-0 z-10 bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 border-b border-border shadow-sm">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
           <div className="inline-flex flex-col flex-shrink-0 min-w-0">
-            <span
-              aria-label="NULOOK"
+            <h1
               className="inline-flex items-center tracking-wide leading-none whitespace-nowrap text-2xl sm:text-3xl md:text-4xl font-bold"
+              aria-label="NULOOK - Essayage Virtuel Alimenté par IA"
             >
-              <span style={{ color: "#ce0003" }}>NU</span>
-              <span style={{ color: "#564646" }}>LOOK</span>
-            </span>
-            <div className="mt-0.5 sm:mt-1 text-left leading-tight tracking-tight whitespace-nowrap text-[10px] sm:text-xs md:text-sm text-[#3D3232] font-medium">
+              <span style={{ color: "#ce0003" }} aria-hidden="true">NU</span>
+              <span style={{ color: "#564646" }} aria-hidden="true">LOOK</span>
+            </h1>
+            <p className="mt-0.5 sm:mt-1 text-left leading-tight tracking-tight whitespace-nowrap text-[10px] sm:text-xs md:text-sm text-[#3D3232] font-medium">
               Essayage Virtuel Alimenté par IA
-            </div>
+            </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3 flex-shrink-0">
             {!isGenerating && (
@@ -450,10 +474,10 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                 variant="secondary"
                 size="sm"
                 onClick={handleReset}
-                className="group text-secondary-foreground hover:bg-secondary/80 transition-all duration-200 text-xs sm:text-sm px-3 sm:px-4 h-[44px] sm:h-9 md:h-10 whitespace-nowrap shadow-sm hover:shadow-md gap-2 flex items-center"
-                aria-label="Réinitialiser"
+                className="group text-secondary-foreground hover:bg-secondary/80 transition-all duration-200 text-xs sm:text-sm px-3 sm:px-4 h-[44px] sm:h-9 md:h-10 whitespace-nowrap shadow-sm hover:shadow-md gap-2 flex items-center focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                aria-label="Réinitialiser l'application"
               >
-                <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:rotate-[-120deg] duration-500" />
+                <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:rotate-[-120deg] duration-500" aria-hidden="true" />
                 <span>Réinitialiser</span>
               </Button>
             )}
@@ -461,40 +485,50 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
               variant="destructive"
               size="icon"
               onClick={handleClose}
-              className="h-[44px] w-[44px] sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-md bg-error text-error-foreground hover:bg-error/90 border-error transition-all duration-200 group shadow-sm hover:shadow-md"
-              aria-label="Fermer"
+              className="h-[44px] w-[44px] sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-md bg-error text-error-foreground hover:bg-error/90 border-error transition-all duration-200 group shadow-sm hover:shadow-md focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2"
+              aria-label="Fermer l'application"
               title="Fermer"
             >
-              <X className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:rotate-90 duration-300" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:rotate-90 duration-300" aria-hidden="true" />
             </Button>
           </div>
         </div>
       </div>
 
       {/* Status Bar */}
-      <div className="px-3 sm:px-4 md:px-5 lg:px-6 pt-2 sm:pt-3">
+      <section
+        className="px-3 sm:px-4 md:px-5 lg:px-6 pt-2 sm:pt-3"
+        aria-label="État de l'application"
+      >
         <StatusBar message={statusMessage} variant={statusVariant} />
-      </div>
+      </section>
 
       {/* Content */}
       <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-4 sm:space-y-5 md:space-y-6">
         {/* Selection sections - always visible */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
           {/* Left Panel: Upload / Preview */}
-          <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
-            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
-                1
+          <section aria-labelledby="upload-heading">
+            <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <div
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm"
+                  aria-hidden="true"
+                >
+                  1
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2
+                    id="upload-heading"
+                    className="text-base sm:text-lg font-semibold"
+                  >
+                    Téléchargez Votre Photo
+                  </h2>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    Choisissez une photo claire de vous-même
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-base sm:text-lg font-semibold">
-                  Téléchargez Votre Photo
-                </h2>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  Choisissez une photo claire de vous-même
-                </p>
-              </div>
-            </div>
 
             {!uploadedImage && (
               <PhotoUpload onPhotoUpload={handlePhotoUpload} />
@@ -511,49 +545,59 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
                       variant="outline"
                       size="sm"
                       onClick={handleClearUploadedImage}
-                      className="group h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm flex-shrink-0 gap-1.5 border-border text-foreground hover:bg-muted hover:border-muted-foreground/20 hover:text-muted-foreground transition-all duration-200"
-                      aria-label="Effacer la photo"
+                      className="group h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm flex-shrink-0 gap-1.5 border-border text-foreground hover:bg-muted hover:border-muted-foreground/20 hover:text-muted-foreground transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                      aria-label="Effacer la photo téléchargée"
+                      aria-describedby="upload-heading"
                     >
-                      <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:scale-110 duration-200" />
+                      <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:scale-110 duration-200" aria-hidden="true" />
                       <span>Effacer</span>
                     </Button>
                   </div>
                   <div className="aspect-[3/4] rounded overflow-hidden border border-border bg-card flex items-center justify-center shadow-sm">
                     <img
                       src={uploadedImage}
-                      alt="Uploaded"
+                      alt="Photo téléchargée pour l'essayage virtuel"
                       className="h-full w-auto object-contain"
                     />
                   </div>
                 </div>
               </div>
             )}
-          </Card>
+            </Card>
+          </section>
 
           {/* Right Panel: Clothing Selection */}
-          <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
-            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm">
-                2
+          <section aria-labelledby="clothing-heading">
+            <Card className="p-3 sm:p-4 md:p-5 border-border bg-card">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <div
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground grid place-items-center font-semibold text-sm sm:text-base flex-shrink-0 shadow-sm"
+                  aria-hidden="true"
+                >
+                  2
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2
+                    id="clothing-heading"
+                    className="text-base sm:text-lg font-semibold"
+                  >
+                    Sélectionner un Article de Vêtement
+                  </h2>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    Sélectionnez un article de vêtement sur cette page
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-base sm:text-lg font-semibold">
-                  Sélectionner un Article de Vêtement
-                </h2>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  Sélectionnez un article de vêtement sur cette page
-                </p>
-              </div>
-            </div>
 
-            <ClothingSelection
-              images={availableImages}
-              recommendedImages={recommendedImages}
-              selectedImage={selectedClothing}
-              onSelect={handleClothingSelect}
-              onRefreshImages={handleRefreshImages}
-            />
-          </Card>
+              <ClothingSelection
+                images={availableImages}
+                recommendedImages={recommendedImages}
+                selectedImage={selectedClothing}
+                onSelect={handleClothingSelect}
+                onRefreshImages={handleRefreshImages}
+              />
+            </Card>
+          </section>
         </div>
 
         {/* Generate button - show when not generating */}
@@ -562,17 +606,31 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
             <Button
               onClick={handleGenerate}
               disabled={!selectedClothing || !uploadedImage || isGenerating}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11 sm:h-12 md:h-14 text-sm sm:text-base md:text-lg min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11 sm:h-12 md:h-14 text-sm sm:text-base md:text-lg min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               aria-label="Générer l'essayage virtuel"
+              aria-describedby={!selectedClothing || !uploadedImage ? "generate-help" : undefined}
             >
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
               Générer
             </Button>
+            {(!selectedClothing || !uploadedImage) && (
+              <p id="generate-help" className="sr-only">
+                Veuillez télécharger une photo et sélectionner un vêtement pour générer l'essayage virtuel
+              </p>
+            )}
           </div>
         )}
 
         {/* Results section - always visible with skeleton when loading */}
-        <div className="pt-2 sm:pt-4">
+        <section
+          className="pt-2 sm:pt-4"
+          aria-labelledby="results-heading"
+          aria-live="polite"
+          aria-busy={isGenerating}
+        >
+          <h2 id="results-heading" className="sr-only">
+            Résultats de l'essayage virtuel
+          </h2>
           <ResultDisplay
             generatedImage={generatedImage}
             personImage={uploadedImage}
@@ -580,21 +638,24 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
             isGenerating={isGenerating}
             progress={progress}
           />
-        </div>
+        </section>
 
         {error && (
-          <Card className="p-6 bg-error/10 border-error">
-            <p className="text-error font-medium">{error}</p>
-            <Button
-              variant="secondary"
-              onClick={handleReset}
-              className="group mt-4 gap-2 text-secondary-foreground hover:bg-secondary/80 transition-all duration-200"
-              aria-label="Réessayer"
-            >
-              <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-[-120deg] duration-500" />
-              <span>Réessayer</span>
-            </Button>
-          </Card>
+          <div role="alert" aria-live="assertive">
+            <Card className="p-6 bg-error/10 border-error">
+              <p className="text-error font-medium" id="error-message">{error}</p>
+              <Button
+                variant="secondary"
+                onClick={handleReset}
+                className="group mt-4 gap-2 text-secondary-foreground hover:bg-secondary/80 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                aria-label="Réessayer après une erreur"
+                aria-describedby="error-message"
+              >
+                <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-[-120deg] duration-500" aria-hidden="true" />
+                <span>Réessayer</span>
+              </Button>
+            </Card>
+          </div>
         )}
       </div>
     </div>

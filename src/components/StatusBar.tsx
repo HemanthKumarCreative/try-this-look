@@ -12,7 +12,7 @@ export default function StatusBar({ message, variant = "info" }: StatusBarProps)
   const isError = variant === "error";
 
   return (
-    <div className="w-full">
+    <div className="w-full" role={isError ? "alert" : "status"} aria-live={isError ? "assertive" : "polite"}>
       <Alert className={`rounded-md border p-3 sm:p-4 transition-colors duration-200 ${
         isError 
           ? "bg-error/10 border-error/30 text-error" 

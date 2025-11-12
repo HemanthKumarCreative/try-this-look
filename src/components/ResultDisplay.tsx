@@ -411,14 +411,14 @@ export default function ResultDisplay({
               // Generated image available - show it
               <img
                 src={generatedImage}
-                alt="Résultat de l'essayage virtuel"
+                alt="Résultat de l'essayage virtuel généré par intelligence artificielle"
                 className="h-full w-auto object-contain"
                 loading="lazy"
               />
             ) : (
               // No image and not loading - show static placeholder
-              <div className="w-full h-full flex flex-col items-center justify-center gap-3 sm:gap-4 text-muted-foreground">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-muted/50 flex items-center justify-center">
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3 sm:gap-4 text-muted-foreground" role="status" aria-live="polite">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-muted/50 flex items-center justify-center" aria-hidden="true">
                   <ImageIcon className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground/60" />
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground/80 text-center px-4">
@@ -448,9 +448,9 @@ export default function ResultDisplay({
               aria-busy={isBuyNowLoading}
             >
               {isBuyNowLoading ? (
-                <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 animate-spin flex-shrink-0 mr-1.5 sm:mr-2" />
+                <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 animate-spin flex-shrink-0 mr-1.5 sm:mr-2" aria-hidden="true" />
               ) : (
-                <CreditCard className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" />
+                <CreditCard className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" aria-hidden="true" />
               )}
               <span className="leading-tight whitespace-nowrap">
                 {isBuyNowLoading ? "Traitement..." : "Acheter Maintenant"}
@@ -475,9 +475,9 @@ export default function ResultDisplay({
               aria-busy={isAddToCartLoading}
             >
               {isAddToCartLoading ? (
-                <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 animate-spin flex-shrink-0 mr-1.5 sm:mr-2" />
+                <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 animate-spin flex-shrink-0 mr-1.5 sm:mr-2" aria-hidden="true" />
               ) : (
-                <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" />
+                <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" aria-hidden="true" />
               )}
               <span className="leading-tight whitespace-nowrap">
                 {isAddToCartLoading ? "Ajout..." : "Ajouter au Panier"}
@@ -502,9 +502,9 @@ export default function ResultDisplay({
               aria-busy={isDownloadLoading}
             >
               {isDownloadLoading ? (
-                <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 animate-spin flex-shrink-0 mr-1.5 sm:mr-2" />
+                <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 animate-spin flex-shrink-0 mr-1.5 sm:mr-2" aria-hidden="true" />
               ) : (
-                <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" />
+                <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0 mr-1.5 sm:mr-2" aria-hidden="true" />
               )}
               <span className="leading-tight whitespace-nowrap">
                 {isDownloadLoading ? "Téléchargement..." : "Télécharger"}

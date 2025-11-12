@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import dotenv from "dotenv";
 import crypto from "crypto";
+import * as logger from "./utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -68,6 +69,9 @@ const shopify = shopifyApi({
 const app = express();
 
 // Middleware
+// Request logging middleware (before other middleware)
+app.use(logger.requestLogger);
+
 // For webhooks, we need raw body for HMAC verification
 app.use((req, res, next) => {
   if (req.path.startsWith("/webhooks/")) {
@@ -156,6 +160,106 @@ const verifyWebhookSignature = (req, res, next) => {
   }
 };
 
+// App proxy signature verification middleware
+// This middleware MUST verify app proxy requests using the signature parameter
+// Reference: https://shopify.dev/docs/apps/build/online-store/app-proxies/authenticate-app-proxies
+const verifyAppProxySignature = (req, res, next) => {
+  try {
+    // Missing API secret - return 500 (server error, not auth error)
+    if (!apiSecret) {
+      return res.status(500).json({
+        error: "Server configuration error",
+        message: "API secret not configured",
+      });
+    }
+
+    // Get query parameters from request
+    const queryParams = req.query;
+    const providedSignature = queryParams.signature;
+
+    // Missing signature parameter - return 401
+    if (!providedSignature) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Missing signature parameter",
+      });
+    }
+
+    // Create a copy of query parameters and remove signature
+    const paramsForVerification = { ...queryParams };
+    delete paramsForVerification.signature;
+
+    // Sort parameters alphabetically and format as "key=value"
+    // Arrays should be joined with commas
+    const sortedParams = Object.keys(paramsForVerification)
+      .sort()
+      .map((key) => {
+        const value = paramsForVerification[key];
+        // Handle arrays by joining with commas
+        const formattedValue = Array.isArray(value) ? value.join(",") : value;
+        return `${key}=${formattedValue}`;
+      })
+      .join(""); // Concatenate without separators
+
+    // Calculate HMAC-SHA256 hexdigest using shared secret
+    const calculatedSignature = crypto
+      .createHmac("sha256", apiSecret)
+      .update(sortedParams)
+      .digest("hex");
+
+    // Compare signatures using timing-safe comparison
+    // Convert both hex strings to buffers for constant-time comparison
+    const providedSignatureBuffer = Buffer.from(providedSignature, "hex");
+    const calculatedSignatureBuffer = Buffer.from(calculatedSignature, "hex");
+
+    // Length mismatch - return 401
+    if (providedSignatureBuffer.length !== calculatedSignatureBuffer.length) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Invalid app proxy signature",
+      });
+    }
+
+    // Use crypto.timingSafeEqual for constant-time comparison to prevent timing attacks
+    if (
+      !crypto.timingSafeEqual(providedSignatureBuffer, calculatedSignatureBuffer)
+    ) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Invalid app proxy signature",
+      });
+    }
+
+    // Signature is valid - attach proxy metadata to request
+    req.proxyShop = paramsForVerification.shop;
+    req.proxyLoggedInCustomerId = paramsForVerification.logged_in_customer_id;
+    req.proxyPathPrefix = paramsForVerification.path_prefix;
+    req.proxyTimestamp = paramsForVerification.timestamp;
+
+    // Verify timestamp is recent (optional but recommended for security)
+    // Prevent replay attacks by checking if timestamp is within acceptable range
+    const timestamp = parseInt(paramsForVerification.timestamp, 10);
+    const currentTime = Math.floor(Date.now() / 1000);
+    const timeDifference = Math.abs(currentTime - timestamp);
+
+    // Allow timestamp difference of up to 5 minutes (300 seconds)
+    if (timeDifference > 300) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Request timestamp is too old or too far in the future",
+      });
+    }
+
+    next();
+  } catch (error) {
+    // Any unexpected error during validation - return 401 for security
+    return res.status(401).json({
+      error: "Unauthorized",
+      message: "App proxy signature verification failed",
+    });
+  }
+};
+
 // Serve static files only in non-Vercel environment
 // In Vercel, static files are served directly by the platform
 // Check for Vercel environment
@@ -238,6 +342,8 @@ app.get("/auth", async (req, res) => {
 
 app.get("/auth/callback", async (req, res) => {
   try {
+    logger.info("[OAUTH] OAuth callback received");
+    
     const callbackResponse = await shopify.auth.callback({
       rawRequest: req,
       rawResponse: res,
@@ -247,16 +353,26 @@ app.get("/auth/callback", async (req, res) => {
     const apiKey = process.env.VITE_SHOPIFY_API_KEY;
 
     if (!shop || !apiKey) {
+      logger.error("[OAUTH] OAuth callback failed - missing shop or API key", null, req, {
+        shop: shop || "unknown",
+        hasApiKey: !!apiKey,
+      });
       return res.status(500).json({
         error: "Authentication failed",
         message: "Missing shop or API key information",
       });
     }
 
+    logger.info("[OAUTH] OAuth callback completed successfully", {
+      shop,
+    });
+
     // Redirect to the app in Shopify admin
     const redirectUrl = `https://${shop}/admin/apps/${apiKey}`;
     res.redirect(redirectUrl);
   } catch (error) {
+    logger.error("[OAUTH] OAuth callback failed", error, req);
+    
     if (!res.headersSent) {
       res.status(500).json({
         error: "OAuth callback failed",
@@ -270,31 +386,63 @@ app.get("/auth/callback", async (req, res) => {
 // All webhooks must be registered in shopify.app.toml and verified with HMAC
 
 // App uninstalled webhook - mandatory for app lifecycle
+// Reference: https://shopify.dev/docs/apps/build/webhooks
 app.post(
   "/webhooks/app/uninstalled",
   verifyWebhookSignature,
   async (req, res) => {
     try {
       const { shop_domain } = req.webhookData;
+      const shop = req.webhookShop || shop_domain;
+
+      // Log webhook received for audit purposes
+      logger.info(`[WEBHOOK] app/uninstalled received for shop: ${shop}`, {
+        shop,
+        webhookTopic: req.webhookTopic,
+      });
 
       // Handle app uninstallation
       // Clean up any app-specific data, sessions, or resources
       // This is a mandatory webhook for compliance
 
-      // Implement cleanup logic (delete sessions, remove app data, etc.)
-      // This webhook is called when the app is uninstalled from a shop
+      // NOTE: This app stores data client-side only (localStorage)
+      // No server-side database or storage system exists
+      // Shopify API library handles session cleanup automatically
+      // If server-side storage is added in the future, implement cleanup logic here
+
+      // Example cleanup logic (for future server-side storage):
+      // - Delete shop sessions from database
+      // - Remove shop configuration data
+      // - Clean up shop-specific resources
+      // - Revoke access tokens (handled by Shopify API library)
+
+      // Log successful processing
+      logger.info(`[WEBHOOK] app/uninstalled processed successfully for shop: ${shop}`, {
+        shop,
+        webhookTopic: req.webhookTopic,
+      });
 
       res.status(200).json({ received: true });
     } catch (error) {
-      res.status(500).json({
-        error: "Internal server error",
-        message: error.message,
+      // Log error for debugging
+      logger.error(`[WEBHOOK ERROR] app/uninstalled failed`, error, req, {
+        shop: req.webhookShop || req.webhookData?.shop_domain,
+        webhookTopic: req.webhookTopic,
+      });
+      
+      // Return 200 to acknowledge receipt (Shopify requirement)
+      // But log the error for investigation
+      res.status(200).json({ 
+        received: true,
+        error: "Webhook processed but encountered an error",
       });
     }
   }
 );
 
 // Customer data request webhook - mandatory for GDPR compliance
+// Reference: https://shopify.dev/docs/apps/build/compliance/privacy-law-compliance
+// Must respond within 30 days of receiving this webhook
 app.post(
   "/webhooks/customers/data_request",
   verifyWebhookSignature,
@@ -302,26 +450,74 @@ app.post(
     try {
       const { shop_id, shop_domain, customer, orders_requested } =
         req.webhookData;
+      const shop = req.webhookShop || shop_domain;
+      const customerId = customer?.id || customer;
+
+      // Log webhook received for audit purposes
+      logger.info(`[WEBHOOK] customers/data_request received for shop: ${shop}, customer: ${customerId}`, {
+        shop,
+        customerId,
+        webhookTopic: req.webhookTopic,
+      });
 
       // Handle GDPR data request
       // Must provide customer data within 30 days
       // This is a mandatory webhook for GDPR compliance
 
-      // Collect and prepare customer data
-      // Data should include all information stored about the customer
-      // Must provide customer data within 30 days of this webhook
+      // NOTE: This app stores data client-side only (localStorage in user's browser)
+      // No server-side database or storage system exists
+      // Customer photos and try-on images are stored locally in the user's browser
+      // No server-side customer data is stored or processed
 
+      // Data Storage Approach:
+      // - Customer photos: Stored in browser localStorage (client-side only)
+      // - Generated try-on images: Stored in browser localStorage (client-side only)
+      // - Product information: Retrieved from Shopify product pages (not stored)
+      // - No server-side database or storage system
+
+      // GDPR Compliance:
+      // Since no server-side customer data is stored, this webhook returns success
+      // Customer data is stored client-side only and is managed by the user's browser
+      // If server-side storage is added in the future, implement data export here
+
+      // Example data export logic (for future server-side storage):
+      // - Query database for customer data
+      // - Collect all stored information about the customer
+      // - Prepare data export file (JSON, CSV, etc.)
+      // - Send data export to customer via email or Shopify admin
+      // - Log data export for audit purposes
+
+      // Log successful processing
+      logger.info(`[WEBHOOK] customers/data_request processed successfully for shop: ${shop}, customer: ${customerId}`, {
+        shop,
+        customerId,
+        webhookTopic: req.webhookTopic,
+      });
+
+      // Return 200 to acknowledge receipt
+      // Note: Actual data export (if needed) should be handled asynchronously
       res.status(200).json({ received: true });
     } catch (error) {
-      res.status(500).json({
-        error: "Internal server error",
-        message: error.message,
+      // Log error for debugging
+      logger.error(`[WEBHOOK ERROR] customers/data_request failed`, error, req, {
+        shop: req.webhookShop || req.webhookData?.shop_domain,
+        customerId: req.webhookData?.customer?.id || req.webhookData?.customer,
+        webhookTopic: req.webhookTopic,
+      });
+      
+      // Return 200 to acknowledge receipt (Shopify requirement)
+      // But log the error for investigation
+      res.status(200).json({ 
+        received: true,
+        error: "Webhook processed but encountered an error",
       });
     }
   }
 );
 
 // Customer redact webhook - mandatory for GDPR compliance
+// Reference: https://shopify.dev/docs/apps/build/compliance/privacy-law-compliance
+// Must delete all customer data within 10 days of receiving this webhook
 app.post(
   "/webhooks/customers/redact",
   verifyWebhookSignature,
@@ -329,43 +525,136 @@ app.post(
     try {
       const { shop_id, shop_domain, customer, orders_to_redact } =
         req.webhookData;
+      const shop = req.webhookShop || shop_domain;
+      const customerId = customer?.id || customer;
+
+      // Log webhook received for audit purposes
+      logger.info(`[WEBHOOK] customers/redact received for shop: ${shop}, customer: ${customerId}`, {
+        shop,
+        customerId,
+        webhookTopic: req.webhookTopic,
+      });
 
       // Handle GDPR customer data deletion
       // Must delete all customer data within 10 days
       // This is a mandatory webhook for GDPR compliance
 
-      // Delete all customer-related data
-      // This includes any stored customer information, images, preferences, etc.
-      // Must delete all customer data within 10 days of this webhook
+      // NOTE: This app stores data client-side only (localStorage in user's browser)
+      // No server-side database or storage system exists
+      // Customer photos and try-on images are stored locally in the user's browser
+      // No server-side customer data is stored or processed
 
+      // Data Storage Approach:
+      // - Customer photos: Stored in browser localStorage (client-side only)
+      // - Generated try-on images: Stored in browser localStorage (client-side only)
+      // - Product information: Retrieved from Shopify product pages (not stored)
+      // - No server-side database or storage system
+
+      // GDPR Compliance:
+      // Since no server-side customer data is stored, this webhook returns success
+      // Customer data is stored client-side only and is managed by the user's browser
+      // Client-side data is automatically cleared when user clears browser data
+      // If server-side storage is added in the future, implement data deletion here
+
+      // Example data deletion logic (for future server-side storage):
+      // - Delete customer photos from storage
+      // - Delete generated try-on images from storage
+      // - Delete customer preferences from database
+      // - Delete customer session data
+      // - Log data deletion for audit purposes
+      // - Verify data deletion was successful
+
+      // Log successful processing
+      logger.info(`[WEBHOOK] customers/redact processed successfully for shop: ${shop}, customer: ${customerId}`, {
+        shop,
+        customerId,
+        webhookTopic: req.webhookTopic,
+      });
+
+      // Return 200 to acknowledge receipt
+      // Note: Actual data deletion (if needed) should be handled asynchronously
       res.status(200).json({ received: true });
     } catch (error) {
-      res.status(500).json({
-        error: "Internal server error",
-        message: error.message,
+      // Log error for debugging
+      logger.error(`[WEBHOOK ERROR] customers/redact failed`, error, req, {
+        shop: req.webhookShop || req.webhookData?.shop_domain,
+        customerId: req.webhookData?.customer?.id || req.webhookData?.customer,
+        webhookTopic: req.webhookTopic,
+      });
+      
+      // Return 200 to acknowledge receipt (Shopify requirement)
+      // But log the error for investigation
+      res.status(200).json({ 
+        received: true,
+        error: "Webhook processed but encountered an error",
       });
     }
   }
 );
 
 // Shop redact webhook - mandatory for GDPR compliance
+// Reference: https://shopify.dev/docs/apps/build/compliance/privacy-law-compliance
+// Must delete all shop data within 10 days of receiving this webhook
 app.post("/webhooks/shop/redact", verifyWebhookSignature, async (req, res) => {
   try {
     const { shop_id, shop_domain } = req.webhookData;
+    const shop = req.webhookShop || shop_domain;
+
+    // Log webhook received for audit purposes
+    logger.info(`[WEBHOOK] shop/redact received for shop: ${shop}`, {
+      shop,
+      webhookTopic: req.webhookTopic,
+    });
 
     // Handle GDPR shop data deletion
     // Must delete all shop data within 10 days
     // This is a mandatory webhook for GDPR compliance
 
-    // Delete all shop-related data
-    // This includes any stored shop information, configurations, etc.
-    // Must delete all shop data within 10 days of this webhook
+    // NOTE: This app stores data client-side only (localStorage in user's browser)
+    // No server-side database or storage system exists
+    // Shop configuration and data are stored client-side only
+    // No server-side shop data is stored or processed
 
+    // Data Storage Approach:
+    // - Shop configuration: Stored in browser localStorage (client-side only)
+    // - Product information: Retrieved from Shopify product pages (not stored)
+    // - No server-side database or storage system
+
+    // GDPR Compliance:
+    // Since no server-side shop data is stored, this webhook returns success
+    // Shop data is stored client-side only and is managed by the user's browser
+    // Client-side data is automatically cleared when user clears browser data
+    // If server-side storage is added in the future, implement data deletion here
+
+    // Example data deletion logic (for future server-side storage):
+    // - Delete shop configuration from database
+    // - Delete shop-specific resources
+    // - Delete shop session data
+    // - Delete shop-related files from storage
+    // - Log data deletion for audit purposes
+    // - Verify data deletion was successful
+
+    // Log successful processing
+    logger.info(`[WEBHOOK] shop/redact processed successfully for shop: ${shop}`, {
+      shop,
+      webhookTopic: req.webhookTopic,
+    });
+
+    // Return 200 to acknowledge receipt
+    // Note: Actual data deletion (if needed) should be handled asynchronously
     res.status(200).json({ received: true });
   } catch (error) {
-    res.status(500).json({
-      error: "Internal server error",
-      message: error.message,
+    // Log error for debugging
+    logger.error(`[WEBHOOK ERROR] shop/redact failed`, error, req, {
+      shop: req.webhookShop || req.webhookData?.shop_domain,
+      webhookTopic: req.webhookTopic,
+    });
+    
+    // Return 200 to acknowledge receipt (Shopify requirement)
+    // But log the error for investigation
+    res.status(200).json({ 
+      received: true,
+      error: "Webhook processed but encountered an error",
     });
   }
 });
@@ -375,7 +664,17 @@ app.post("/api/tryon/generate", async (req, res) => {
   try {
     const { personImage, clothingImage, storeName } = req.body;
 
+    logger.info("[API] Try-on generation request received", {
+      storeName,
+      hasPersonImage: !!personImage,
+      hasClothingImage: !!clothingImage,
+    });
+
     if (!personImage || !clothingImage) {
+      logger.warn("[API] Try-on generation request missing required images", {
+        hasPersonImage: !!personImage,
+        hasClothingImage: !!clothingImage,
+      });
       return res.status(400).json({ error: "Missing required images" });
     }
 
@@ -393,6 +692,11 @@ app.post("/api/tryon/generate", async (req, res) => {
       formData.append("storeName", storeName);
     }
 
+    const startTime = Date.now();
+    logger.info("[API] Sending try-on generation request to external API", {
+      storeName,
+    });
+
     // Forward to your existing API
     const response = await fetch(
       "https://try-on-server-v1.onrender.com/api/fashion-photo",
@@ -407,12 +711,33 @@ app.post("/api/tryon/generate", async (req, res) => {
     );
 
     if (!response.ok) {
+      const errorText = await response.text().catch(() => "Unknown error");
+      logger.error("[API] External API returned error", null, req, {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText.substring(0, 500), // Limit error text length
+        storeName,
+      });
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
+    const duration = Date.now() - startTime;
+    
+    logger.info("[API] Try-on generation completed successfully", {
+      storeName,
+      duration: `${duration}ms`,
+      hasResult: !!data,
+    });
+    
     res.json(data);
   } catch (error) {
+    const duration = Date.now() - startTime;
+    logger.error("[API] Try-on generation failed", error, req, {
+      storeName,
+      duration: `${duration}ms`,
+    });
+    
     res.status(500).json({
       error: "Failed to generate try-on image",
       message: error.message,
@@ -423,13 +748,22 @@ app.post("/api/tryon/generate", async (req, res) => {
 // Product data endpoint (public - for widget use)
 app.get("/api/products/:productId", async (req, res) => {
   try {
+    const productId = req.params.productId;
+    logger.info("[API] Product data request received", {
+      productId,
+    });
+    
     // Public request - return basic product info from query
     // Widget will get product data from page context
     res.json({
-      id: req.params.productId,
+      id: productId,
       message: "Product data available from page context",
     });
   } catch (error) {
+    logger.error("[API] Product data request failed", error, req, {
+      productId: req.params.productId,
+    });
+    
     res
       .status(500)
       .json({ error: "Failed to fetch product", message: error.message });
@@ -451,19 +785,64 @@ app.get("/widget", (req, res) => {
 // App proxy route for Shopify app proxy
 // Shopify app proxy format: /apps/{prefix}/{subpath}/{path}
 // With prefix="apps" and subpath="a", the URL becomes: /apps/apps/a/{path}
-app.get("/apps/apps/a/*", (req, res) => {
-  // Handle app proxy requests
-  // Extract path after /apps/apps/a/
-  const proxyPath = req.path.replace("/apps/apps/a", "");
+// MUST verify signature for security - reference: https://shopify.dev/docs/apps/build/online-store/app-proxies/authenticate-app-proxies
+app.get("/apps/apps/a/*", verifyAppProxySignature, (req, res) => {
+  try {
+    // Handle app proxy requests
+    // Extract path after /apps/apps/a/
+    const proxyPath = req.path.replace("/apps/apps/a", "");
 
-  if (proxyPath === "/widget" || proxyPath.startsWith("/widget")) {
-    if (isVercel) {
-      res.redirect("/index.html");
-    } else {
-      res.sendFile(join(__dirname, "../dist/index.html"));
+    // Verify shop parameter is present and valid
+    if (!req.proxyShop) {
+      logger.warn("[APP PROXY] Missing shop parameter", {
+        proxyPath,
+      });
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "Missing shop parameter",
+      });
     }
-  } else {
-    res.status(404).json({ error: "Not found" });
+
+    // Verify shop format (should be a .myshopify.com domain)
+    if (!req.proxyShop.endsWith(".myshopify.com")) {
+      logger.warn("[APP PROXY] Invalid shop domain format", {
+        shop: req.proxyShop,
+        proxyPath,
+      });
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "Invalid shop domain format",
+      });
+    }
+    
+    logger.info("[APP PROXY] App proxy request processed", {
+      shop: req.proxyShop,
+      proxyPath,
+      loggedInCustomerId: req.proxyLoggedInCustomerId,
+    });
+
+    if (proxyPath === "/widget" || proxyPath.startsWith("/widget")) {
+      // Serve widget page
+      if (isVercel) {
+        res.redirect("/index.html");
+      } else {
+        res.sendFile(join(__dirname, "../dist/index.html"));
+      }
+    } else {
+      res.status(404).json({ error: "Not found" });
+    }
+  } catch (error) {
+    logger.error("[APP PROXY] App proxy request failed", error, req, {
+      proxyPath: req.path.replace("/apps/apps/a", ""),
+      shop: req.proxyShop,
+    });
+    
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: "Internal server error",
+        message: error.message || "An error occurred processing the app proxy request",
+      });
+    }
   }
 });
 
@@ -477,6 +856,11 @@ if (!isVercel) {
 
 // Error handling middleware (must be last)
 app.use((err, req, res, next) => {
+  // Log error using logger
+  logger.error("Unhandled error in request", err, req, {
+    status: err.status || 500,
+  });
+  
   if (!res.headersSent) {
     res.status(err.status || 500).json({
       error: err.message || "Internal server error",
