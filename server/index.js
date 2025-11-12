@@ -1,6 +1,6 @@
 import "@shopify/shopify-api/adapters/node";
 import express from "express";
-import { shopifyApi, LATEST_API_VERSION } from "@shopify/shopify-api";
+import { shopifyApi, LATEST_API_VERSION, RequestedTokenType } from "@shopify/shopify-api";
 import { restResources } from "@shopify/shopify-api/rest/admin/2024-01";
 import { join } from "path";
 import { fileURLToPath } from "url";
@@ -76,6 +76,140 @@ app.use((req, res, next) => {
     express.json()(req, res, next);
   }
 });
+
+/**
+ * Session Token Validation Middleware
+ * Validates session tokens from App Bridge requests
+ * Session tokens are automatically added by App Bridge 3.x to the Authorization header
+ */
+const validateSessionToken = async (req, res, next) => {
+  // Skip validation for webhooks, OAuth routes, and public routes
+  if (
+    req.path.startsWith("/webhooks/") ||
+    req.path.startsWith("/auth") ||
+    req.path === "/health" ||
+    req.path.startsWith("/api/products/") // Public product endpoint
+  ) {
+    return next();
+  }
+
+  try {
+    // Extract session token from Authorization header
+    // Format: "Bearer <session_token>"
+    const authHeader = req.get("authorization");
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      // No session token - this might be a public request or first load
+      // Allow the request but mark it as unauthenticated
+      req.sessionToken = null;
+      req.isAuthenticated = false;
+      return next();
+    }
+
+    const sessionToken = authHeader.replace("Bearer ", "").trim();
+
+    if (!sessionToken) {
+      req.sessionToken = null;
+      req.isAuthenticated = false;
+      return next();
+    }
+
+    // Validate and decode the session token using Shopify API library
+    try {
+      const sessionTokenPayload = await shopify.session.decodeSessionToken(sessionToken);
+      
+      // Extract shop domain from the session token
+      // The 'dest' field contains the shop domain (e.g., "myshop.myshopify.com")
+      // The 'iss' field contains the issuer (e.g., "https://myshop.myshopify.com/admin")
+      let shop = null;
+      
+      if (sessionTokenPayload.dest) {
+        // dest is the shop domain directly
+        shop = sessionTokenPayload.dest;
+      } else if (sessionTokenPayload.iss) {
+        // Extract shop from issuer URL
+        try {
+          const issUrl = new URL(sessionTokenPayload.iss);
+          shop = issUrl.hostname;
+        } catch (urlError) {
+          // If URL parsing fails, try to extract from string
+          const match = sessionTokenPayload.iss.match(/([a-z0-9-]+\.myshopify\.com)/i);
+          if (match) {
+            shop = match[1];
+          }
+        }
+      }
+      
+      if (!shop) {
+        req.sessionToken = null;
+        req.isAuthenticated = false;
+        return next();
+      }
+
+      // Store session token info in request
+      req.sessionToken = sessionToken;
+      req.sessionTokenPayload = sessionTokenPayload;
+      req.shop = shop;
+      req.isAuthenticated = true;
+
+      // Try to get or create a session using token exchange
+      // This will exchange the session token for an access token if needed
+      try {
+        const accessToken = await shopify.auth.tokenExchange({
+          shop,
+          sessionToken,
+          requestedTokenType: RequestedTokenType.OnlineAccessToken,
+        });
+
+        // Create a session object from the token exchange result
+        // The tokenExchange returns an access token, we need to create a session
+        const session = {
+          shop,
+          accessToken: accessToken.accessToken || accessToken,
+          state: "active",
+          isOnline: true,
+        };
+
+        // Store session in request for use in routes
+        req.shopifySession = session;
+        res.locals.shopify = { session };
+      } catch (tokenExchangeError) {
+        // Token exchange failed - might be first load or expired token
+        // Allow request to continue but mark as unauthenticated
+        console.warn("Token exchange failed:", tokenExchangeError.message);
+        req.shopifySession = null;
+      }
+
+      return next();
+    } catch (decodeError) {
+      // Invalid session token - check if this is a document request
+      const isDocumentRequest = !req.get("authorization");
+      
+      if (isDocumentRequest) {
+        // For document requests without auth, allow through (first load)
+        req.sessionToken = null;
+        req.isAuthenticated = false;
+        return next();
+      }
+      
+      // For API requests with invalid token, return 401 with retry header
+      console.warn("Session token validation failed:", decodeError.message);
+      return res.status(401).setHeader("X-Shopify-Retry-Invalid-Session-Request", "1").json({
+        error: "Unauthorized",
+        message: "Invalid or expired session token",
+      });
+    }
+  } catch (error) {
+    // Error during validation - allow request but mark as unauthenticated
+    console.error("Error in session token validation:", error);
+    req.sessionToken = null;
+    req.isAuthenticated = false;
+    return next();
+  }
+};
+
+// Apply session token validation middleware to all routes
+app.use(validateSessionToken);
 
 // HMAC signature verification middleware for webhooks
 // This middleware MUST return HTTP 401 for invalid signatures to comply with Shopify requirements

@@ -53,6 +53,48 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="/assets/NUSENSE_LOGO.svg" />
 
+    <!-- Shopify App Bridge Configuration -->
+    <!-- API key from shopify.app.toml client_id -->
+    <!-- In production, use environment variable: process.env.VITE_SHOPIFY_API_KEY -->
+    <meta name="shopify-api-key" content="f8de7972ae23d3484581d87137829385" />
+    <script>
+      console.log("📜 HTML: Preparing to load App Bridge script...");
+      console.log("🔑 API Key:", document.querySelector('meta[name="shopify-api-key"]')?.getAttribute('content'));
+      
+      // Create script element to load App Bridge
+      const appBridgeScript = document.createElement('script');
+      appBridgeScript.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js';
+      
+      appBridgeScript.onload = function() {
+        console.log("✅ HTML: App Bridge script loaded successfully");
+        console.log("🔍 HTML: Checking for window.shopify...");
+        
+        // Check immediately
+        if (window.shopify) {
+          console.log("✅ HTML: App Bridge detected immediately after script load!");
+          console.log("📦 HTML: App Bridge object:", window.shopify);
+        } else {
+          console.warn("⚠️ HTML: App Bridge script loaded but window.shopify not found yet");
+          // Check again after a short delay (App Bridge might initialize asynchronously)
+          setTimeout(() => {
+            if (window.shopify) {
+              console.log("✅ HTML: App Bridge detected after delay");
+              console.log("📦 HTML: App Bridge object:", window.shopify);
+            } else {
+              console.warn("⚠️ HTML: App Bridge still not detected after delay");
+            }
+          }, 200);
+        }
+      };
+      
+      appBridgeScript.onerror = function() {
+        console.error("❌ HTML: Failed to load App Bridge script");
+        console.error("🔍 HTML: Check network connection and CDN availability");
+      };
+      
+      document.head.appendChild(appBridgeScript);
+    </script>
+
   </head>
 
   <body>

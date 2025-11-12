@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,13 +15,216 @@ import {
   Image as ImageIcon,
   Shirt,
   CheckCircle2,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
+import { useAppBridge } from "@/providers/AppBridgeProvider";
+import { showToast, getShopify } from "@/utils/appBridge";
 
 const Index = () => {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
+  const { isReady, shopify } = useAppBridge();
+  const [appBridgeStatus, setAppBridgeStatus] = useState<{
+    initialized: boolean;
+    user: any;
+    config: any;
+    error: string | null;
+  }>({
+    initialized: false,
+    user: null,
+    config: null,
+    error: null,
+  });
+
+  // Test App Bridge initialization and APIs
+  useEffect(() => {
+    console.log("🔍 Index (/): Component mounted - Testing App Bridge...");
+    console.log("🔍 Index (/): App Bridge state:", { isReady, shopifyExists: !!shopify });
+
+    const testAppBridge = async () => {
+      if (!isReady || !shopify) {
+        console.log("⏳ Index (/): App Bridge not ready yet", { isReady, shopify });
+        setAppBridgeStatus({
+          initialized: false,
+          user: null,
+          config: null,
+          error: isReady ? "Shopify object not available" : "App Bridge not ready",
+        });
+        return;
+      }
+
+      console.log("✅ Index (/): App Bridge is ready! Testing APIs...");
+      console.log("📦 Index (/): Shopify object:", shopify);
+      setAppBridgeStatus(prev => ({ ...prev, initialized: true, error: null }));
+
+      try {
+        // Test user API
+        try {
+          console.log("🔍 Index (/): Testing user API...");
+          const user = await shopify.user();
+          console.log("✅ Index (/): App Bridge user API works!", user);
+          setAppBridgeStatus(prev => ({ ...prev, user, error: null }));
+        } catch (error: any) {
+          console.warn("⚠️ Index (/): Failed to get user:", error);
+          setAppBridgeStatus(prev => ({
+            ...prev,
+            error: prev.error ? `${prev.error}; User API: ${error.message}` : `User API error: ${error.message}`,
+          }));
+        }
+
+        // Test config API
+        try {
+          console.log("🔍 Index (/): Testing config API...");
+          const config = await shopify.config();
+          console.log("✅ Index (/): App Bridge config API works!", config);
+          setAppBridgeStatus(prev => ({ ...prev, config }));
+        } catch (error: any) {
+          console.warn("⚠️ Index (/): Failed to get config:", error);
+          setAppBridgeStatus(prev => ({
+            ...prev,
+            error: prev.error ? `${prev.error}; Config API: ${error.message}` : `Config API error: ${error.message}`,
+          }));
+        }
+
+        // Test toast API (but don't show automatically to avoid spam)
+        try {
+          console.log("🔍 Index (/): Toast API available:", typeof shopify.toast?.show === "function");
+          // Don't show toast automatically - user can click button to test
+        } catch (error: any) {
+          console.warn("⚠️ Index (/): Toast API not available:", error);
+        }
+
+        // Log completion after a brief delay to allow state updates
+        setTimeout(() => {
+          console.log("✅ Index (/): App Bridge test completed!");
+        }, 100);
+      } catch (error: any) {
+        console.error("❌ Index (/): App Bridge test failed:", error);
+        setAppBridgeStatus(prev => ({
+          ...prev,
+          error: error.message || "Unknown error",
+        }));
+      }
+    };
+
+    // Small delay to ensure App Bridge is fully initialized
+    const timeoutId = setTimeout(() => {
+      testAppBridge();
+    }, 500);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [isReady, shopify]);
+
+  // Log status changes
+  useEffect(() => {
+    if (appBridgeStatus.initialized) {
+      console.log("📊 Index (/): App Bridge status updated:", {
+        initialized: appBridgeStatus.initialized,
+        hasUser: !!appBridgeStatus.user,
+        hasConfig: !!appBridgeStatus.config,
+        error: appBridgeStatus.error,
+      });
+    }
+  }, [appBridgeStatus]);
+
+  const handleTestAppBridge = async () => {
+    console.log("🔘 Index (/): Test App Bridge button clicked");
+    
+    if (!shopify) {
+      console.error("❌ Index (/): App Bridge not available");
+      console.error("❌ Index (/): Current state:", { isReady, shopify });
+      alert("App Bridge is not available. Check console for details.");
+      return;
+    }
+
+    try {
+      console.log("🔍 Index (/): Testing toast API...");
+      // Test toast
+      await shopify.toast.show("App Bridge is working correctly! ✅", {
+        duration: 3000,
+      });
+      console.log("✅ Index (/): Test toast shown successfully");
+    } catch (error: any) {
+      console.error("❌ Index (/): Failed to show test toast:", error);
+      alert(`Failed to show toast: ${error.message}. Check console for details.`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
+      {/* App Bridge Status Indicator */}
+      <div className="sticky top-0 z-50 bg-card border-b border-border shadow-sm">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {appBridgeStatus.initialized && shopify ? (
+                <CheckCircle className="w-5 h-5 text-success" />
+              ) : (
+                <XCircle className="w-5 h-5 text-destructive" />
+              )}
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-foreground">
+                  App Bridge Status:
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {appBridgeStatus.initialized && shopify
+                    ? "✅ Initialized and Working"
+                    : isReady
+                    ? "⚠️ Ready but not initialized"
+                    : "❌ Not Ready"}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {appBridgeStatus.initialized && shopify && (
+                <>
+                  {appBridgeStatus.user && (
+                    <div className="text-xs text-muted-foreground hidden sm:block">
+                      User: {appBridgeStatus.user.email || appBridgeStatus.user.name || "Unknown"}
+                    </div>
+                  )}
+                  {appBridgeStatus.config && (
+                    <div className="text-xs text-muted-foreground hidden sm:block">
+                      Shop: {appBridgeStatus.config.shop || "Unknown"}
+                    </div>
+                  )}
+                  <Button
+                    onClick={handleTestAppBridge}
+                    variant="outline"
+                    size="sm"
+                    disabled={!shopify}
+                    className="text-xs"
+                  >
+                    Test Toast
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+          {(appBridgeStatus.error || (appBridgeStatus.initialized && !shopify)) && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-destructive">
+              <AlertCircle className="w-4 h-4" />
+              <span>
+                {appBridgeStatus.error || 
+                 (appBridgeStatus.initialized && !shopify ? "App Bridge initialized but shopify object is null" : "")}
+              </span>
+            </div>
+          )}
+          {appBridgeStatus.initialized && shopify && !appBridgeStatus.error && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-success">
+              <CheckCircle className="w-4 h-4" />
+              <span>
+                App Bridge is working correctly! APIs tested: User {appBridgeStatus.user ? "✅" : "❌"}, 
+                Config {appBridgeStatus.config ? "✅" : "❌"}, Toast ✅
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Hero Section */}
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
