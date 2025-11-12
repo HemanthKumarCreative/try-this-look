@@ -493,7 +493,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
             </Button>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Status Bar */}
       <section
