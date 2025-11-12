@@ -10,7 +10,6 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "serve": "node dev-server.js",
     "shopify": "shopify",
     "shopify:dev": "shopify app dev",
     "shopify:deploy": "shopify app deploy",
