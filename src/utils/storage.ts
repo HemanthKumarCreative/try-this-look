@@ -1,4 +1,4 @@
-import { TryOnSession, CartItem, ProductInfo } from "@/types/tryon";
+import { CartItem, ProductInfo } from "@/types/tryon";
 
 const STORAGE_KEYS = {
   UPLOADED_IMAGE: "nusense_tryon_uploaded_image",
@@ -97,16 +97,6 @@ function safeRemoveItem(key: string) {
 }
 
 export const storage = {
-  // Session management
-  saveSession(session: TryOnSession): void {
-    safeSetItem(STORAGE_KEYS.LAST_SESSION_DATA, JSON.stringify(session));
-  },
-
-  getSession(): TryOnSession | null {
-    const data = safeGetItem(STORAGE_KEYS.LAST_SESSION_DATA);
-    return data ? JSON.parse(data) : null;
-  },
-
   clearSession(): void {
     safeRemoveItem(STORAGE_KEYS.LAST_SESSION_DATA);
     safeRemoveItem(STORAGE_KEYS.UPLOADED_IMAGE);

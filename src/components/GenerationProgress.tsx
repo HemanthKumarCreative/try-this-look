@@ -2,7 +2,6 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Sparkles } from "lucide-react";
 import { LOADING_MESSAGES } from "@/types/tryon";
-import { useEffect, useState } from "react";
 
 interface GenerationProgressProps {
   progress: number;
@@ -13,15 +12,7 @@ export default function GenerationProgress({
   progress,
   isGenerating,
 }: GenerationProgressProps) {
-  const [messageIndex, setMessageIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const messageIndex = 0;
 
   return (
     <div className="space-y-4 sm:space-y-5 md:space-y-6 py-6 sm:py-8 md:py-12">

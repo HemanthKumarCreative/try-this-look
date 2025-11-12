@@ -52,7 +52,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
   }, [storeInfo]);
 
   useEffect(() => {
-    // Load saved session on mount
     const savedImage = storage.getUploadedImage();
     const savedClothing = storage.getClothingUrl();
     const savedResult = storage.getGeneratedImage();
@@ -107,18 +106,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
 
       // Request immediately - parent window will extract images from Shopify page
       requestImages();
-
-      // Retry multiple times to ensure we get the images
-      // Parent window listener might not be ready immediately
-      const retryDelays = [200, 500, 1000, 2000];
-      retryDelays.forEach((delay) => {
-        setTimeout(() => {
-          // Only retry if we haven't received images yet
-          if (!imagesLoadedRef.current) {
-            requestImages();
-          }
-        }, delay);
-      });
 
       // DO NOT extract from widget's own page when in iframe mode
       // Wait for parent window to send images via postMessage
@@ -269,11 +256,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       localStorage.setItem(INFLIGHT_KEY, "1");
     } catch {}
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => Math.min(prev + 5, 90));
-    }, 1500);
-
     try {
       const personBlob = await dataURLToBlob(uploadedImage);
       const clothingResponse = await fetch(selectedClothing);
@@ -288,7 +270,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         storeName
       );
 
-      clearInterval(progressInterval);
       setProgress(100);
 
       if (result.status === "success" && result.image) {
@@ -303,7 +284,6 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
         );
       }
     } catch (err) {
-      clearInterval(progressInterval);
       const errorMessage =
         err instanceof Error
           ? err.message
@@ -422,12 +402,7 @@ export default function TryOnWidget({ isOpen, onClose }: TryOnWidgetProps) {
       !savedResult &&
       !generatedImage
     ) {
-      // Restart generation to resume after a short delay to ensure state is fully applied
-      const timeoutId = setTimeout(() => {
-        handleGenerate();
-      }, 300);
-
-      return () => clearTimeout(timeoutId);
+      handleGenerate();
     }
   }, [uploadedImage, selectedClothing, generatedImage]); // Depend on state to ensure it's set before resuming
 

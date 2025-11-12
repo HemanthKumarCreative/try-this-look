@@ -1,7 +1,6 @@
 import TryOnWidget from "@/components/TryOnWidget";
 
 export default function Widget() {
-  console.log("Widget component rendered");
   return (
     <div className="w-full h-full" style={{ backgroundColor: "#fef3f3" }}>
       {/* Try-On Widget Content */}

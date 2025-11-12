@@ -149,7 +149,6 @@ const verifyWebhookSignature = (req, res, next) => {
     next();
   } catch (error) {
     // Any unexpected error during validation - return 401 for security
-    console.error("Error in webhook signature verification:", error);
     return res.status(401).json({
       error: "Unauthorized",
       message: "Webhook signature verification failed",
@@ -244,24 +243,12 @@ app.get("/auth/callback", async (req, res) => {
       rawResponse: res,
     });
 
-    const { session } = callbackResponse;
-
-    if (!session) {
-      return res.status(500).json({
-        error: "Authentication failed",
-        message: "No session was created during authentication",
-      });
-    }
-
-    // Sessions are automatically stored by the Shopify API library
-    // The library handles session storage internally based on your configuration
-
-    const shop = session.shop;
+    const shop = callbackResponse.session?.shop;
     const apiKey = process.env.VITE_SHOPIFY_API_KEY;
 
     if (!shop || !apiKey) {
       return res.status(500).json({
-        error: "Invalid session data",
+        error: "Authentication failed",
         message: "Missing shop or API key information",
       });
     }
@@ -299,7 +286,6 @@ app.post(
 
       res.status(200).json({ received: true });
     } catch (error) {
-      console.error("Error handling app/uninstalled webhook:", error);
       res.status(500).json({
         error: "Internal server error",
         message: error.message,
@@ -327,7 +313,6 @@ app.post(
 
       res.status(200).json({ received: true });
     } catch (error) {
-      console.error("Error handling customers/data_request webhook:", error);
       res.status(500).json({
         error: "Internal server error",
         message: error.message,
@@ -355,7 +340,6 @@ app.post(
 
       res.status(200).json({ received: true });
     } catch (error) {
-      console.error("Error handling customers/redact webhook:", error);
       res.status(500).json({
         error: "Internal server error",
         message: error.message,
@@ -379,7 +363,6 @@ app.post("/webhooks/shop/redact", verifyWebhookSignature, async (req, res) => {
 
     res.status(200).json({ received: true });
   } catch (error) {
-    console.error("Error handling shop/redact webhook:", error);
     res.status(500).json({
       error: "Internal server error",
       message: error.message,
@@ -440,25 +423,12 @@ app.post("/api/tryon/generate", async (req, res) => {
 // Product data endpoint (public - for widget use)
 app.get("/api/products/:productId", async (req, res) => {
   try {
-    // This endpoint can be public for widget use
-    // For authenticated requests, use session from res.locals.shopify.session
-    const session = res.locals.shopify?.session;
-
-    if (session) {
-      // Authenticated request - use Shopify API
-      const client = new shopify.clients.Rest({ session });
-      const product = await client.get({
-        path: `products/${req.params.productId}`,
-      });
-      res.json(product.body);
-    } else {
-      // Public request - return basic product info from query
-      // Widget will get product data from page context
-      res.json({
-        id: req.params.productId,
-        message: "Product data available from page context",
-      });
-    }
+    // Public request - return basic product info from query
+    // Widget will get product data from page context
+    res.json({
+      id: req.params.productId,
+      message: "Product data available from page context",
+    });
   } catch (error) {
     res
       .status(500)

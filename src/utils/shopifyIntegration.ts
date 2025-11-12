@@ -688,17 +688,11 @@ export function requestStoreInfoFromParent(
       return;
     }
 
-    const timeout = setTimeout(() => {
-      window.removeEventListener('message', messageHandler);
-      resolve(null);
-    }, 5000);
-
     const messageHandler = (event: MessageEvent) => {
       // Security: Validate origin if possible
       // Note: Using '*' in postMessage is less secure, but necessary for cross-origin
       
       if (event.data?.type === 'NUSENSE_STORE_INFO') {
-        clearTimeout(timeout);
         window.removeEventListener('message', messageHandler);
         
         const storeInfo: StoreInfo = {
@@ -723,7 +717,6 @@ export function requestStoreInfoFromParent(
     try {
       window.parent.postMessage({ type: 'NUSENSE_REQUEST_STORE_INFO' }, '*');
     } catch (error) {
-      clearTimeout(timeout);
       window.removeEventListener('message', messageHandler);
       resolve(null);
     }

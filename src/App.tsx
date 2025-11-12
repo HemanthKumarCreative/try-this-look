@@ -13,7 +13,6 @@ const queryClient = new QueryClient();
  * Main App Component
  */
 const App = () => {
-  console.log("App component rendered");
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

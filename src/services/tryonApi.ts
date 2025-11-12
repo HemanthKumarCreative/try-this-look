@@ -52,15 +52,12 @@ export const getHealthStatus = async (): Promise<void> => {
     });
 
     if (!response.ok) {
-      console.warn(
-        `[tryonApi] Health check failed with status ${response.status}`
-      );
       return;
     }
 
     await response.json();
   } catch (error) {
-    console.warn("[tryonApi] Health check request failed", error);
+    // Health check request failed
   }
 };
 
