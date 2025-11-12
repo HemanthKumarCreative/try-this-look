@@ -3,7 +3,7 @@
 client_id = "e3597bdbef35404641f8734b49e50a3a"
 name = "nusense-tryon"
 application_url = "https://try-this-look.vercel.app"
-embedded = true
+embedded = false
 
 [build]
 automatically_update_urls_on_dev = true
